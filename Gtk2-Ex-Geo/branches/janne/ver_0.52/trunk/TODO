@@ -1,0 +1,16 @@
+- colors dialog non-modal
+- every layer to have their own dialogs?
+- render one (vector) layer several times with different settings
+- label
+- polygon value to info
+- ogr: color alpha vs alpha, set a in list after color dialog
+
+- rendering int rasters: use attribute table to get color table / color bin key
+- support strings as keys in color tables
+- in colors dialog: color field combo also for int rasters
+
+- how to tell which object is under cursor when looking at vector data
+
+- real rasters can't have color tables
+
+- if the colors table is to be non-modal, all its information should be kept out of the layer until apply or ok

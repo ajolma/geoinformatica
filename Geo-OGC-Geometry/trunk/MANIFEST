@@ -1,0 +1,10 @@
+Artistic		The "Artistic License"
+Copying			The GNU General Public License
+MANIFEST		This file
+README
+lib/Geo/OGC/Geometry.pm
+Makefile.PL
+t/00.t
+t/01.t
+t/02.t
+META.yml

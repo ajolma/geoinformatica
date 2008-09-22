@@ -1,0 +1,9 @@
+Artistic		The "Artistic License"
+Copying			The GNU General Public License
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Gnuplot.t
+lib/IPC/Gnuplot.pm
+META.yml                                 Module meta-data (added by MakeMaker)

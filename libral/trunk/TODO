@@ -1,0 +1,17 @@
+
+- improve the terrain analysis code
+
+- remove ral_gdwrite and replace it with GDAL functions
+
+- switch to swig
+
+- make error reporting thread-safe
+
+- write a general trace_border function and put it into grid.c, it
+should use callbacks as borderwalk, but it should have options: use 4
+or 8 connectivity; trace 4 or 8 connective border cells (8 is
+available when 8 connectivity is used); trace the border clockwise or
+anti-clockwise; trace the outer border or the inner border
+
+- write a function (which uses the trace_border and) which returns the
+vertices of the border optimally (not midpoints of straight lines)

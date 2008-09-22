@@ -1,0 +1,297 @@
+2006-03-06  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* Makefile.PL, README, lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm, lib/Gtk2/Ex/Geo/TemporalRaster.pm:
+	docs
+
+2006-02-15  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm:
+	_gd in eval
+
+2006-02-14  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/TemporalRaster.pm, lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, t/Gtk2-Ex-Geo.t:
+	*** empty log message ***
+
+2006-02-13  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	selection
+
+	* lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	better panning
+
+2006-02-12  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	sensitivity
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/GDALDialog.pm:
+	colors dialog for vector data
+
+2006-02-11  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/Overlay.pm, t/Gtk2-Ex-Geo.t:
+	rasterize dialog, refactoring layer attributes into layers
+
+2006-02-10  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm:
+	*** empty log message ***
+
+	* lib/Gtk2/Ex/Geo/GDALDialog.pm:
+	there may be no libral raster
+
+	* t/Gtk2-Ex-Geo.t, lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm:
+	*** empty log message ***
+
+2006-02-09  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm:
+	dialog boxes
+
+	* lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm:
+	clip and copy colortable
+
+2006-02-08  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* t/Gtk2-Ex-Geo.t, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	bug fixes on dialogs etc
+
+	* t/Gtk2-Ex-Geo.t: *** empty log message ***
+
+2006-02-07  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	multiple history indexes
+
+	* t/Gtk2-Ex-Geo.t, lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	history and overcome winaxe bugs
+
+2006-02-06  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	rendering point and support mixed features
+
+	* lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	dialogs, context menu to overlay
+
+2006-02-05  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* MANIFEST, Makefile.PL, lib/Gtk2/Ex/Geo/GDALDialog.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	dialogs
+
+2006-02-03  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	working dialogs
+
+2006-02-02  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm:
+	bug in add_vector
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm: *** empty log message ***
+
+2006-02-01  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/Overlay.pm:
+	working features dialog
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	work on features dialog
+
+2006-01-25  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* MANIFEST, META.yml, lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/OGRDialog.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	*** empty log message ***
+
+2006-01-22  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm:
+	added the glade file into this
+
+2006-01-18  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/OGRDialog.pm: *** empty log message ***
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, Makefile.PL:
+	added OGRDialog.pm
+
+2005-12-30  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* META.yml: *** empty log message ***
+
+2005-10-13  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* README, lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	*** empty log message ***
+
+2005-10-12  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Glue.pm, t/Gtk2-Ex-Geo.t:
+	*** empty log message ***
+
+2005-10-05  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm, t/Gtk2-Ex-Geo.t:
+	measure tool
+
+2005-10-03  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	*** empty log message ***
+
+2005-09-28  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* Makefile.PL, lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm, lib/Gtk2/Ex/Geo/Renderer.xs, t/Gtk2-Ex-Geo.t:
+	major change, renderer.xs is more or less empty, all visualization in layer objects
+
+2005-09-21  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Renderer.xs: *** empty log message ***
+
+2005-09-20  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	improved polygon fill, Composite
+
+2005-09-15  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Renderer.xs:
+	render only the layer
+
+2005-09-13  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, t/Gtk2-Ex-Geo.t:
+	inspect
+
+2005-09-12  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	*** empty log message ***
+
+2005-09-11  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm: *** empty log message ***
+
+2005-09-09  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	ogr rendering
+
+	* META.yml, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	support for ogr.pm
+
+2005-08-29  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Overlay.pm:
+	use true grid if exists
+
+	* lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	gdal iinterface
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	*** empty log message ***
+
+2005-08-24  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm:
+	caching
+
+	* lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	*** empty log message ***
+
+2005-08-23  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* MANIFEST, Makefile.PL, lib/Gtk2/Ex/Geo/Composite.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	Initial Composite (rgb), improved code in renderer, export as png
+
+2005-06-18  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Renderer.xs:
+	alpha in showpoints
+
+2005-06-09  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Renderer.xs:
+	separated render_points, polylines, polygons as fcts, render_as may be overridden
+
+	* META.yml: *** empty log message ***
+
+2005-05-26  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* Makefile.PL, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	*Z and *M shapes get rendered now
+
+2005-04-28  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* t/Gtk2-Ex-Geo.t: *** empty log message ***
+
+	* Makefile.PL, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.xs, t/Gtk2-Ex-Geo.t:
+	name in Makefile.PL, no event handling if no layers
+
+2005-04-23  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, t/Gtk2-Ex-Geo.t, MANIFEST, Makefile.PL, README, lib/Gtk2/Ex/Geo.pm:
+	release 0.31
+
+2005-04-21  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.pm, t/Gtk2-Ex-Geo.t, lib/Gtk2/Ex/Geo.pm:
+	documentation
+
+	* lib/Gtk2/Ex/Geo/Renderer.xs:
+	some optimizations
+
+2005-04-19  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm:
+	open gtopo dems
+
+2005-04-18  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm:
+	strict and warnings...
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	grid attrib naming, ALPHA attrib in glue
+
+2005-04-16  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, t/Gtk2-Ex-Geo.t:
+	namings
+
+2005-04-15  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, t/Gtk2-Ex-Geo.t:
+	require 5.8, zoom_to, eval_entry, get_focal, maybe others
+
+	* t/Gtk2-Ex-Geo.t, lib/Gtk2/Ex/Geo/Renderer.xs:
+	*** empty log message ***
+
+2005-04-12  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* t/Gtk2-Ex-Geo.t, lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	Rtree optional, subtle bugs in polyline rendering and shapefile rendering in general
+
+	* lib/Gtk2/Ex/Geo/Glue.pm:
+	removed extra debug code
+
+2005-04-11  Ari Jolma  <ajolma@earth.hut.fi>
+
+	* lib/Gtk2/Ex/Geo.pm, Makefile.PL:
+	removed the 5.8.5 requirement
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, t/Gtk2-Ex-Geo.t:
+	Initial import.
+
+	* lib/Gtk2/Ex/Geo/Glue.pm, lib/Gtk2/Ex/Geo/Overlay.pm, t/Gtk2-Ex-Geo.t:
+	New file.
+
+	* Changes, MANIFEST, Makefile.PL, README, lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Renderer.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	Initial import.
+
+	* Changes, MANIFEST, Makefile.PL, README, lib/Gtk2/Ex/Geo.pm, lib/Gtk2/Ex/Geo/Renderer.pm, lib/Gtk2/Ex/Geo/Renderer.xs:
+	New file.
+

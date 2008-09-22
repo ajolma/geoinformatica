@@ -1,0 +1,336 @@
+package Gtk2::Ex::Geo::GDALDialog;
+
+use strict;
+use warnings;
+use POSIX;
+
+require Exporter;
+
+our @ISA = qw(Exporter Gtk2::Ex::Geo::DialogMaster);
+
+our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+
+our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+
+our @EXPORT = qw(
+	
+);
+
+=pod
+
+=head1 NAME
+
+Gtk2::Ex::Geo::GDALDialog - Dialogs for raster (gdal) layers
+
+=head1 SYNOPSIS
+
+  use Gtk2::Ex::Geo::GDALDialog;
+
+=head1 DESCRIPTION
+
+=head2 EXPORT
+
+=head1 METHODS
+
+=head2 new
+
+=cut
+
+sub new {
+    my($class, %params) = @_;
+
+    my @buffer = <DATA>;
+    pop @buffer unless $buffer[$#buffer] =~ /^\</; # remove the extra content
+
+    my $self = Gtk2::Ex::Geo::DialogMaster::new($class, %params, buffer => \@buffer);
+
+    bless $self => (ref($class) or $class);
+
+    bootstrap($self);
+    
+    return $self;
+}
+
+sub bootstrap {
+    my($self,$widget) = @_;
+    $self->{glade} = Gtk2::GladeXML->new_from_buffer("@{$self->{buffer}}");
+    for ('clip_dialog',
+	 'vectorize_dialog') {
+	$self->hide_on_delete($_);
+    }
+
+    $self->widget('clip_dialog')->signal_connect(response => \&clip_response, $self);
+    $self->widget('vectorize_dialog')->signal_connect(response => \&vectorize_response, $self);
+	
+    my $combo = $self->prepare_simple_combo('clip_to_raster_combobox');
+    $combo->set_active(0);
+    $combo->signal_connect(changed=>\&clip_to_raster_selected, $self);
+    
+    $self->widget('datasource_button')->signal_connect(clicked=>\&select_directory, [$self, 'datasource_entry']);
+
+    return $self->widget($widget) if $widget;
+}
+
+=pod
+
+=head2 clip_dialog
+
+=cut
+
+sub clip_dialog {
+    my($self, $layer) = @_;
+
+    $self->{clip_layer} = $layer;
+
+    my $dialog = $self->open_dialog('clip_dialog', 'Create a libral raster from', $layer);
+
+    my $combo = $self->widget('clip_to_raster_combobox');
+    my $model = $combo->get_model;
+    $model->clear;
+    $model->set($model->append, 0, '<Current view>');
+    $model->set($model->append, 0, '<self>');
+    for my $layer (@{$self->{overlay}->{layers}}) {
+	next unless ref($layer) =~ /^Geo::Raster/;
+	$model->set($model->append, 0, $layer->name());
+    }
+    $combo->set_active(0);
+
+    clip_to_raster_selected($combo, $self);
+
+    $self->widget('clip_name_entry')->set_text('gd');
+
+    my @dim = $self->{glue}->{overlay}->get_focus;
+    push @dim, $layer->cell_size( of_GDAL => 1 );
+    
+    $self->cache_dim($layer, @dim);
+}
+
+sub clip_response {
+    my($dialog, $response, $self) = @_;
+
+    if ($response eq 'ok') {
+
+	my $combo = $self->widget('clip_to_raster_combobox');
+	my $model = $combo->get_model;
+	my $iter = $combo->get_active_iter;
+	my $clip_to = $model->get($iter);
+	
+	my $new_layer;
+	
+	if ($clip_to eq '<Current view>') {
+	    my @dim = $self->cache_dim($self->{clip_layer});
+	    $new_layer = $self->{clip_layer}->cache(@dim);
+	} elsif ($clip_to eq '<self>') {
+	    $self->{clip_layer}->cache();
+	    delete $self->{clip_layer}->{GDAL};
+	} else {
+	    my $layer = $self->{overlay}->get_layer_by_name($clip_to);
+	    $new_layer = $self->{clip_layer}->clip_to($layer);  
+	}
+ 
+	my $name = $self->widget('clip_name_entry')->get_text();
+	$self->{glue}->add_layer($new_layer, $name, 1) unless $name eq '<self>';
+	$self->{glue}->set_layer($self->{clip_layer});
+	$self->{glue}->{overlay}->render;
+	    
+    } elsif ($response eq '1') { # compute
+	    
+	$self->cache_dim($self->{clip_layer});
+	return;
+
+    }
+    
+    delete $self->{clip_layer};
+    $self->close_dialog([$self, 'clip_dialog']);
+
+}
+
+sub clip_to_raster_selected {
+    my($combo, $self) = @_;
+    my $a = $combo->get_active();
+    if ($a <= 0) {
+	$self->widget('clip_minx_entry')->set_sensitive(1);
+	$self->widget('clip_miny_entry')->set_sensitive(1);
+	$self->widget('clip_maxx_entry')->set_sensitive(1);
+	$self->widget('clip_maxy_entry')->set_sensitive(1);
+	$self->widget('clip_name_entry')->set_sensitive(1);
+    } else {
+	$self->widget('clip_minx_entry')->set_sensitive(0);
+	$self->widget('clip_miny_entry')->set_sensitive(0);
+	$self->widget('clip_maxx_entry')->set_sensitive(0);
+	$self->widget('clip_maxy_entry')->set_sensitive(0);
+	my $m = $combo->get_model;
+	my $n = $m->get($combo->get_active_iter);
+	my $layer;
+	my @dim;
+	my $cell_size;
+	if ($n eq '<self>') {
+	    $layer = $self->{clip_layer};
+	    $self->widget('clip_name_entry')->set_sensitive(0);
+	    $self->widget('clip_name_entry')->set_text($self->{clip_layer}->name());
+	    @dim = $layer->world(of_GDAL=>1);
+	    $cell_size = $layer->cell_size(of_GDAL=>1);
+	} else {
+	    $layer = $self->{overlay}->get_layer_by_name($n);
+	    @dim = $layer->world;
+	    $cell_size = $layer->cell_size;
+	}
+	$self->cache_dim($layer, @dim, $cell_size);
+    }
+}
+
+sub cache_dim {
+    my $self = shift;
+    my $layer = shift;
+
+    my($minx, $miny, $maxx, $maxy, $cellsize);
+
+    if (@_) {
+
+	($minx, $miny, $maxx, $maxy, $cellsize) = @_;
+
+	$self->widget('clip_minx_entry')->set_text($minx);
+	$self->widget('clip_miny_entry')->set_text($miny);
+	$self->widget('clip_maxx_entry')->set_text($maxx);
+	$self->widget('clip_maxy_entry')->set_text($maxy);
+	$self->widget('clip_cellsize_label')->set_text($cellsize);
+
+    } else {
+
+	$minx = get_number($self->widget('clip_minx_entry'));
+	$miny = get_number($self->widget('clip_miny_entry'));
+	$maxx = get_number($self->widget('clip_maxx_entry'));
+	$maxy = get_number($self->widget('clip_maxy_entry'));
+	$cellsize = get_number($self->widget('clip_cellsize_label'));
+    }
+
+    my $M = int(($maxy - $miny)/$cellsize)+1;
+    my $N = int(($maxx - $minx)/$cellsize)+1;
+    my $bytes = $layer->datatype eq 'integer' ? 2 : 4; # should look this up from libral/GDAL
+    my $size = $M*$N*$bytes;
+    if ($size > 1024) {
+	$size = int($size/1024);
+	if ($size > 1024) {
+	    $size = int($size/1024);
+	    $size = "$size MiB";
+	} else {
+	    $size = "$size KiB";
+	}
+    } else {
+	$size = "$size B";
+    }
+
+    $self->widget('clip_info_label')->set_text("The size of the (~${M}x~${N}) libral raster will be $size.");
+
+    return ($minx, $miny, $maxx, $maxy, $cellsize);
+
+}
+
+
+sub vectorize_dialog {
+    my($self, $layer) = @_;
+
+    my $dialog = $self->open_dialog('vectorize_dialog', 'Create a vector layer from', $layer);
+    $self->{vectorize_layer} = $layer;
+
+    my %drivers = Geo::Vector::drivers;
+    my $combo = $self->widget('ogr_driver_combobox');
+    my $model = $combo->get_model;
+    $model->clear;
+    $model->set($model->append, 0, "");
+    for (sort keys %drivers) {
+	$model->set($model->append, 0, $_);
+    }
+
+    $self->widget('vector_name_entry')->set_text('v');
+    $self->widget('datasource_entry')->set_text('.');
+}
+
+sub vectorize_response {
+    my($dialog, $response, $self) = @_;
+	
+    if ($response eq 'ok') {
+
+	my %ret;
+	$ret{layer} = $self->widget('vector_name_entry')->get_text();
+	my $combo = $self->widget('ogr_driver_combobox');
+	my $model = $combo->get_model;
+	my $iter = $combo->get_active_iter;
+	$ret{driver} = $model->get($iter) if $iter;
+	$ret{datasource} = $self->widget('datasource_entry')->get_text();
+	my $connectivity = $self->widget('connectivity_checkbutton')->get_active();
+	$ret{connectivity} = $connectivity ? 8 : 4;
+
+	my $v = $self->{vectorize_layer}->vectorize(%ret);
+	if ($v) {
+	    $self->{glue}->add_layer($v, $ret{layer}, 1);
+	    $self->{glue}->{overlay}->render;
+	}
+    }
+    
+    delete $self->{vectorize_layer};
+    $self->close_dialog([$self, 'vectorize_dialog']);
+}
+
+sub select_directory {
+    my $button = shift;
+    my($self, $entry) = @{$_[0]};
+    my $file_chooser =
+	Gtk2::FileChooserDialog->new ("Select a folder",
+				      undef, 'select_folder',
+				      'gtk-cancel' => 'cancel',
+				      'gtk-ok' => 'ok');
+
+    my $folder = $file_chooser->get_current_folder();
+    #$folder = $self->{folder} if $self->{folder};
+    #$file_chooser->set_current_folder($folder);
+    my $uri;
+    if ($file_chooser->run eq 'ok') {
+	$uri = $file_chooser->get_uri;
+	#$self->{folder} = $file_chooser->get_current_folder();
+	#print STDERR "$uri\n";
+	$uri =~ s/^file:\/\///;
+	$self->widget($entry)->set_text($uri);
+    }
+
+    $file_chooser->destroy;
+}
+
+sub get_number {
+    my($entry) = @_;
+    my $text = $entry->get_text;
+    $text =~ s/\s//g;
+    $text =~ s/,/./;
+    $text;
+}
+
+sub min {
+    $_[0] > $_[1] ? $_[1] : $_[0];
+}
+
+sub max {
+    $_[0] > $_[1] ? $_[0] : $_[1];
+}
+
+1;
+=pod
+
+=head1 SEE ALSO
+
+Gtk2::Ex::Geo
+
+=head1 AUTHOR
+
+Ari Jolma, E<lt>ajolma at tkk.fiE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2006 by Ari Jolma
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.8.5 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut
+
+__DATA__
