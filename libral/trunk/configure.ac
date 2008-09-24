@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-VERSION=0.61
-AC_INIT(libral, 0.61, ari.jolma_at_tkk.fi)
+VERSION=0.62
+AC_INIT(libral, 0.62, ari.jolma_at_tkk.fi)
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile libral.pc ral/config.h])

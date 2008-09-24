@@ -10,6 +10,9 @@ and <a href="visual_8h.html">this</a>) may change and it may even be
 separated into another library. The Cairo library may be used more in
 the future.
 
+Libral is a part of the <a
+href="http://trac.osgeo.org/geoinformatica/">Geoinformatica stack</a>.
+
 \section index_intro Introduction
 
 libral is a C library for raster algebra. libral contains also a
