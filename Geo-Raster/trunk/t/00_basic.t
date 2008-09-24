@@ -46,6 +46,11 @@ sub diff {
 
 for my $datatype1 ('int','real') {
     my $gd1 = new Geo::Raster($datatype1,5,10);
+
+    my $mem = $gd1->gdal_mem_band;
+
+    ok($mem->{XSize} == 10, "GDAL mem dataset and band");
+
     $gd1->set(5);
     ok(diff($gd1->cell(3,3),5),'set & get');
     for my $datatype2 (undef,'int','real') {
