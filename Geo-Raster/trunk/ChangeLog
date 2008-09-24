@@ -1,1 +1,128 @@
-The changes are logged onto the SVN, which is at https://hoslab.cs.helsinki.fi/savane/
+The changes are logged onto the SVN, which is at https://svn.osgeo.org/geoinformatica/libral/
+
+Moved to svn.osgeo.org
+	
+Date: 22:37:18, 21. elokuuta 2008
+layer treeview tooltips and "v" instead of "?"
+
+Date: 21:13:20, 19. elokuuta 2008
+assume patched ExtUtils::Dependd::find_extra_libs; do not use simple as it does not exist any more
+
+Date: 21:17:46, 26. maaliskuuta 2008
+reorg missing modules, add META.yml
+
+Date: 21:20:21, 11. maaliskuuta 2008
+removed Gtk2::Ex::Geo::Raster and Vector
+
+Date: 19:56:27, 10. maaliskuuta 2008
+upgrade method
+
+Date: 21:58:34, 9. maaliskuuta 2008
+fix mapping between M,N width,height in pixbufs
+
+Date: 21:47:14, 9. maaliskuuta 2008
+conversions from gtk2_ex_geo_pixbuf to ral_pixbuf
+
+Date: 20:19:27, 8. maaliskuuta 2008
+renaming Gtk2::Ex::Geo::Vector as Geo::Vector::Layer and Gtk2::Ex::Geo::Raster as Geo::Raster::Layer
+
+Date: 12:09:21, 8. maaliskuuta 2008
+fixes to get Geo::Raster::Layer.pm working
+
+Date: 11:58:20, 8. maaliskuuta 2008
+moved part from xs to help.c and added stuff for Geo::Raster::Layer
+
+Date: 11:56:50, 8. maaliskuuta 2008
+moving Gtk2::Ex::Geo::Raster to Geo::Raster::Layer
+
+Date: 12:22:56, 3. maaliskuuta 2008
+fix ogr_layer to OGR->Layer
+
+Date: 23:57:34, 26. marraskuuta 2007
+methods dataset and band to get Geo::GDAL objects
+
+Date: 22:44:05, 10. syyskuuta 2007
+in vectorize, add the value of the region to the polygons as attribute 'value'
+
+Date: 1:26:44, 18. elokuuta 2007
+Updated over operator (specially reversion handling), corrected calls of modulus_with to call correct C-functions.
+
+Date: 16:05:28, 1. elokuuta 2007
+as_string and shallow_copy and overloading them
+
+Date: 23:26:27, 11. heinäkuuta 2007
+add Geo-OGC-Geometry
+
+Date: 15:37:20, 10. heinäkuuta 2007
+exists moved to IO.pm, dox, 
+
+Date: 10:06:25, 6. heinäkuuta 2007
+remove Geo::Layer and put color_table to Gtk2::Ex::Geo::Layer, add Gtk2::Ex::Geo::Dialogs for color table and symbol dialogs
+
+Date: 8:55:16, 5. heinäkuuta 2007
+moved visual code into Gtk2-Ex-Geo.xs
+
+Date: 10:11:13, 3. heinäkuuta 2007
+removed unnecessary palette_type call, documentation
+
+Date: 13:12:14, 2. heinäkuuta 2007
+The Geo::Raster::cache did not return a new raster in the same class as self (#105)
+
+Date: 20:21:51, 1. heinäkuuta 2007
+split Raster.pm into several files, prepare for release 0.61
+
+Date: 17:55:47, 1. heinäkuuta 2007
+naming: ral_xy -> ral_variogram, ral_fs -> ral_estimate
+
+Date: 11:39:54, 1. heinäkuuta 2007
+all GUI stuff moved to Gtk2::Ex::Geo::Layer and Gtk2::Ex::Geo::Raster, other changes for Geo::Raster:
+- use UNIVERSAL::isa to test if an object is a Geo::Raster
+- no stringify
+- constructor Geo::Raster::new(Geo::Raster object) (use this also in clone())
+- no blessing since it is done in base class! (in _all_ subclasses!)
+
+Date: 8:56:21, 29. kesäkuuta 2007
+default font is "sans 12"
+
+Date: 22:31:20, 28. kesäkuuta 2007
+store just font_name or font_description, not family etc. separately
+
+Date: 12:17:20, 28. kesäkuuta 2007
+label placement
+
+Date: 10:24:03, 25. kesäkuuta 2007
+labeling methods, removed some pod docs
+
+Date: 10:21:32, 24. kesäkuuta 2007
+Message:
+subs features and selected_features
+
+Date: 17:29:14, 20. kesäkuuta 2007
+*types are class methods
+
+Date: 17:27:53, 20. kesäkuuta 2007
+variogram returns also the number of values in bins
+
+Date: 1:00:08, 15. kesäkuuta 2007
+if load, delete GDAL
+
+Date: 0:57:09, 15. kesäkuuta 2007
+_keep_ attr in some methods
+
+Date: 0:56:10, 15. kesäkuuta 2007
+initial krige
+
+Date: 21:45:34, 13. kesäkuuta 2007
+added variogram method for grids
+
+Date: 16:47:23, 9. kesäkuuta 2007
+menu item Deselect all, sub select, sub render_selection
+
+Date: 22:22:28, 31. toukokuuta 2007
+change to new: _gdzonesize
+
+Date: 14:00:52, 31. toukokuuta 2007
+fixed typos real_div and integer_div
+
+Date: 20:53:04, 28. toukokuuta 2007
+Initial clean import without history or old branches.
