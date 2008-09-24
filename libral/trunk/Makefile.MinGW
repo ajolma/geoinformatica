@@ -6,13 +6,13 @@ DLL_NAME = libral.dll
 
 CC = gcc
 
-DEFINES =
+DEFINES = -DHAVE_STRDUP
 
 GTK_DIR = /c/GTK
 
 GDAL_DIR = /local
 
-INCLUDES = -I. -I$(GDAL_DIR)/include -I$(GTK_DIR)/include/gtk-2.0 -I$(GTK_DIR)/include/glib-2.0 -I$(GTK_DIR)/lib/glib-2.0/include
+INCLUDES = -I. -Iral -I$(GDAL_DIR)/include -I$(GTK_DIR)/include/gtk-2.0 -I$(GTK_DIR)/include/glib-2.0 -I$(GTK_DIR)/lib/glib-2.0/include
 
 CFLAGS = -g -O2 $(INCLUDES) $(DEFINES)
 
