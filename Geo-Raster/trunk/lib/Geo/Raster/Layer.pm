@@ -18,7 +18,6 @@ use FileHandle;
 use Carp;
 use File::Spec;
 use File::Basename;
-use Geo::Vector;
 use Gtk2::Ex::Geo::Layer qw /:all/;
 use Geo::Raster::Layer::Dialogs;
 use Glib;
