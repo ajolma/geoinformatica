@@ -23,17 +23,8 @@ ABBREVIATE_BRIEF       = "The $name class" \
                          the
 ALWAYS_DETAILED_SEC    = NO
 INLINE_INHERITED_MEMB  = NO
-FULL_PATH_NAMES        = YES
-STRIP_FROM_PATH        = C:/dev/hoslab/Geo-Raster/trunk/lib \
-			C:/dev/hoslab/Geo-Vector/trunk/lib \
-			C:/dev/hoslab/Gtk2-Ex-Geo/trunk/lib \
-			C:/dev/hoslab/IPC-Gnuplot/trunk/lib \
-			C:/dev/hoslab/Geo-OGC-Geometry/trunk/lib \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Raster/trunk/lib \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Vector/trunk/lib \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/trunk/lib \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/trunk/lib \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/trunk/lib
+FULL_PATH_NAMES        = NO
+STRIP_FROM_PATH        = 
 STRIP_FROM_INC_PATH    = 
 SHORT_NAMES            = NO
 JAVADOC_AUTOBRIEF      = NO
@@ -67,7 +58,7 @@ SHOW_INCLUDE_FILES     = YES
 INLINE_INFO            = YES
 SORT_MEMBER_DOCS       = YES
 SORT_BRIEF_DOCS        = NO
-SORT_BY_SCOPE_NAME     = NO
+SORT_BY_SCOPE_NAME     = YES
 GENERATE_TODOLIST      = YES
 GENERATE_TESTLIST      = YES
 GENERATE_BUGLIST       = YES
@@ -92,69 +83,20 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 INPUT                  = . ../../Geo-Vector \
 			../../Gtk2-Ex-Geo \
-			../../Gtk2-Ex-Geo-Raster \
-			../../Gtk2-Ex-Geo-Vector \
 			../../IPC-Gnuplot \
 			../../Geo-OGC-Geometry
 FILE_PATTERNS          = *.pm \
 			*.dox
 RECURSIVE              = YES
-EXCLUDE                = C:/dev/hoslab/Geo-Raster/trunk/blib \
-			C:/dev/hoslab/Geo-Raster/trunk/Files.pm \
-			C:/dev/hoslab/Geo-Raster/trunk/.svn \
-			C:/dev/hoslab/Geo-Raster/trunk/t \
-			C:/dev/hoslab/Geo-Vector/branches \
-			C:/dev/hoslab/Geo-Vector/spike \
-			C:/dev/hoslab/Geo-Vector/tags \
-                        C:/dev/hoslab/Geo-Vector/trunk/blib \
-			C:/dev/hoslab/Geo-Vector/trunk/Files.pm \
-			C:/dev/hoslab/Gtk2-Ex-Geo/branches \
-			C:/dev/hoslab/Gtk2-Ex-Geo/spike \
-			C:/dev/hoslab/Gtk2-Ex-Geo/tags \
-			C:/dev/hoslab/Gtk2-Ex-Geo/trunk/blib \
-			C:/dev/hoslab/Gtk2-Ex-Geo/trunk/Files.pm \
-			C:/dev/hoslab/Gtk2-Ex-Geo/trunk/build \
-			C:/dev/hoslab/IPC-Gnuplot/branches \
-			C:/dev/hoslab/IPC-Gnuplot/spike \
-			C:/dev/hoslab/IPC-Gnuplot/tags \
-			C:/dev/hoslab/IPC-Gnuplot/trunk/blib \
-			C:/dev/hoslab/IPC-Gnuplot/trunk/Files.pm \
-			C:/dev/hoslab/IPC-Gnuplot/trunk/build \
-			C:/dev/hoslab/Geo-OGC-Geometry/branches \
-			C:/dev/hoslab/Geo-OGC-Geometry/spike \
-			C:/dev/hoslab/Geo-OGC-Geometry/tags \
-			C:/dev/hoslab/Geo-OGC-Geometry/trunk/blib \
-			C:/dev/hoslab/Geo-OGC-Geometry/trunk/Files.pm \
-			C:/dev/hoslab/Geo-OGC-Geometry/trunk/build \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Raster/trunk/blib \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Raster/trunk/t \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Raster/trunk/Files.pm \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Raster/trunk/.svn \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Vector/branches \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Vector/spike \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Vector/tags \
-                        /home/ajolma/hoslab/svngeoinformatica/Geo-Vector/trunk/blib \
-			/home/ajolma/hoslab/svngeoinformatica//Geo-Vector/trunk/Files.pm \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/branches \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/spike \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/tags \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/trunk/blib \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/trunk/Files.pm \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/trunk/build \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/branches \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/spike \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/tags \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/trunk/blib \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/trunk/Files.pm \
-			/home/ajolma/hoslab/svngeoinformatica/IPC-Gnuplot/trunk/build \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/branches \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/spike \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/tags \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/trunk/blib \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/trunk/Files.pm \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-OGC-Geometry/trunk/build
+EXCLUDE                = 
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = 
+EXCLUDE_PATTERNS       = */branches/* \
+		       */spike/* \
+		       */.svn* \
+		       *blib* \
+		       *Files.pm \
+		       *tags* \
+		       */t/*
 EXAMPLE_PATH           = 
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO
@@ -256,12 +198,7 @@ ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = NO
 EXPAND_ONLY_PREDEF     = NO
 SEARCH_INCLUDES        = NO
-INCLUDE_PATH           = C:/dev/hoslab/Geo-Raster/trunk/lib/ \
-			C:/dev/hoslab/Geo-Vector/trunk/lib/ \
-			C:/dev/hoslab/Gtk2-Ex-Geo/trunk/lib/ \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Raster/trunk/lib/ \
-			/home/ajolma/hoslab/svngeoinformatica/Geo-Vector/trunk/lib/ \
-			/home/ajolma/hoslab/svngeoinformatica/Gtk2-Ex-Geo/trunk/lib/
+INCLUDE_PATH           = 
 INCLUDE_FILE_PATTERNS  = 
 PREDEFINED             = 
 EXPAND_AS_DEFINED      = 
