@@ -48,6 +48,44 @@ ral_cell_destroy(c)
 		if (ral_has_msg())
 			croak(ral_get_msg());
 
+char *
+ral_data_element_type(gd)
+	ral_grid *gd
+	CODE:
+		switch(gd->datatype) {
+		case RAL_INTEGER_GRID: RETVAL = RAL_INTEGER_TYPE_NAME;
+		break;
+		case RAL_REAL_GRID: RETVAL = RAL_REAL_TYPE_NAME;
+		break;
+		default: RETVAL = "";
+		break;
+		}
+	OUTPUT:
+		RETVAL
+
+int
+ral_sizeof_data_element(gd)
+	ral_grid *gd
+	CODE:
+		switch(gd->datatype) {
+		case RAL_INTEGER_GRID: RETVAL = sizeof(RAL_INTEGER)*CHAR_BIT;
+		break;
+		case RAL_REAL_GRID: RETVAL = sizeof(RAL_REAL)*CHAR_BIT;
+		break;
+		default: RETVAL = 0;
+		break;
+		}
+	OUTPUT:
+		RETVAL
+
+long
+ral_pointer_to_data(gd)
+	ral_grid *gd
+	CODE:
+		RETVAL = (long)(gd->data);
+	OUTPUT:
+		RETVAL
+
 void
 ral_grid_set_mask(gd, mask)
 	ral_grid *gd

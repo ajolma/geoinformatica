@@ -32,7 +32,7 @@ documentation of Geo::Raster</a> is written in doxygen format.
 use strict;
 use warnings;
 use POSIX;
-POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
+POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.gdal.org/faq.html nr. 12
 use Carp;
 use FileHandle;
 use Config; # For byteorder
@@ -321,6 +321,25 @@ sub new {
     }
     $self->attributes() if $self->{GRID};
     return $self;
+}
+
+sub gdal_mem_band {
+    my $self = shift;
+    my @size = $self->size;
+    my $datapointer = ral_pointer_to_data($self->{GRID});
+    my $datatype = ral_data_element_type($self->{GRID});
+    my $size = ral_sizeof_data_element($self->{GRID});
+    my %gdal_type = (
+	'short' => 'Int',
+	'float' => 'Float',
+	);
+    my $ds = Geo::GDAL::Open(
+	"MEM:::DATAPOINTER=$datapointer,".
+	"PIXELS=$size[1],LINES=$size[0],DATATYPE=$gdal_type{$datatype}$size");
+    my $world = ral_grid_get_world($self->{GRID});
+    my $cell_size = ral_grid_get_cell_size($self->{GRID});
+    $ds->SetGeoTransform([$world->[0], $cell_size, 0, $world->[3], 0, -$cell_size]);
+    return $ds->Band(1);
 }
 
 sub as_string {
