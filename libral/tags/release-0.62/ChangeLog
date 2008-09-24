@@ -1,0 +1,48 @@
+The changes are logged onto the SVN, which is at https://svn.osgeo.org/geoinformatica/libral/
+
+Moved to svn.osgeo.org
+	
+Date: 0:50:26, 13. huhtikuuta 2008
+fixed bug in rendering a vector feature as a symbol
+
+Date: 20:13:32, 3. marraskuuta 2007
+handle geometry collections correctly in render layers
+
+Date: 15:12:31, 3. marraskuuta 2007
+render fcts return ok status, render polygons does not do anything if the polygon is empty
+
+Date: 15:10:47, 3. marraskuuta 2007
+render functions return ok status
+
+Version 0.61
+
+Date: 19:09:01, 2. heinäkuuta 2007
+GET_PIXEL_COLOR picked from wrong places
+
+Date: 17:55:47, 1. heinäkuuta 2007
+naming: ral_xy -> ral_variogram, ral_fs -> ral_estimate
+
+Date: 11:25:33, 1. heinäkuuta 2007
+hue_dir 1 means "up"
+
+Date: 22:51:00, 26. kesäkuuta 2007
+the cairo image surface is ABGR in Intel little endian machines
+
+Date: 10:40:13, 26. kesäkuuta 2007
+fix a bug which prevented alpha working correctly after overhaul to cairo
+
+Date: 18:22:46, 24. kesäkuuta 2007
+render on cairo image surface and later convert it into gdk pixbuf
+
+Date: 10:01:04, 24. kesäkuuta 2007
+include the number of observations into variogram bins (n in ral_xy)
+
+Date: 0:54:07, 15. kesäkuuta 2007
+fixed a bug in variogram, added krige
+
+Date: 21:45:34, 13. kesäkuuta 2007
+added variogram method for grids
+
+Date: 20:53:04, 28. toukokuuta 2007
+Initial clean import without history or old branches.
+
