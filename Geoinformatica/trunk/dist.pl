@@ -6,13 +6,14 @@ use File::Spec;
 
 my $DIST = getcwd() . "/Geoinformatica";
 my $PERL = "c:/Geoinformatica"; # Perl with needed modules
-my $GTK = "c:/GTK-rt"; # GTK runtime
+my $GTK_RT = "c:/GTK-rt"; # GTK runtime
+my $GTK = "c:/GTK";
 my $MINGW = "c:/MinGW";
 my $EXPAT = "c:/Program Files/Expat 2.0.1";
 my $LOCAL = "c:/msys/1.0/local";
-my $POSTGIS = "c:/Program Files/PostgreSQL/8.2";
 my $GNUPLOT = "c:/Program Files/gnuplot";
 my $GDAL = "c:/dev/gdal";
+
 my $LIBRAL = "c:/dev/hoslab/libral/trunk";
 
 my $PERL_MOD_DOC = "c:/dev/hoslab/Geo-Raster/trunk/html";
@@ -31,25 +32,37 @@ copy($PERL_MOD_DOC, "$DIST/doc/Perl modules");
 copy($LIBRAL_DOC, "$DIST/doc/libral");
 copy($PERL_GDAL_DOC, "$DIST/doc/Perl GDAL");
 
-copy($PERL, $DIST);
-copy($GTK, $DIST);
-delete $copy{"$GTK/uninst.exe"};
+for (glob("$PERL/bin/*perl*.exe"), glob("$PERL/bin/*perl*.dll")) {
+    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+    copy($_, "$DIST/bin/$file");
+}
+copy("$PERL/html", "$DIST/html");
+copy("$PERL/lib", "$DIST/lib");
+copy("$PERL/share", "$DIST/share");
+copy("$PERL/site", "$DIST/site");
+
+copy($GTK_RT, $DIST);
+delete $copy{"$GTK_RT/uninst.exe"};
 delete $to{"$DIST/uninst.exe"};
-delete $copy{"$GTK/license.txt"};
+delete $copy{"$GTK_RT/license.txt"};
 delete $to{"$DIST/license.txt"};
-copy("$GTK/license.txt", "$DIST/share/doc/GTK/license.txt") if -f "$GTK/license.txt";
-copy("$GNUPLOT/bin", "$DIST/bin");
+copy("$GTK_RT/license.txt", "$DIST/share/doc/GTK_RT/license.txt") if -f "$GTK_RT/license.txt";
+
+for (glob("'$GNUPLOT/bin/?gnuplot.*'")) {
+    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+    copy($_, "$DIST/bin/$file");
+}
+copy("$GNUPLOT/bin/share", "$DIST/bin/share");
+
 for (qw/BUGS ChangeLog Copyright INSTALL NEWS README 
         README.1ST README.Windows docs/) 
 {
     copy("$GNUPLOT/$_", "$DIST/share/doc/gnuplot/$_");
 }
 copy("$MINGW/bin/mingwm10.dll", "$DIST/bin");
-copy("$POSTGIS/OpenSSL Licence.txt", "$DIST");
-for (qw/comerr32.dll krb5_32.dll libeay32.dll libiconv-2.dll
-    libintl-2.dll libpq.dll libproj.dll ssleay32.dll/) 
+for (qw/libpq.dll/) 
 { 
-    copy("$POSTGIS/bin/$_", "$DIST/bin/$_");
+    copy("$LOCAL/pgsql/lib/$_", "$DIST/bin/$_");
 }
 for (glob("'$EXPAT/bin/*.dll'")) {
     my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
@@ -84,12 +97,22 @@ $mday = "0$mday" if $mday < 10;
 
 my $devel = "devel"; # -$year-$mon-$mday";
 
-for (glob("'$LOCAL/bin/*config'")) {
+for (glob("$LOCAL/bin/*config")) {
     my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
     copy($_, "$DIST-$devel/bin/$file");
 }
 copy("$LOCAL/include", "$DIST-$devel/include");
 copy("$LOCAL/lib", "$DIST-$devel/lib");
+
+for (glob("$LOCAL/bin/*.exe")) {
+    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+    copy($_, "$DIST-utilities/bin/$file");
+}
+for (glob("$GTK/bin/*.exe"), glob("$GTK/bin/*.bat")) {
+    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+    copy($_, "$DIST-utilities/bin/$file");
+}
+copy("$LOCAL/pgsql/bin/psql.exe", "$DIST-utilities/bin/psql.exe");
 
 
 for (keys %dist) {
@@ -181,6 +204,9 @@ sub simple_copy {
     my $x = "copy \"$from\" \"$to\"";
     print "$x\n";
     system $x;
+    if ($to=~/\.dll$/ or $to=~/\.a$/) {
+	system "strip --strip-debug $to";
+    }
 }
 
 sub dos_mkdir {
