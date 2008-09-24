@@ -37,16 +37,6 @@ for $package ('gdal','gdk-pixbuf-2.0','libral') {
 	$l = $pkg_info{libs};
     }
     $cflags .= " $c";
-    # this code is for MinGW in fact
-    if ($^O eq "MSWin32") {
-	my @a = split /\s+/,$l;
-	for (@a) {
-	    if (/^-l/ and !(/.dll/)) {
-		$_ .= '.dll.a';
-	    }
-	}
-	$l = join(' ',@a);
-    }
     $libs .= " $l";
     print "ok\n";
 }

@@ -14,6 +14,9 @@ $missing_modules{chk_module('Geo::OGC::Geometry')} = 1;
 $missing_modules{chk_module('Gtk2::GladeXML')} = 1;
 $missing_modules{chk_module('Gtk2::Ex::Geo')} = 1;
 $missing_modules{chk_module('Graph')} = 1;
+
+$missing_modules{chk_module('Win32::OLE')} = 1; #if Win32
+
 delete $missing_modules{''};
 
 my @missing_modules = keys %missing_modules;
@@ -38,16 +41,6 @@ for $package ('gdal','gdk-pixbuf-2.0','libral') {
 	$l = $pkg_info{libs};
     }
     $cflags .= " $c";
-    # this code is for MinGW in fact
-    if ($^O eq "MSWin32") {
-	my @a = split /\s+/,$l;
-	for (@a) {
-	    if (/^-l/ and !(/.dll/) and !(/-lm/) and !(/^-lws2/) and !(/^-lgdi/)) {
-		$_ .= '.dll.a';
-	    }
-	}
-	$l = join(' ',@a);
-    }
     $libs .= " $l";
     print "ok\n";
 }
@@ -146,7 +139,6 @@ sub postamble {
     my $lib = 'lib/Geo/Vector/Layer/';
     for ('Dialogs') {
 	$ret .= "\n$lib$_.pm: $lib$_.pm.in $lib$_.glade\n";
-	print STDERR "$ret\n";
 	if ($^O eq 'MSWin32') {
 	} else {
 	    $ret .= "\tif [ -f $lib$_.pm ]; then chmod u+w $lib$_.pm; fi\n\n";
