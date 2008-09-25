@@ -850,8 +850,7 @@ sub add_layer {
     my $i = $self->{overlay}->index_of_layer($name) if defined $name;
     croak "layer with name $name already exists" if defined $i;
 
-    $name = $layer->name unless defined $name;
-    $layer->defaults(name => $name);
+    $layer->name($name);
     $layer->{_tree_index} = $self->{model}->insert (undef, 0);
  
     $self->set_layer($layer);
