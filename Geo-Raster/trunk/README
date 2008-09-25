@@ -1,50 +1,5 @@
-Perl Module Geo::Raster
-
-     Copyright (c) 1999- Ari Jolma. All rights reserved.
-     This program is free software; you can redistribute it and/or
-     modify it under the same terms as Perl itself. That is, using
-     either
-
-	a) the GNU General Public License as published by the Free
-	Software Foundation; or
-
-	b) the "Artistic License".
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See either
-    the GNU General Public License or the Artistic License for more details.
-
-    You should have received a copy of the Artistic License with this
-    Kit, in the file named "Artistic".  If not, get it from
-    http://www.perl.com/language/misc/Artistic.html.
-
-    You should also have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software Foundation,
-    Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
-
-ACKNOWLEDGEMENTS
-
-array.c and array.h are taken from the Karl Glazebrook's PGPLOT
-distribution.
-
-INSTALLATION
-
-To install, unzip and untar the archive. In the directory created type
-
-perl Makefile.pl
-make
-make test
-make install
-
-Geo::Raster requires the Raster Algebra Library libral. libral
-is at <http://sourceforge.net/projects/libral>.
-
-Required modules are ExtUtils::Depends, Statistics::Descriptive,
-gdalconst, and gdal.
-
-Documentation is in the module file and will be added onto
-perllocal.pod as usual.
+Geo-Raster
+=======================
 
 DESCRIPTION
 
@@ -70,3 +25,33 @@ for example histograms are simple to plot and rgb values for a grid
 can be retrieved from a database.
 
 Gtk2::Ex::Geo is a GUI (with a CLI capability) for Geo::Raster
+
+INSTALLATION
+
+To install, unzip and untar the archive. In the directory created type
+
+perl Makefile.pl
+make
+make test
+make install
+
+Geo::Raster requires the Raster Algebra Library libral. libral
+is at <http://sourceforge.net/projects/libral>.
+
+Required modules are ExtUtils::Depends, Statistics::Descriptive,
+gdalconst, and gdal.
+
+Documentation is in the module file and will be added onto
+perllocal.pod as usual.
+
+ACKNOWLEDGEMENTS
+
+array.c and array.h are taken from the Karl Glazebrook's PGPLOT
+distribution.
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 1999- by Ari Jolma
+
+This library is free software; you can redistribute it and/or modify
+it under the terms of Artistic License 2.0 (included as LICENCE).
