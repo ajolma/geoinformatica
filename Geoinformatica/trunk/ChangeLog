@@ -1,0 +1,39 @@
+The changes are logged onto the SVN, which is at https://svn.osgeo.org/geoinformatica/libral/
+
+Moved to svn.osgeo.org
+	
+Date: 20:03:02, 22. elokuuta 2008
+run uninstall first if geoinformatica is already installed
+
+Date: 23:46:41, 21. elokuuta 2008
+use plain devel
+
+Date: 23:46:05, 21. elokuuta 2008
+default bg color is now grey set from here
+
+Date: 12:15:48, 13. elokuuta 2008
+fixed local/bin*.dll, some fine tunings
+
+Date: 20:03:48, 11. elokuuta 2008
+glob needs "'"'s, fixed expat to use glob
+
+Date: 9:47:42, 11. elokuuta 2008
+shebang perl
+
+Date: 10:57:19, 9. elokuuta 2008
+add docs to the installation and make a devel distro tree
+
+Date: 10:15:34, 9. elokuuta 2008
+subs from Gtk2::Ex::Geo::Geo.pm, config options are set only if windows
+
+Date: 23:26:48, 8. elokuuta 2008
+version is date
+
+Date: 23:26:17, 8. elokuuta 2008
+added gui.pl into bin
+
+Date: 22:48:41, 8. elokuuta 2008
+use Cwd
+
+Date: 18:56:20, 8. elokuuta 2008
+intial import
