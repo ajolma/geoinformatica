@@ -176,7 +176,7 @@ sub get_plot_datasets {
 # @param options a list of named parameters and key=>value pairs for gnuplot or p
 sub plot {
     my($self, $this, %params) = @_;
-    my $gnuplot = $Config::Config{'osname'} eq 'MSWin32' ? 'pgnuplot' : 'gnuplot';
+    my $gnuplot = $^O eq 'MSWin32' ? 'pgnuplot' : 'gnuplot';
     open GNUPLOT, "| $gnuplot" or croak "can't open gnuplot: $!\n";
     my $fh = select(GNUPLOT); $| = 1;
     my $datafile = $params{datafile} || 'plot_data';
