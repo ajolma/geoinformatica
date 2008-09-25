@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 1;
+use Test::More tests => 3;
 BEGIN { 
 
 # depending for now on Gtk2::Ex::Geo::Raster and Vector
@@ -25,7 +25,22 @@ for (0..100) {
     $xy{$_} = $_*$_;
 }
 
-$gnuplot->plot(\%xy);
-sleep(2);
+eval {
+    $gnuplot->plot(\%xy);
+};
 
-$gnuplot->p(\%xy);
+SKIP: {
+    skip "no gnuplot", 1 if $!;
+    ok(1, "plot");
+}
+
+sleep(2) unless $!;
+
+eval {
+    $gnuplot->p(\%xy);
+};
+
+SKIP: {
+    skip "no gnuplot", 1 if $!;
+    ok(1, "print");
+}
