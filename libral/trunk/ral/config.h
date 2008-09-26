@@ -11,7 +11,6 @@
 
 /* The implementation datatype for integer rasters */
 #define RAL_INTEGER short
-#define RAL_INTEGER_TYPE_NAME "short"
 
 typedef RAL_INTEGER *RAL_INTEGER_HANDLE;
 
@@ -23,7 +22,6 @@ typedef RAL_INTEGER *RAL_INTEGER_HANDLE;
 
 /* The implementation datatype for real rasters */
 #define RAL_REAL float
-#define RAL_REAL_TYPE_NAME "float"
 
 typedef RAL_REAL *RAL_REAL_HANDLE;
 

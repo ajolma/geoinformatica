@@ -1,11 +1,11 @@
-prefix=/usr/local
+prefix=/home/ajolma/usr/
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
 Name: libral
 Description: Raster algebra functions for in-memory grids
-Version: 0.61
-Requires: gdal gdk-pixbuf-2.0
-Libs:  -L${exec_prefix}/lib -lral
-Cflags:  -I${prefix}/include
+Version: 0.62
+Requires: gdk-pixbuf-2.0
+Libs:  -L/home/ajolma/usr//lib -lgdal -L${exec_prefix}/lib -lral
+Cflags:  -I/home/ajolma/usr//include -I${prefix}/include
