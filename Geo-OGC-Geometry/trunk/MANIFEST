@@ -1,6 +1,5 @@
-Artistic		The "Artistic License"
-Copying			The GNU General Public License
-MANIFEST		This file
+LICENCE
+MANIFEST
 README
 lib/Geo/OGC/Geometry.pm
 Makefile.PL
