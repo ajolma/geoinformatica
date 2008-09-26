@@ -5,4 +5,4 @@ MANIFEST
 README
 t/Gnuplot.t
 lib/IPC/Gnuplot.pm
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml

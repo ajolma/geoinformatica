@@ -15,7 +15,7 @@ $missing_modules{chk_module('Gtk2::GladeXML')} = 1;
 $missing_modules{chk_module('Gtk2::Ex::Geo')} = 1;
 $missing_modules{chk_module('Graph')} = 1;
 
-$missing_modules{chk_module('Win32::OLE')} = 1; #if Win32
+$missing_modules{chk_module('Win32::OLE')} = 1 if $^O eq 'MSWin32';
 
 delete $missing_modules{''};
 
