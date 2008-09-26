@@ -1,7 +1,6 @@
-Artistic		The "Artistic License"
-Changes			Differences from previous version
-Copying			The GNU General Public License
-MANIFEST		This file
+LICENCE
+Changes
+MANIFEST
 README
 TODO
 lib/Geo/Raster.pm
