@@ -2,6 +2,8 @@
 # @brief Adds graphics, image analysis etc. methods into Geo::Raster
 package Geo::Raster;
 
+use UNIVERSAL qw(isa);
+
 ## @method Geo::Raster frame($with)
 #
 # @brief Changing the border grid cell values to the given value.
@@ -122,7 +124,7 @@ sub line {
 sub transect {
     my($self, $geom, $delta) = @_;
     croak "usage: \$raster->transect(\$geometry, \$delta)" 
-	unless ref($geom) eq 'Geo::OGR::Geometry' and (defined $delta and $delta > 0);
+	unless isa($geom, 'Geo::OGR::Geometry') and (defined $delta and $delta > 0);
     my @transect;
     if ($geom->GetGeometryCount) {
 	for (0..$geom->GetGeometryCount-1) {

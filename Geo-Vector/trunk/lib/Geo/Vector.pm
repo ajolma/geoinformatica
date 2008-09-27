@@ -269,7 +269,7 @@ sub new {
 	croak "No name given to the new layer" unless $params{layer};
 	    
 	my $srs;
-	if (ref($params{srs}) and ref($params{srs}) eq 'Geo::OSR::SpatialReference') {
+	if (ref($params{srs}) and isa($params{srs}, 'Geo::OSR::SpatialReference')) {
 	    $srs = $params{srs};
 	} else {
 	    $srs = new Geo::OSR::SpatialReference;
@@ -313,7 +313,7 @@ sub set_driver {
     my($self, $driver, $data_source, $update, $options) = @_;
     $options = [] unless $options;
     if ($driver) {
-	if (ref($driver) eq 'Geo::OGR::Driver') {
+	if (isa($driver, 'Geo::OGR::Driver')) {
 	    $self->{OGR}->{Driver} = $driver;
 	} else {
 	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);

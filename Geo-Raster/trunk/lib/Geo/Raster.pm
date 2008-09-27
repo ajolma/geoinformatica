@@ -2966,7 +2966,7 @@ sub if {
     $a = new Geo::Raster ($a) if defined wantarray;
     croak "usage $a->if($b, $c)" unless defined $c;
     if (ref($c)) {
-	if (ref($c) eq 'Geo::Raster') {
+	if (isa($c, 'Geo::Raster')) {
 	    ral_grid_if_then_grid($b->{GRID}, $a->{GRID}, $c->{GRID});
 	} elsif (ref($c) eq 'HASH') {
 	    my(@k,@v);
@@ -3148,7 +3148,7 @@ sub clip {
 	}
     } else {
 	my $gd = shift;
-	return unless ref($gd) eq 'Geo::Raster';
+	return unless isa($gd, 'Geo::Raster');
 	my @a = $gd->attributes;
 	my($i1,$j1) = $self->w2g($a[4],$a[7]);
 	my($i2,$j2) = ($i1+$a[1]-1,$j1+$a[2]-1);

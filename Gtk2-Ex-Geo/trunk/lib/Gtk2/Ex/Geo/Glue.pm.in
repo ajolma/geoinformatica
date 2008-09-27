@@ -718,7 +718,7 @@ sub show_information {
 
     my $location = sprintf("(x,y) = (%.4f, %.4f)", $x, $y);
     my $value = '';
-    if ($layer and ref($layer) =~ /Raster/) {
+    if ($layer and isa($layer, 'Geo::Raster')) {
 	my @ij = $layer->w2g($x, $y);
 	$location .= sprintf(", (i,j) = (%i, %i)",@ij);
 	$value = $layer->point($x, $y);
@@ -880,7 +880,7 @@ sub layers {
 sub get_focal {
     my($self, $name) = @_;
     my $gd = $self->{overlay}->get_layer_by_name($name);
-    if ($gd and ref($gd) =~ /Raster/) {
+    if ($gd and isa($gd, 'Geo::Raster')) {
 	my @clip = $self->{overlay}->get_focus;
 	@clip = $gd->wa2ga(@clip);
 	# do not expand the view
@@ -1039,7 +1039,7 @@ sub eval_entry {
 	}
 	for my $i (0..$#g) {
 	    if ($self->{overlay}->get_layer_by_name($g[$i])) {
-		$_gd[$i]->value_range() if ref($_gd[$i]) =~ /Raster/;
+		$_gd[$i]->value_range() if isa($_gd[$i], 'Geo::Raster');
 	    } else {
 		eval "\$self->add_layer(\$$g[$i],'$g[$i]',1) if ".
 		    "isa(\$$g[$i], 'Gtk2::Ex::Geo::Layer') or isa(\$$g[$i], 'Geo::Raster') or isa(\$$g[$i], 'Geo::Vector');"

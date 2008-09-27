@@ -2,6 +2,8 @@
 # @brief Adds terrain analysis methods into Geo::Raster
 package Geo::Raster;
 
+use UNIVERSAL qw(isa);
+
 ## @method Geo::Raster aspect()
 #
 # @brief This DEM method computes the aspect (in radians, computing clockwise 
@@ -704,7 +706,7 @@ sub catchment {
     my $i = shift;
     my ($M, $N) = $fdg->size();
     my ($j, $m, $catchment);
-    if (ref($i) eq 'Geo::Raster') {
+    if (isa($i, 'Geo::Raster')) {
 	$catchment = $i;
 	$i = shift;
 	$j = shift;
@@ -791,7 +793,7 @@ sub prune {
     my $fdg = shift;
     my $lakes;
     my $min_length = shift;
-    if (ref($min_length) eq 'Geo::Raster') {
+    if (isa($min_length, 'Geo::Raster')) {
 	$lakes = $min_length;
 	$min_length = shift;
     }
@@ -823,7 +825,7 @@ sub number_streams {
     my $fdg = shift;
     my $lakes;
     my $i = shift;
-    if (ref($i) eq 'Geo::Raster') {
+    if (isa($i, 'Geo::Raster')) {
 	$lakes = $i;
 	$i = shift;
     }
@@ -869,7 +871,7 @@ sub subcatchments {
     my $fdg = shift;
     my $lakes;
     my $i = shift;
-    if (ref($i) eq 'Geo::Raster') {
+    if (isa($i, 'Geo::Raster')) {
 	$lakes = $i;
 	$i = shift;
     }

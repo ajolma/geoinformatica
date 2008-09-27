@@ -70,7 +70,7 @@ sub registration {
 
 ## @cmethod $upgrade($object)
 #
-# @brief Upgrade Geo::Vector objects to Geo::Vector::Layers
+# @brief Upgrade (strictly) Geo::Vector objects to Geo::Vector::Layers
 sub upgrade {
     my($object) = @_;
     if (ref($object) eq 'Geo::Vector') {
@@ -1322,7 +1322,7 @@ sub get_geom_data {
 	my @rect = $gui->{overlay}->get_viewport; #_of_selection;
 	#@rect = $gui->{overlay}->get_viewport unless @rect;
 	my $s = $gui->{overlay}->{selection};
-	my $a = ($s and ref($s) eq 'Geo::OGR::Geometry');
+	my $a = ($s and isa($s, 'Geo::OGR::Geometry'));
 	my @d;
 	for my $i (0..$geom->GetPointCount-1) {	    
 	    my $x = $geom->GetX($i);

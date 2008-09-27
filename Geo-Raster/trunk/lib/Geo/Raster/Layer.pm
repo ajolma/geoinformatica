@@ -145,7 +145,7 @@ sub registration {
 
 ## @cmethod $upgrade($object) 
 #
-# @brief Upgrade Geo::Raster objects to Geo::Raster::Layers
+# @brief Upgrade (strictly) Geo::Raster objects to Geo::Raster::Layers
 sub upgrade {
     my($object) = @_;
     if (ref($object) eq 'Geo::Raster') {
