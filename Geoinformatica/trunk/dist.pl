@@ -14,9 +14,9 @@ my $LOCAL = "c:/msys/1.0/local";
 my $GNUPLOT = "c:/Program Files/gnuplot";
 my $GDAL = "c:/dev/gdal";
 
-my $LIBRAL = "c:/dev/hoslab/libral/trunk";
+my $LIBRAL = "c:/dev/geoinformatica/libral/trunk";
 
-my $PERL_MOD_DOC = "c:/dev/hoslab/Geo-Raster/trunk/html";
+my $PERL_MOD_DOC = "c:/dev/geoinformatica/Geo-Raster/trunk/html";
 my $LIBRAL_DOC = "$LIBRAL/html";
 my $PERL_GDAL_DOC = "$GDAL/swig/perl/html";
 
@@ -84,7 +84,7 @@ for (qw/README lesser.txt/)
 { 
     copy("$LIBRAL/$_", "$DIST/share/doc/libral/$_");
 }
-copy("gui.pl", "$DIST/bin/gui.pl");
+copy("c:/dev/geoinformatica/Geoinformatica/trunk/gui.pl", "$DIST/bin/gui.pl");
 
 # devel
 
@@ -205,7 +205,7 @@ sub simple_copy {
     print "$x\n";
     system $x;
     if ($to=~/\.dll$/ or $to=~/\.a$/) {
-	system "strip --strip-debug $to";
+	#system "strip --strip-debug $to";
     }
 }
 
