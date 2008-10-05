@@ -75,20 +75,19 @@ else
   HAVE_GDK_PIXBUF="#undef"
 fi
 
-AC_ARG_WITH(gdal,[  --with-gdal[[=DIR]]       whether to use GDAL [[default=yes]] [[from DIR]]],,)
+AC_ARG_WITH(gdal,[  --with-gdal[[=PATH]]       whether to use GDAL [[default=yes]] [[PATH to gdal-config]]],,)
 if test "$with_gdal" != "no"; then
-  if test "$with_gdal" != "yes" -a "$with_gdal" != "" ; then
-    LIBS="$LIBS -L$with_gdal/lib"
-    PC_LIBS="$PC_LIBS -L$with_gdal/lib"
-    CPPFLAGS="$CPPFLAGS -I$with_gdal/include"
-    PC_CPPFLAGS="$PC_CPPFLAGS -I$with_gdal/include"
+  if test "$with_gdal" = "yes" -o "$with_gdal" = "" ; then
+     with_gdal="gdal-config"
   fi
+  TMP=`$with_gdal --libs`
+  LIBS="$LIBS $TMP"
+  PC_LIBS="$PC_LIBS $TMP"
+  TMP=`$with_gdal --cflags`
+  CPPFLAGS="$CPPFLAGS $TMP"
+  PC_CPPFLAGS="$PC_CPPFLAGS $TMP"
   AC_CHECK_HEADER(gdal.h, gdal=true)
   if test "$gdal" = "true"; then
-    LIBS="$LIBS -lgdal"
-    PC_LIBS="$PC_LIBS -lgdal"
-    CPPFLAGS="$CPPFLAGS"
-    PC_CPPFLAGS="$PC_CPPFLAGS"
     HAVE_GDAL="#define"
     REQUIRES="$REQUIRES"
   else
