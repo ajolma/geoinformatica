@@ -36,7 +36,6 @@ use XSLoader;
 use File::Basename;
 use Geo::GDAL;
 use Geo::OGC::Geometry;
-use Graph;
 use Gtk2;
 
 use Geo::Vector::Layer;
@@ -353,7 +352,7 @@ sub DESTROY {
 # @return The name of the OGR driver as a string. 
 sub driver {
     my $self = shift;
-    return $self->{OGR}->{Driver}->GetName;
+    return $self->{OGR}->{Driver}->GetName if $self->{OGR} and $self->{OGR}->{Driver};
 }
 
 ## @method dump(%parameters)
@@ -1148,7 +1147,9 @@ sub make_feature {
 	$feature->SetField( $name, $feature{$name} );
     }
     my $geom;
-    if (ref $feature{geometry}) {
+    if (isa($feature{geometry}, 'Geo::OGR::Geometry')) {
+	$geom = Geo::OGR::CreateGeometryFromWkt( $feature{geometry}->ExportToWkt );
+    } elsif (isa($feature{geometry}, 'Geo::OGC::Geometry')) {
 	$geom = Geo::OGR::CreateGeometryFromWkt( $feature{geometry}->AsText );
     } else {
 	$geom = Geo::OGR::CreateGeometryFromWkt( $feature{geometry} );
@@ -1684,10 +1685,8 @@ sub rasterize {
     return $gd;
 }
 
-## @method void graph()
-#
-# @brief Creates an undirected weighted graph from the OGR-layer.
-#
+## @ignore
+# Creates an undirected weighted graph from the OGR-layer.
 # The edge weights are calculated according to the distances between the 
 # points inside each layer's feature. Requires Geo::Distance.
 sub graph {
