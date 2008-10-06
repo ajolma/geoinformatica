@@ -9,11 +9,9 @@ $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
 $missing_modules{chk_module('File::Basename')} = 1;
 $missing_modules{chk_module('Geo::GDAL')} = 1;
 $missing_modules{chk_module('Geo::Raster')} = 1;
-$missing_modules{chk_module('Geo::Distance')} = 1;
 $missing_modules{chk_module('Geo::OGC::Geometry')} = 1;
 $missing_modules{chk_module('Gtk2::GladeXML')} = 1;
 $missing_modules{chk_module('Gtk2::Ex::Geo')} = 1;
-$missing_modules{chk_module('Graph')} = 1;
 
 $missing_modules{chk_module('Win32::OLE')} = 1 if $^O eq 'MSWin32';
 
