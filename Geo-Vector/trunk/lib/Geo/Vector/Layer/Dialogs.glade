@@ -856,7 +856,7 @@
 		  <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 		  <property name="snap_to_ticks">False</property>
 		  <property name="wrap">False</property>
-		  <property name="adjustment">1 1 1000000 1 10 10</property>
+		  <property name="adjustment">1 1 1000000 1 10 0</property>
 		</widget>
 		<packing>
 		  <property name="padding">0</property>
@@ -898,7 +898,7 @@
 		  <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 		  <property name="snap_to_ticks">False</property>
 		  <property name="wrap">False</property>
-		  <property name="adjustment">15 1 100000 1 10 10</property>
+		  <property name="adjustment">15 1 100000 1 10 0</property>
 		</widget>
 		<packing>
 		  <property name="padding">0</property>
@@ -1377,7 +1377,7 @@
 	      <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 	      <property name="snap_to_ticks">False</property>
 	      <property name="wrap">False</property>
-	      <property name="adjustment">1 1 255 1 10 10</property>
+	      <property name="adjustment">1 1 255 1 10 0</property>
 	    </widget>
 	    <packing>
 	      <property name="padding">0</property>
@@ -1773,7 +1773,7 @@ Polygons</property>
 		  <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 		  <property name="snap_to_ticks">False</property>
 		  <property name="wrap">False</property>
-		  <property name="adjustment">1 1 100000 1 10 10</property>
+		  <property name="adjustment">1 1 100000 1 10 0</property>
 		</widget>
 		<packing>
 		  <property name="padding">0</property>
@@ -1817,7 +1817,7 @@ Polygons</property>
 		  <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 		  <property name="snap_to_ticks">False</property>
 		  <property name="wrap">False</property>
-		  <property name="adjustment">100 1 10000 1 10 10</property>
+		  <property name="adjustment">100 1 10000 1 10 0</property>
 		</widget>
 		<packing>
 		  <property name="padding">0</property>
@@ -2486,7 +2486,7 @@ Polygons</property>
 		<widget class="GtkButton" id="clip_datasource_button">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
-		  <property name="label">gtk-index</property>
+		  <property name="label">gtk-open</property>
 		  <property name="use_stock">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
@@ -2771,7 +2771,7 @@ Polygons</property>
 		  <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 		  <property name="snap_to_ticks">False</property>
 		  <property name="wrap">False</property>
-		  <property name="adjustment">1 1 1000 1 10 10</property>
+		  <property name="adjustment">1 1 1000 1 10 0</property>
 		</widget>
 		<packing>
 		  <property name="padding">0</property>
@@ -2815,7 +2815,7 @@ Polygons</property>
 		  <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 		  <property name="snap_to_ticks">False</property>
 		  <property name="wrap">False</property>
-		  <property name="adjustment">15 1 1000 1 10 10</property>
+		  <property name="adjustment">15 1 1000 1 10 0</property>
 		</widget>
 		<packing>
 		  <property name="padding">0</property>
