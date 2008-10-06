@@ -8,19 +8,22 @@ use Geo::Raster;
 use Geo::Vector;
 use Gtk2::Ex::Geo;
 use Gtk2 '-init';
-use IPC::Gnuplot;
+eval {
+    require IPC::Gnuplot;
+};
+my $have_gnuplot = not $@;
 use File::Spec;
 
 my $OS = $Config::Config{'osname'};
 
 require Win32::TieRegistry if $OS eq 'MSWin32';
 
-# todo, check gnuplot by splitting path and -f
-$ENV{PATH} = "$ENV{PATH};c:/bin/gnuplot/bin";
-
 my $icon;
 
 if ($OS eq 'MSWin32') {
+
+    # todo, check gnuplot by splitting path and -f
+    $ENV{PATH} = "$ENV{PATH};c:/bin/gnuplot/bin" if $have_gnuplot;
 
     my $dir = getcwd;
     my($volume,$directories,$file) = File::Spec->splitpath( $dir );
@@ -58,9 +61,11 @@ my($window, $gis) = setup(
     title => 'Geoinformatica',
     );
 
-my $gnuplot = IPC::Gnuplot->new();
-$gis->register_function( name => 'plot', object => $gnuplot );
-$gis->register_function( name => 'p', object => $gnuplot );
+if ($have_gnuplot) {
+    my $gnuplot = IPC::Gnuplot->new();
+    $gis->register_function( name => 'plot', object => $gnuplot );
+    $gis->register_function( name => 'p', object => $gnuplot );
+}
 
 Glib->install_exception_handler(\&exception_handler);
 
