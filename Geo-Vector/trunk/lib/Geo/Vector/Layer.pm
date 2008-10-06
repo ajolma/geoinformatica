@@ -1992,7 +1992,7 @@ sub fill_layer_treeview {
 	my $iter = $model->insert (undef, 0);
 	$model->set ($iter, 0, $name, 1, $layers->{$name});
     }
-    $treeview->set_cursor(Gtk2::TreePath->new(0));
+    $treeview->set_cursor(Gtk2::TreePath->new(0)) if @layers;
 
     on_layer_treeview_cursor_changed($treeview, $self);
     return @layers > 0;
