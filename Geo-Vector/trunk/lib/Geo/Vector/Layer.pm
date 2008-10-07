@@ -555,7 +555,7 @@ sub open_properties_dialog {
     my $driver = $self->driver;
     $dialog->get_widget('properties_driver_label')->set_text($driver ? $driver : 'unknown');
     $dialog->get_widget('datasource_lbl')->set_text($ds->GetName) if $ds;
-    $dialog->get_widget('sql_lbl')->set_text($self->{sql});
+    $dialog->get_widget('sql_lbl')->set_text($self->{SQL});
     
     $dialog->get_widget('name_entry')->set_text($self->name);
     $dialog->get_widget('alpha_spinbutton')->set_value($self->alpha);
