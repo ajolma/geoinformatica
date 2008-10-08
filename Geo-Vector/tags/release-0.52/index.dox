@@ -1,0 +1,11 @@
+/*! \page geo_vector Geo::Vector
+
+\section index_geo_vector Geo::Vector
+
+Geo::Vector is an extra layer on top of Perl module ogr. ogr module
+allows using OGR (from GDAL) from Perl. Geo::Vector adds the required
+functionality to use ogr layers in Gtk2::Ex::Geo. Geo::Vector may also
+add extra functionality like rasterization, vectorization, rendering
+etc. which may be useful in stand-alone scripts.
+
+*/
