@@ -42,7 +42,7 @@ use Geo::Vector::Layer;
 
 use vars qw( @ISA %GEOMETRY_TYPE %GEOMETRY_TYPE_INV %RENDER_AS );
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 require Exporter;
 

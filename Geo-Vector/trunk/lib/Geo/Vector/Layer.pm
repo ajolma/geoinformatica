@@ -38,7 +38,7 @@ our @ISA = qw(Exporter Geo::Vector Gtk2::Ex::Geo::Layer);
 our @EXPORT = qw();
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 %RENDER_AS2INDEX = (Native => 0, Points => 1, Lines => 2, Polygons => 3);
 for (keys %RENDER_AS2INDEX) {
