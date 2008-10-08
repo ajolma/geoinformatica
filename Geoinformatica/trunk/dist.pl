@@ -204,8 +204,8 @@ sub simple_copy {
     my $x = "copy \"$from\" \"$to\"";
     print "$x\n";
     system $x;
-    if ($to=~/\.dll$/ or $to=~/\.a$/) {
-	#system "strip --strip-debug $to";
+    if ($to=~/\.dll$/ and ($to=~/libgdal/ or $to=~/libgeos/)) {
+	system "strip --strip-debug $to";
     }
 }
 
