@@ -24,13 +24,13 @@ use FileHandle;
 use Glib qw /TRUE FALSE/;
 use Graphics::ColorUtils qw /:all/;
 use Gtk2::Ex::Geo::Dialogs;
+use Geo::OGC::SymbologyEncoding;
 
-use vars qw/$MAX_INT $MAX_REAL $COLOR_CELL_SIZE %PALETTE_TYPE %SYMBOL_TYPE %LABEL_PLACEMENT
-            $SINGLE_COLOR/;
+use vars qw/$MAX_INT $MAX_REAL $COLOR_CELL_SIZE %PALETTE_TYPE %SYMBOL_TYPE %LABEL_PLACEMENT %POINT_PLACEMENT/;
 
 BEGIN {
     use Exporter 'import';
-    our %EXPORT_TAGS = ( 'all' => [ qw(%PALETTE_TYPE %SYMBOL_TYPE %LABEL_PLACEMENT) ] );
+    our %EXPORT_TAGS = ( 'all' => [ qw(%PALETTE_TYPE %SYMBOL_TYPE %LABEL_PLACEMENT %POINT_PLACEMENT) ] );
     our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 }
 
@@ -38,10 +38,6 @@ $MAX_INT = 999999;
 $MAX_REAL = 999999999.99;
 
 $COLOR_CELL_SIZE = 20;
-
-# default values for new objects
-
-$SINGLE_COLOR = [0, 0, 0, 255];
 
 # the integer values are the same as in libral visualization code:
 
@@ -55,12 +51,11 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 		  'Blue channel' => 7,
 		  );
 
-%SYMBOL_TYPE = ( 'No symbol' => 0, 
-		 'Flow_direction' => 1, 
-		 Square => 2, 
-		 Dot => 3, 
-		 Cross => 4, 
-		 'Wind rose' => 6,
+%SYMBOL_TYPE = ( Cross => 0,
+		 Square => 1, 
+		 Dot => 2, 
+		 'Flow direction' => 3, 
+		 'Wind rose' => 4,
 		 );
 
 %LABEL_PLACEMENT = ( 'Center' => 0, 
@@ -72,6 +67,15 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 		     'Bottom left' => 6, 
 		     'Bottom center' => 7, 
 		     'Bottom right' => 8,
+		     );
+
+# if a point symbolizer is used with line or polygon, should it be
+# treated as a symbolizer for the vertices that make up the line or
+# polygon, or should it be used as a surrogate for the whole line or
+# polygon
+
+%POINT_PLACEMENT = ( 'At vertex' => 0,
+		     'At centroid' => 1,
 		     );
 
 ## @cmethod registration()
@@ -117,6 +121,10 @@ sub label_placements {
     return sort {$LABEL_PLACEMENT{$a} <=> $LABEL_PLACEMENT{$b}} keys %LABEL_PLACEMENT;
 }
 
+sub point_placements {
+    return sort {$POINT_PLACEMENT{$a} <=> $POINT_PLACEMENT{$b}} keys %POINT_PLACEMENT;
+}
+
 ## @cmethod $upgrade($object) 
 #
 # @brief Upgrade object from substance class to the respective layer
@@ -152,6 +160,8 @@ sub defaults {
     $self->{VISIBLE} = 1 unless exists $self->{VISIBLE};
     $self->{PALETTE_TYPE} = 'Single color' unless exists $self->{PALETTE_TYPE};
 
+    $self->{POINT_PLACEMENT} = 'At vertex' unless exists $self->{POINT_PLACEMENT};
+
     $self->{SYMBOL_TYPE} = 'No symbol' unless exists $self->{SYMBOL_TYPE};
     $self->{SYMBOL_SIZE} = 5 unless exists $self->{SYMBOL_SIZE}; # also the max size of the symbol, if symbol_scale is used
     $self->{SYMBOL_SCALE_MIN} = 0 unless exists $self->{SYMBOL_SCALE_MIN}; # similar to grayscale scale
@@ -162,7 +172,7 @@ sub defaults {
     $self->{HUE_DIR} = 1 unless exists $self->{HUE_DIR}; # from min up to max
     $self->{HUE} = -1 unless exists $self->{HUE}; # grayscale is gray scale
 
-    @{$self->{SINGLE_COLOR}} = @$SINGLE_COLOR unless exists $self->{SINGLE_COLOR};
+    $self->{SINGLE_COLOR} = [255, 255, 255, 255] unless exists $self->{SINGLE_COLOR};
 
     $self->{COLOR_TABLE} = [] unless exists $self->{COLOR_TABLE};
     $self->{COLOR_BINS} = [] unless exists $self->{COLOR_BINS};
@@ -185,6 +195,11 @@ sub defaults {
     $self->{BORDER_COLOR} = [] unless exists $self->{BORDER_COLOR};
 
     $self->{SELECTED_FEATURES} = [];
+
+    unless (exists $self->{STYLE}) {
+	$self->{STYLE} = Geo::OGC::SymbologyEncoding->new();
+	$self->{STYLE}->add_object('Rule');
+    }
   
     # set from input
     
@@ -214,6 +229,8 @@ sub defaults {
     $self->{LABEL_MIN_SIZE} = $params{label_min_size} if exists $params{label_min_size};
     @{$self->{BORDER_COLOR}} = @{$params{border_color}} if exists $params{border_color};
 
+    $self->{STYLE} = Geo::OGC::SymbologyEncoding->new($params{style}) if exists $params{style};
+
 }
 
 ##@ignore
@@ -236,6 +253,11 @@ sub destroy_dialogs {
 	$dialog->destroy();
 	delete $self->{$_};
     }
+}
+
+sub style {
+    my($self, $style) = @_;
+    defined $style ? $self->{STYLE} = $style : $self->{STYLE};
 }
 
 ## @method $type()
@@ -336,9 +358,17 @@ sub menu_items {
 	    $self->open_features_dialog($gui) if $self->dialog_visible('features_dialog');
 	}
     };
-    $items->{'_Symbol...'} =
+    $items->{'Style...'} =
     {
 	nr => 92,
+	sub => sub {
+	    my($self, $gui) = @{$_[1]};
+	    $self->open_style_dialog($gui);
+	}
+    };
+    $items->{'_Symbol...'} =
+    {
+	nr => 93,
 	sub => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_symbols_dialog($gui);
@@ -346,7 +376,7 @@ sub menu_items {
     };
     $items->{'_Colors...'} =
     {
-	nr => 93,
+	nr => 94,
 	sub => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_colors_dialog($gui);
@@ -354,7 +384,7 @@ sub menu_items {
     };
     $items->{'_Labeling...'} =
     {
-	nr => 94,
+	nr => 95,
 	sub => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_labels_dialog($gui);
@@ -362,7 +392,7 @@ sub menu_items {
     };
     $items->{'_Inspect...'} =
     {
-	nr => 95,
+	nr => 96,
 	sub => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $gui->inspect($self->inspect_data, $self->name);
@@ -406,6 +436,16 @@ sub supported_palette_types {
 		push @ret, $t;
     }
     return @ret;
+}
+
+sub point_placement {
+    my($self, $point_placement) = @_;
+    if (defined $point_placement) {
+		croak "Unknown point placement: $point_placement" unless defined $POINT_PLACEMENT{$point_placement};
+		$self->{POINT_PLACEMENT} = $point_placement;
+    } else {
+		return $self->{POINT_PLACEMENT};
+    }
 }
 
 ## @method $symbol_type($type)
@@ -841,17 +881,16 @@ sub dialog_visible {
 sub open_symbols_dialog {
     my($self, $gui) = @_;
 
-    my $dialog = $self->bootstrap_dialog
-	($gui, 'symbols_dialog', "Symbols for ".$self->name,
-	 {
-	     symbols_dialog => [delete_event => \&cancel_symbols, [$self, $gui]],
-	     symbols_scale_button => [clicked => \&fill_symbol_scale_fields, [$self, $gui]],
-	     symbols_field_combobox => [changed=>\&symbol_field_changed, [$self, $gui]],
-	     symbols_type_combobox => [changed=>\&symbol_field_changed, [$self, $gui]],
-	     symbols_apply_button => [clicked => \&apply_symbols, [$self, $gui, 0]],
-	     symbols_cancel_button => [clicked => \&cancel_symbols, [$self, $gui]],
-	     symbols_ok_button => [clicked => \&apply_symbols, [$self, $gui, 1]],
-	 });
+    my $dialog = $self->bootstrap_dialog($gui, 'symbols_dialog', "Symbols for ".$self->name,
+					 {
+					     symbols_dialog => [delete_event => \&cancel_symbols, [$self, $gui]],
+					     symbols_scale_button => [clicked => \&fill_symbol_scale_fields, [$self, $gui]],
+					     symbols_field_combobox => [changed=>\&symbol_field_changed, [$self, $gui]],
+					     symbols_type_combobox => [changed=>\&symbol_field_changed, [$self, $gui]],
+					     symbols_apply_button => [clicked => \&apply_symbols, [$self, $gui, 0]],
+					     symbols_cancel_button => [clicked => \&cancel_symbols, [$self, $gui]],
+					     symbols_ok_button => [clicked => \&apply_symbols, [$self, $gui, 1]],
+					 });
     
     my $symbol_type_combo = $dialog->get_widget('symbols_type_combobox');
     my $field_combo = $dialog->get_widget('symbols_field_combobox');
@@ -948,7 +987,7 @@ sub fill_symbol_type_combo {
 sub get_selected_symbol_type {
     my $self = shift;
     my $combo = $self->{symbols_dialog}->get_widget('symbols_type_combobox');
-    ($self->{index2symbol_type}{$combo->get_active()} or '');
+    $self->{index2symbol_type}{$combo->get_active()};
 }
 
 ##@ignore
@@ -984,7 +1023,7 @@ sub fill_symbol_field_combo {
 sub get_selected_symbol_field {
     my $self = shift;
     my $combo = $self->{symbols_dialog}->get_widget('symbols_field_combobox');
-    ($self->{index2symbol_field}{$combo->get_active()} or '');
+    $self->{index2symbol_field}{$combo->get_active()};
 }
 
 ##@ignore
@@ -1035,27 +1074,26 @@ sub symbol_field_changed {
 sub open_colors_dialog {
     my($self, $gui) = @_;
 
-    my $dialog = $self->bootstrap_dialog
-	($gui, 'colors_dialog', "Colors for ".$self->name,
-	 {
-	     colors_dialog => [delete_event => \&cancel_colors, [$self, $gui]],
-	     color_scale_button => [clicked => \&fill_color_scale_fields, [$self, $gui]],
-	     color_legend_button => [clicked => \&make_color_legend, [$self, $gui]],
-	     get_colors_button => [clicked => \&get_colors, [$self, $gui]],
-	     open_colors_button => [clicked => \&open_colors_file, [$self, $gui]],
-	     save_colors_button => [clicked => \&save_colors_file, [$self, $gui]],
-	     edit_color_button => [clicked => \&edit_color, [$self, $gui]],
-	     delete_color_button => [clicked => \&delete_color, [$self, $gui]],
-	     add_color_button => [clicked => \&add_color, [$self, $gui]],
-	     palette_type_combobox => [changed => \&palette_type_changed, [$self, $gui]],
-	     color_field_combobox => [changed => \&color_field_changed, [$self, $gui]],
-	     min_hue_button => [clicked => \&set_hue_range, [$self, $gui, 'min']],
-	     max_hue_button => [clicked => \&set_hue_range, [$self, $gui, 'max']],
-	     hue_button => [clicked => \&set_hue, [$self, $gui]],
-	     colors_apply_button => [clicked => \&apply_colors, [$self, $gui, 0]],
-	     colors_cancel_button => [clicked => \&cancel_colors, [$self, $gui]],
-	     colors_ok_button => [clicked => \&apply_colors, [$self, $gui, 1]],
-	 });
+    my $dialog = $self->bootstrap_dialog($gui, 'colors_dialog', "Colors for ".$self->name,
+					 {
+					     colors_dialog => [delete_event => \&cancel_colors, [$self, $gui]],
+					     color_scale_button => [clicked => \&fill_color_scale_fields, [$self, $gui]],
+					     color_legend_button => [clicked => \&make_color_legend, [$self, $gui]],
+					     get_colors_button => [clicked => \&get_colors, [$self, $gui]],
+					     open_colors_button => [clicked => \&open_colors_file, [$self, $gui]],
+					     save_colors_button => [clicked => \&save_colors_file, [$self, $gui]],
+					     edit_color_button => [clicked => \&edit_color, [$self, $gui]],
+					     delete_color_button => [clicked => \&delete_color, [$self, $gui]],
+					     add_color_button => [clicked => \&add_color, [$self, $gui]],
+					     palette_type_combobox => [changed => \&palette_type_changed, [$self, $gui]],
+					     color_field_combobox => [changed => \&color_field_changed, [$self, $gui]],
+					     min_hue_button => [clicked => \&set_hue_range, [$self, $gui, 'min']],
+					     max_hue_button => [clicked => \&set_hue_range, [$self, $gui, 'max']],
+					     hue_button => [clicked => \&set_hue, [$self, $gui]],
+					     colors_apply_button => [clicked => \&apply_colors, [$self, $gui, 0]],
+					     colors_cancel_button => [clicked => \&cancel_colors, [$self, $gui]],
+					     colors_ok_button => [clicked => \&apply_colors, [$self, $gui, 1]],
+					 });
     
     my $palette_type_combo = $dialog->get_widget('palette_type_combobox');
     my $field_combo = $dialog->get_widget('color_field_combobox');
@@ -1182,14 +1220,14 @@ sub cancel_colors {
 sub get_selected_palette_type {
     my $self = shift;
     my $combo = $self->{colors_dialog}->get_widget('palette_type_combobox');
-    ($self->{index2palette_type}{$combo->get_active()} or '');
+    $self->{index2palette_type}{$combo->get_active()};
 }
 
 ##@ignore
 sub get_selected_color_field {
     my $self = shift;
     my $combo = $self->{colors_dialog}->get_widget('color_field_combobox');
-    ($self->{index2field}{$combo->get_active()} or '');
+    $self->{index2field}{$combo->get_active()};
 }
 
 ##@ignore
@@ -1624,7 +1662,7 @@ sub current_coloring_type {
     my $field = $self->get_selected_color_field();
     return unless defined $field;
     my $schema = $self->schema();
-    if (!$schema->{$field}{TypeName} or $schema->{$field}{TypeName} eq 'Integer') {
+    if ($schema->{$field}{TypeName} eq 'Integer') {
 	$type = 'Int';
     } elsif ($schema->{$field}{TypeName} eq 'Real') {
 	$type = 'Double';
@@ -2031,5 +2069,279 @@ sub labels_color {
     }
     $color_chooser->destroy;
 }
+
+#
+#
+#
+
+
+## @method open_style_dialog($gui)
+# @brief Open the style dialog for this layer.
+sub open_style_dialog {
+    my($self, $gui) = @_;
+
+    my $dialog = $self->bootstrap_dialog
+	($gui, 'style_dialog', "Style for ".$self->name,
+	 {
+	     style_dialog => [delete_event => \&cancel_style, [$self, $gui]],
+	     style_apply_button => [clicked => \&apply_style, [$self, $gui, 0]],
+	     style_cancel_button => [clicked => \&cancel_style, [$self, $gui]],
+	     style_ok_button => [clicked => \&apply_style, [$self, $gui, 1]],
+	     
+	     style_main_open_button => [clicked => \&style_main_open, [$self, $gui]],
+	     style_main_save_as_button => [clicked => \&style_main_save_as, [$self, $gui]],
+	     style_points_refresh_button => [clicked => \&style_points_refresh, [$self, $gui]],
+	     style_points_open_button => [clicked => \&style_points_open, [$self, $gui]],
+	     style_labels_font_button => [clicked => \&style_labels_font, [$self, $gui]],
+	     style_colors_refresh_values_button => [clicked => \&style_colors_refresh_values, [$self, $gui]],
+	     style_colors_min_hue_button => [clicked => \&style_colors_hue, [$self, $gui, 'min']],
+	     style_colors_max_hue_button => [clicked => \&style_colors_hue, [$self, $gui, 'max']],
+	     style_colors_hue_button => [clicked => \&style_colors_hue, [$self, $gui]],
+	     style_colors_hue_refresh_button => [clicked => \&style_colors_hue_refresh, [$self, $gui]],
+	     style_colors_color_button => [clicked => \&style_colors_color, [$self, $gui]],
+	     style_colors_remove_button => [clicked => \&style_colors_remove, [$self, $gui]],
+	     style_colors_add_button => [clicked => \&style_colors_add, [$self, $gui]],
+	     style_colors_get_button => [clicked => \&style_colors_get, [$self, $gui]],
+	     style_colors_open_button => [clicked => \&style_colors_open, [$self, $gui]],
+	     style_colors_save_as_button => [clicked => \&style_colors_save_as, [$self, $gui]],
+
+	     style_points_used_checkbutton => [toggled => \&style_points_used, [$self, $gui]],
+	     style_lines_used_checkbutton => [toggled => \&style_lines_used, [$self, $gui]],
+	     style_polygons_used_checkbutton => [toggled => \&style_polygons_used, [$self, $gui]],
+	     style_labels_used_checkbutton => [toggled => \&style_labels_used, [$self, $gui]],
+	     
+	 });    
+
+    # back up data
+
+    $self->{style} = $self->style;
+    $self->{style_backup} = $self->style;
+    
+    # set up the controllers
+
+    # currently using the first rule only
+
+    my $rule = $self->{style}->get_objects('Rule')->[0];
+
+    # Symbolizers
+
+    my $w = $dialog->get_widget('style_points_placement_combobox');
+    my @m = $self->point_placements;
+    my $model = $w->get_model;
+    $model->clear;
+    my $i = 0;
+    my $active = 0;
+    for my $n (@m) {
+	$model->set($model->append, 0, $n);
+	$active = $i if $n eq $self->point_placement;
+	$i++;
+    }
+    $w->set_active($active);
+
+    $w = $dialog->get_widget('style_points_symbol_comboboxentry');
+    @m = $self->symbol_types;
+    $model = $w->get_model;
+    $model->clear;
+    $i =0;
+    $active = 0;
+    for my $n (@m) {
+	$model->set($model->append, 0, $n);
+	$active = $i if $n eq $self->symbol_type;
+	$i++;
+    }
+    $w->set_active($active);
+
+    $w = $dialog->get_widget('style_points_field_comboboxentry');
+    $model = $w->get_model;
+    $model->clear;
+    $i =0;
+    $active = 0;
+    my $schema = $self->schema();
+    for my $name (sort keys %$schema) {
+	my $type = $schema->{$name}{TypeName};
+	next unless $type;
+	next unless $type eq 'Integer' or $type eq 'Real';
+	$model->set($model->append, 0, $name);
+	$active = $i if $name eq $self->symbol_field;
+	$i++;
+    }
+    $w->set_active($active);
+
+    my $s = $rule->get_object('PointSymbolizer');
+    if ($s) {
+	$dialog->get_widget('style_points_used_checkbutton')->set_active();
+    }
+
+    $s = $rule->get_object('LineSymbolizer');
+    if ($s) {
+	$dialog->get_widget('style_lines_used_checkbutton')->set_active();
+    }
+
+    $s = $rule->get_object('PolygonSymbolizer');
+    if ($s) {
+	$dialog->get_widget('style_polygons_used_checkbutton')->set_active();
+    }
+
+    $s = $rule->get_object('TextSymbolizer');
+    if ($s) {
+	$dialog->get_widget('style_labels_used_checkbutton')->set_active();
+    }
+
+    $s = $rule->get_object('RasterSymbolizer');
+    if ($s) {
+    }
+}
+
+##@ignore
+sub apply_style {
+    my($self, $gui, $close) = @{$_[1]};
+    my $dialog = $self->{style_dialog};
+    
+
+    $self->{style_dialog_position} = [$dialog->get_widget('style_dialog')->get_position];
+    $dialog->get_widget('style_dialog')->hide() if $close;
+    $gui->set_layer($self);
+    $gui->{overlay}->render;
+}
+
+##@ignore
+sub cancel_style {
+    my($self, $gui);
+    for (@_) {
+	next unless ref CORE::eq 'ARRAY';
+	($self, $gui) = @{$_};
+    }
+
+    
+    my $dialog = $self->{style_dialog}->get_widget('style_dialog');
+    $self->{style_dialog_position} = [$dialog->get_position];
+    $dialog->hide();
+    $gui->set_layer($self);
+    $gui->{overlay}->render;
+    1;
+}
+
+sub style_main_open {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_main_save_as {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_points_refresh {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_points_open {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_labels_font {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_refresh_values {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_hue {
+    my($self, $gui, $button) = @{$_[1]};
+}
+
+sub style_colors_hue_refresh {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_color {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_remove {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_add {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_get {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_open {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_colors_save_as {
+    my($self, $gui) = @{$_[1]};
+}
+
+sub style_points_used {
+    my $button = shift;
+    my($self, $gui) = @{$_[0]};
+    my $dialog = $self->{style_dialog};
+    my $a = $button->get_active;
+
+    for (qw/style_points_max_size_label style_points_min_size_label
+	 style_points_max_value_label style_points_min_value_label
+	 style_points_symbol_label style_points_field_label
+	 style_points_max_size_spinbutton
+	 style_points_min_size_spinbutton style_points_max_value_entry
+	 style_points_min_value_entry
+	 style_points_symbol_comboboxentry
+	 style_points_field_comboboxentry style_points_placement_label
+	 style_points_refresh_button style_points_open_button
+	 style_points_placement_combobox/) 
+    {
+	$dialog->get_widget($_)->set_sensitive($a);
+    }
+}
+
+sub style_lines_used {
+    my $button = shift;
+    my($self, $gui) = @{$_[0]};
+    my $dialog = $self->{style_dialog};
+    my $a = $button->get_active;
+
+    for (qw/style_lines_width_label style_lines_linejoin_label
+	 style_lines_linecap_label style_lines_dasharray_label
+	 style_lines_dashoffset_label style_lines_width_comboboxentry
+	 style_lines_linejoin_comboboxentry
+	 style_lines_linecap_comboboxentry
+	 style_lines_dasharray_comboboxentry
+	 style_lines_dashoffset_comboboxentry/) 
+    {
+	$dialog->get_widget($_)->set_sensitive($a);
+    }
+}
+
+sub style_polygons_used {
+    my $button = shift;
+    my($self, $gui) = @{$_[0]};
+    my $dialog = $self->{style_dialog};
+    my $a = $button->get_active;
+
+    for (qw//) 
+    {
+	$dialog->get_widget($_)->set_sensitive($a);
+    }
+}
+
+sub style_labels_used {
+    my $button = shift;
+    my($self, $gui) = @{$_[0]};
+    my $dialog = $self->{style_dialog};
+    my $a = $button->get_active;
+
+    for (qw/style_labels_min_size_label style_labels_font_label
+	 style_labels_placement_label style_labels_field_label
+	 style_labels_min_size_entry style_labels_font_label
+	 style_labels_font_button style_labels_placement_comboboxentry
+	 style_labels_field_comboboxentry/) 
+    {
+	$dialog->get_widget($_)->set_sensitive($a);
+    }
+}	     
 
 1;
