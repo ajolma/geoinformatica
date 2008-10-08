@@ -29,7 +29,7 @@ BEGIN {
     our @EXPORT = qw();
     our @EXPORT_OK = qw();
     our %EXPORT_TAGS = ( FIELDS => [ @EXPORT_OK, @EXPORT ] );
-    our $VERSION = 0.01;
+    our $VERSION = 0.02;
 }
 
 ## @cmethod object new(%params)
