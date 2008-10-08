@@ -1,0 +1,308 @@
+/*! \page terrain_analysis Terrain Analysis with Geo::Raster
+
+Note: most of the methods on this page can be executed in-place or in
+a scalar context, where they return a new raster.
+
+Note: when doing calculations like these, make sure you do them with
+libral rasters. GDAL rasters are technically also libral rasters but 
+only temporarily as the libral raster is regenerated every time and
+exist only for visualization purposes. To make a libral raster from a
+GDAL raster use the Geo::Raster::cache method or the clip dialog that
+is available through the menu.
+
+\section index_primary Primary indices from a DEM
+
+These are all methods for DEMs.
+
+\code
+    ($A,$B,$C,$D,$D,$E,$F,$G,$H) = $dem->fit_surface($z_factor);
+    $aspect = $dem->aspect();
+    $slope = $dem->slope($z_factor);
+\endcode
+
+The fit_surface method returns all 9 spatially distributed
+coefficients of the fitted surface: z = A * x^2y^2 + B * x^2y + C *
+xy^2 + D * x^2 + E * y^2 + F * xy + G * x + H *y + I
+
+z_factor is the unit of z divided by the unit of x and y
+
+\section index_fdg Flow direction grid (FDG) from DEM
+
+\code
+    $fdg = $dem->fdg();
+\endcode
+
+This method takes named arguments 'method' and 'drain_all'. Method may
+be 'D8', 'Rho8', or 'many'. If drain all is set, an iteration is
+initiated, which resolves the drainage of all flat areas and pit
+cells.
+
+The default method is D8 (deterministic eight-neighbors steepest
+descent) and the returned FDG is of type D8, i.e., an integer grid
+(-1..8) where -1 denotes flat area, 0 a pit, 1 flow direction north, 2
+north-east, etc.  A pit is the lowest point of a depression. Another
+supported method is Rho8 (stochastic eight-neighbors aspect-based)
+which also produces a D8 FDG but the direction is chosen between the
+two steepest descent directions (assumed to being next to each other)
+so that the expected direction is the true aspect (Fairfield and
+Leymarie, Water Resour. Res. 27(5) 709-717). The third method is
+"many" which produces a FDG, where the bits in each byte (actually a
+short integer) in each cell denotes the neighbors having lower
+elevation, i.e., value 1 (2**0 = 1) means only the cell in direction 1
+is lower, value 3 (2**0+2**1 = 3) means both cells in direction 1 and
+in direction 2 are lower, etc.
+
+The method for FDGs include
+
+\code
+    @outlet_cell = $fdg->outlet(@cell);
+    @upstream_cells = $fdg->upstream();
+    $catchment = $fdg->catchment(@cell, $m);
+\endcode
+
+The last one computes the catchment (upslope area) of the cell. It is
+usually a good idea to compute it only for a FDG which contains no
+pits nor flat areas.
+
+\section index_flats Handling the flat areas in a FDG
+
+The method
+
+\code
+    $fdg->drain_flat_areas($dem, %named_parameters);
+\endcode
+
+routes water off from a flat area. Currently two methods can be
+specified using a named parameter "method": "one pour point" and
+"multiple pour points".
+
+\section index_depressions Handling the depressions in a FDG and/or DEM
+
+Methods
+
+\code
+    $dem->raise_pits(zlimit=>$z_limit, quiet=>1);
+    $dem->lower_peaks(zlimit=>$z_limit, quiet=>1);
+\endcode
+
+raise or lower cells which are lower (pits) or higher (peaks) than all
+their 8-neigbors.  The z_limit is the minimum elevation difference,
+which is needed to consider a cell lower or higher than all its
+neighbors.  $z_limit is optional, the deafult value is 0.
+
+A depression is a connected (in the FDG sense) area in the DEM, which
+is lower than all its neighbors. The depressions method finds all
+depressions in a DEM:
+
+\code
+    $depressions = $dem->depressions($fdg, $inc_m);
+\endcode
+
+The depressions grid is a binary (0/1) grid unless $inc_m is given and
+it is true.
+
+Depressions may be removed by filling or by breaching. Filling means
+raising the depression cells to the elevation of the lowest lying cell
+just outside the depression. Breaching means lowering the elevation of
+the "dam" cells. The breaching is tried at the lowest cell on the rim
+of the depression which has the steepest descent away from the
+depression (if there are more than one lowest cells) and the steepest
+descent into the depression (if there are more than one lowest cells
+with identical slope out) (see Martz, L.W. and Garbrecht, J. 1998. The
+treatment of flat areas and depressions in automated drainage analysis
+of raster digital elevation models. Hydrol. Process. 12, 843-855; the
+breaching algorithm implemented here is close to but not the same as
+theirs - the biggest difference being that the depression cells are
+not raised here). Breaching is often limited to a certain number of
+cells.  Both of these methods change the DEM. Both methods need to be
+run iteratively to remove all removable depressions. Only the filling
+method is guaranteed to produce a depressionless DEM.
+
+The methods are:
+
+\code
+    $fdg = $dem->fill_depressions(fdg=>$fdg, quiet=>value, no_iteration=>value);
+\endcode
+
+and
+
+\code
+    $fdg = $dem->breach(fdg=>$fdg, limit=>$limit, quiet=>value, no_iteration=>value);
+\endcode
+
+All the named parameters are optional. The limit in breaching is
+optional, the default is to not limit the breaching (limit == 0). The
+$fdg, if given, should not contain flat areas.
+
+If the $fdg is not given it is calculated using the D8 method and its
+flat areas are drained first using the multiple pour point method and
+then the one pour point method. $fdg is required if no_iteration is
+set to true.
+
+If no_iteration is specified the depressions are removed iteratively
+until all depressions are removed or the number of depressions does
+not diminish in one iteration loop.
+
+Another method, which produces a depressionless FDG is 
+
+\code
+    $fdg = $fdg->drain_depressions($dem);
+\endcode
+
+This method is similar to the above methods but it does not change the
+DEM. It changes the path in the FDG from the bottom of the pit to the
+lowest pour point of the depression.
+
+\section index_routing Routing of water
+
+Method 
+
+\code
+    $water->route($dem, $fdg, $flow, $k, $d, $f, $r);
+\endcode
+
+routes water out from a catchment. The method is recursive and routes
+water from each cell downslope if water from all its upslope cells
+have been routed downslope. 
+
+The catchment tree is traversed using the flow direction grid, which thus
+must contain only valid directions (no pits nor flat area cells).
+
+The flow from cell a to a downstream cell b is calculated using eq:
+
+    slope = r * (h(a) - h(b)) / (UNIT_DISTANCE * distance_unit(dir(a->b)))
+    flow = k * (slope + d) * water(a)
+
+    r               is the unit of z dived by the unit of x and y, e.g, 
+                    if z is given in cm and UNIT_DISTANCE = 25 m, then 
+                    r = 1 cm / 1 m = 0.01. $r is by default 1
+
+    h(x)            is the elevation of x
+
+    dir(a->b)       is the direction from a to b
+
+    UNIT_DISTANCE   is a property of the DEM 
+
+    distance_unit() is 1 if direction is north, east, ... and sqrt(2) if
+                    direction is north-east, south-east, ...  
+    
+    k               is a parameter
+
+    d               is a parameter
+
+    water(a)        is the amount of water at cell a
+
+Arguments:
+
+    $water Storage at each cell [grid]
+    $dem   DEM (input) [grid]
+    $fdg   FDG (input) [grid]
+    $flow  Amount of water leaving each cell (output) [grid]
+    $k     parameter [grid]
+    $d     parameter [grid]
+    $f     determines if water is routed from each cell to all of its
+           neighbors having the same or lower elevation ($f == 1) or
+           to the cell pointed by FDG ($f == 0) (default 1)
+    $r     is the unit of z dived by the unit of x and y (default 1)
+
+\section index_paths The flow paths
+
+Methods
+
+\code
+    $fdg->path(@cell, $stop);
+    $fdg->path_length($stop, $op);
+    $fdg->path_sum($stop, $op);
+\endcode
+
+compute a value based on flow path defined by the FDG. The $stop, if
+given, specifies the end cell of the path. The path is from a center
+of a cell to another center.
+
+\section index_upslope The upslope area
+
+Methods
+
+\code
+    $fdg->upslope_sum($op, $include_self);
+    $fdg->upslope_count($op, $include_self);
+\endcode
+
+compute a value based on the upslope area of cells. The $include_self
+can be used to specify whether to include the cell in its upslope
+area.  The default is yes.
+
+\section index_lakes Lakes on the terrain
+
+The lakes on the terrain can be obtained for example from a land cover
+raster. Often the FDG is not sane regarding the lake: flow paths may
+enter and exit lakes and then enter again. The method
+
+\code
+    $fdg->kill_extra_outlets($lakes, $upslope_area_grid);
+\endcode
+
+performs a sanity check on the FDG + lakes raster pair.
+
+\section index_streams Streams rasters
+
+A streams grid may be obtained from the upslope area (obtained with
+upslope count) grid by thresholding.  If it is to be used with a lakes
+grid in the subcatchment method, it should be elaborated using
+methods:
+
+\code
+    $streams->prune($fdg, $lakes, $min_length, $i, $j);
+\endcode
+
+or
+
+\code
+    $streams->prune($fdg, $min_length, $i, $j);
+\endcode
+
+which removes streams shorter than $l (in grid scale), note: also
+streams which end in a lake may be removed. If $min_length is not
+given the method removes one pixel streams. The outlet cell is
+optional.
+
+To give an unique id for each stream section use the number_streams
+method:
+
+\code
+    $streams->number_streams($fdg, $lakes, $i, $j);
+\endcode
+
+or
+
+\code
+    $streams->number_streams($fdg, $i, $j);
+\endcode
+
+The outlet cell is optional.
+
+\section index_struct Subcatchment structure
+
+The method
+
+\code
+    ($subcatchments, $topology) = $streams->subcatchments($fdg, $lakes, @cell, $head_catchments);
+    ($subcatchments, $topology) = $streams->subcatchments($fdg, $lakes, $head_catchments);
+    ($subcatchments, $topology) = $streams->subcatchments($fdg, $lakes);
+    $subcatchments = $streams->subcatchments($fdg, @cell, $head_catchments);
+    $subcatchments = $streams->subcatchments($fdg, $head_catchments);
+    $subcatchments = $streams->subcatchments($fdg, @cell);
+    $subcatchments = $streams->subcatchments($fdg);
+\endcode
+
+Divides the catchment into stream elements, lakes, and subcatchments.
+
+The method
+
+\code
+    $subcatchments = save_catchment_structure($topology, $streams, $lakes, $datasource, $layer);
+\endcode
+
+saves the catchment structure as a vector layer into a OGR datasource with name $layer.
+
+*/

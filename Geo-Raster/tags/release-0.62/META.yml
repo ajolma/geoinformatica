@@ -1,0 +1,20 @@
+--- #YAML:1.0
+name:                Geo-Raster
+version:             0.61
+abstract:            Perl extension for geospatial rasters
+license:             Artistic
+author:              
+    - Ari Jolma <ari.jolma @ tkk.fi>
+distribution_type:   module
+requires:     
+  Statistics::Descriptive: 0
+  Geo::GDAL: 0.22
+  Gtk2::Ex::Geo: 0.61
+
+build_requires:
+  ExtUtils::Depends: 0
+  ExtUtils::PkgConfig: 0
+
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3
