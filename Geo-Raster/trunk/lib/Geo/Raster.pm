@@ -53,7 +53,7 @@ use Geo::Raster::Layer;
 
 use vars qw($BYTE_ORDER $INTEGER_GRID $REAL_GRID);
 
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 
 # TODO: make these constants derived from libral:
 $INTEGER_GRID = 1;

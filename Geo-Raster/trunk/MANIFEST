@@ -2,7 +2,6 @@ LICENCE
 Changes
 MANIFEST
 README
-TODO
 lib/Geo/Raster.pm
 lib/Geo/Raster.xs
 lib/Geo/typemap
