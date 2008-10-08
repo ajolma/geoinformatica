@@ -3,7 +3,6 @@ ChangeLog
 Changes
 MANIFEST
 README
-TODO
 Makefile.PL
 index.dox
 t/00.t
