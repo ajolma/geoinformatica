@@ -28,6 +28,8 @@ tree($DIST, \%dist);
 my %copy;
 my %to;
 
+copy('G-shell.bat', "$DIST/G-shell.bat");
+
 copy($PERL_MOD_DOC, "$DIST/doc/Perl modules");
 copy($LIBRAL_DOC, "$DIST/doc/libral");
 copy($PERL_GDAL_DOC, "$DIST/doc/Perl GDAL");
