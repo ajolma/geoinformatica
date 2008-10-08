@@ -1,0 +1,39 @@
+## @class Gtk2::Ex::Geo::Dialogs
+# @brief Generic dialogs for geospatial layers
+# @author Copyright (c) Ari Jolma
+# @author This library is free software; you can redistribute it and/or modify
+# it under the same terms as Perl itself, either Perl version 5.8.5 or,
+# at your option, any later version of Perl 5 you may have available.
+
+package Gtk2::Ex::Geo::Dialogs;
+
+=pod
+
+=head1 NAME
+
+Gtk2::Ex::Geo::Dialogs - Generic dialogs for geospatial layers
+
+The <a href="http://map.hut.fi/doc/Geoinformatica/html/">
+documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
+
+=cut
+
+use strict;
+use warnings;
+
+BEGIN {
+    use Exporter 'import';
+    our @ISA = qw(Gtk2::Ex::Geo::DialogMaster);
+}
+
+sub new {
+    my($class, %params) = @_;
+
+    my @buffer = <DATA>;
+    pop @buffer unless $buffer[$#buffer] =~ /^\</; # remove the extra content
+
+    return Gtk2::Ex::Geo::DialogMaster::new($class, %params, buffer => \@buffer);
+}
+
+1;
+__DATA__
