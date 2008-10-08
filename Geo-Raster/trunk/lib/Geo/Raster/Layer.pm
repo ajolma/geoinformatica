@@ -31,7 +31,7 @@ our @ISA = qw(Exporter Geo::Raster Gtk2::Ex::Geo::Layer);
 our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 sub registration {
     my $dialogs = Geo::Raster::Layer::Dialogs->new();
