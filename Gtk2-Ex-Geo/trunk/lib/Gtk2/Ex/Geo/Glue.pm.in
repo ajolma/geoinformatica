@@ -1059,6 +1059,25 @@ sub eval_entry {
     }
 }
 
+sub render {
+    $_[0]->{overlay}->render;
+}
+
+sub simulate {
+    my($self, $sub, $speed) = @_;
+    $self->stop;
+    $speed = 300 unless defined $speed;
+    $self->{timeout} = Glib::Timeout->add($speed, $sub);
+}
+
+sub stop {
+    my($self) = @_;
+    if ($self->{timeout}) {
+	Glib::Source->remove($self->{timeout});
+	$self->{timeout} = undef;
+    }
+}
+
 sub min {
     $_[0] > $_[1] ? $_[1] : $_[0];
 }
