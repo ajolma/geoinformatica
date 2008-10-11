@@ -56,7 +56,7 @@ GDALColorEntry fetch_color(AV *a, int i)
 hv_store(to, key, strlen(key), with(from), 0);
 
 
-/* convert a focal area expressed as an array of arrays into a simple int array 
+/* convert a focal area expressed as an array of arrays to a simple int array 
    the focal area is a M x M square, where M is an odd number and the center of the
    square is the cell of interest 
    d is defined by 2*d+1 = M
@@ -92,6 +92,60 @@ int *focal2mask(AV *focal, int *d, int defined_is_enough)
 							mask[ix] = 1;
 						else
 							mask[ix] = SvIV(*t) ? 1 : 0;
+					} else
+						mask[ix] = 0;
+				} else
+					mask[ix] = 0;
+				ix++;
+			}
+		} else 
+			for (j = 0; j < M; j++) {
+				mask[ix] = 0;
+				ix++;
+			}
+	}
+	return mask;
+	fail:
+		if(mask) free(mask);
+		return NULL;
+}
+
+/* convert a focal area expressed as an array of arrays to a simple double array 
+   the focal area is a M x M square, where M is an odd number and the center of the
+   square is the cell of interest 
+   d is defined by 2*d+1 = M
+   the length of the returned array is M x M
+   M is >= 1
+*/
+double *focal2maskd(AV *focal, int *d, int defined_is_enough)
+{
+	double *mask = NULL;
+	int i, j, m = av_len(focal)+1, M = -1, ix;
+	/* get the M */
+	for (i = 0; i < m; i++) {
+		SV **s = av_fetch(focal, i, 0);
+		RAL_CHECKM(SvROK(*s) AND SvTYPE(SvRV(*s)) == SVt_PVAV, 
+				"the focal area parameter must be a reference to an array of arrays");
+		M = M < 0 ? av_len((AV*)SvRV(*s))+1 : max(M, av_len((AV*)SvRV(*s))+1);
+	}
+	M = max(max(m, M), 1);
+	*d = (M-1)/2;
+	M = 2*(*d)+1;
+	ix = 0;
+	SV *sv;
+	RAL_CHECKM(mask = (double *)calloc(M*M, sizeof(double)), RAL_ERRSTR_OOM);
+	for (i = 0; i < M; i++) {
+		if (i < m) {
+			SV **s = av_fetch(focal, i, 0);
+			int n = av_len((AV*)SvRV(*s))+1;
+			for (j = 0; j < M; j++) {
+				if (j < n) {
+					SV **t = av_fetch((AV*)SvRV(*s), j, 0);
+					if (t AND *t AND SvOK(*t)) {
+						if (defined_is_enough)
+							mask[ix] = 1;
+						else
+							mask[ix] = SvNV(*t) ? 1 : 0;
 					} else
 						mask[ix] = 0;
 				} else

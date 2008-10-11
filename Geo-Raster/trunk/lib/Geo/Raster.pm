@@ -3545,6 +3545,32 @@ sub focal_range {
     return @$x;
 }
 
+sub spread {
+    my($self, $mask) = @_;
+    my $grid = ral_grid_spread($self->{GRID}, $mask);
+    if (defined wantarray) {
+	$grid = new Geo::Raster($grid);
+	return $grid;
+    } else {
+	ral_grid_destroy($self->{GRID});
+	$self->{GRID} = $grid;
+	attributes($self);
+    }
+}
+
+sub spread_random {
+    my($self, $mask) = @_;
+    my $grid = ral_grid_spread_random($self->{GRID}, $mask);
+    if (defined wantarray) {
+	$grid = new Geo::Raster($grid);
+	return $grid;
+    } else {
+	ral_grid_destroy($self->{GRID});
+	$self->{GRID} = $grid;
+	attributes($self);
+    }
+}
+
 ## @method hashref contents()
 #
 # @brief Returns a hash having all the amounts of each grid value.

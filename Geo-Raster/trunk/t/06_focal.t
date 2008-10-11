@@ -44,3 +44,20 @@ $g = $grid->convolve(\@mask);
 $grid->focal_sum(\@mask);
 
 is($grid->get(4,4), 5, "focal sum for a grid self");
+
+$grid = new Geo::Raster 10,10;
+$grid->set(0);
+$grid->set(5,5,9);
+$grid->spread([[1,1,1],[1,1,1],[1,1,1]]);
+for $i (4..6) {
+    for $j (4..6) {
+        is($grid->get($i,$j), 1, "spread $i $j");
+    }
+}
+$grid = new Geo::Raster 10,10;
+$grid->set(0);
+$grid->set(5,5,1);
+$mask = [[1,1,1],[1,1,1],[1,1,1]];
+$grid->spread_random($mask);
+is($grid->focal_sum($mask,5,5), 1, "spread_random");
+

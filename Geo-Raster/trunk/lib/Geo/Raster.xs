@@ -801,42 +801,9 @@ ral_grid_convolve(gd, ci, cj, kernel)
 	{
 		ral_cell c = {ci, cj};
 		double *_kernel = NULL;
-		int i, j, m = av_len(kernel)+1, M = -1, ix, d;
-		/* get the M */
-		for (i = 0; i < m; i++) {
-			SV **s = av_fetch(kernel, i, 0);
-			RAL_CHECKM(SvROK(*s) AND SvTYPE(SvRV(*s)) == SVt_PVAV, 
-					"the kernel parameter must be a reference to an array of arrays");
-			M = M < 0 ? av_len((AV*)SvRV(*s))+1 : max(M, av_len((AV*)SvRV(*s))+1);
-		}
-		M = max(max(m, M), 1);
-		d = (M-1)/2;
-		M = 2*d+1;
-		ix = 0;
-		SV *sv;
-		RAL_CHECKM(_kernel = (double *)calloc(M*M, sizeof(double)), RAL_ERRSTR_OOM);
-		for (i = 0; i < M; i++) {
-			if (i < m) {
-				SV **s = av_fetch(kernel, i, 0);
-				int n = av_len((AV*)SvRV(*s))+1;
-				for (j = 0; j < M; j++) {
-					if (j < n) {
-						SV **t = av_fetch((AV*)SvRV(*s), j, 0);
-						if (t AND *t AND SvOK(*t)) {
-							_kernel[ix] = SvNV(*t);
-						} else
-							_kernel[ix] = 0;
-					} else
-						_kernel[ix] = 0;
-					ix++;
-				}
-			} else 
-				for (j = 0; j < M; j++) {
-					_kernel[ix] = 0;
-					ix++;
-				}
-		}
+		int d;
 		double g;
+		RAL_CHECK(_kernel = focal2maskd(kernel, &d, 0));
 		ral_grid_convolve(gd, c, _kernel, d, &g);
 		fail:
 		if (_kernel) free(_kernel);
@@ -952,47 +919,64 @@ ral_grid_focal_count_of_grid(gd, focal, value)
 			croak(ral_get_msg());
 
 ral_grid *
+ral_grid_spread(grid, mask)
+	ral_grid *grid
+	AV *mask
+	CODE:
+	{
+		double *_mask = NULL;
+		int i, d;
+		double s = 0;
+		RAL_CHECK(_mask = focal2maskd(mask, &d, 0));
+		for (i = 0; i < (2*d+1)*(2*d+1); i++)
+		    s += _mask[i];
+		for (i = 0; i < (2*d+1)*(2*d+1); i++)
+		    _mask[i] /= s;
+		ral_grid *ret = ral_grid_spread(grid, _mask, d);
+		fail:
+		if (mask) free(mask);
+		RETVAL = ret;
+	}
+	OUTPUT:
+		RETVAL
+	POSTCALL:
+		if (ral_has_msg())
+			croak(ral_get_msg());
+
+ral_grid *
+ral_grid_spread_random(grid, mask)
+	ral_grid *grid
+	AV *mask
+	CODE:
+	{
+		double *_mask = NULL;
+		int i, d;
+		double s = 0;
+		RAL_CHECK(_mask = focal2maskd(mask, &d, 0));
+		for (i = 0; i < (2*d+1)*(2*d+1); i++)
+		    s += _mask[i];
+		for (i = 0; i < (2*d+1)*(2*d+1); i++)
+		    _mask[i] /= s;
+		ral_grid *ret = ral_grid_spread_random(grid, _mask, d);
+		fail:
+		if (_mask) free(_mask);
+		RETVAL = ret;
+	}
+	OUTPUT:
+		RETVAL
+	POSTCALL:
+		if (ral_has_msg())
+			croak(ral_get_msg());
+
+ral_grid *
 ral_grid_convolve_grid(gd, kernel)
 	ral_grid *gd
 	AV *kernel
 	CODE:
 	{
 		double *_kernel = NULL;
-		int i, j, m = av_len(kernel)+1, M = -1, ix, d;
-		/* get the M */
-		for (i = 0; i < m; i++) {
-			SV **s = av_fetch(kernel, i, 0);
-			RAL_CHECKM(SvROK(*s) AND SvTYPE(SvRV(*s)) == SVt_PVAV, 
-					"the kernel parameter must be a reference to an array of arrays");
-			M = M < 0 ? av_len((AV*)SvRV(*s))+1 : max(M, av_len((AV*)SvRV(*s))+1);
-		}
-		M = max(max(m, M), 1);
-		d = (M-1)/2;
-		M = 2*d+1;
-		ix = 0;
-		SV *sv;
-		RAL_CHECKM(_kernel = (double *)calloc(M*M, sizeof(double)), RAL_ERRSTR_OOM);
-		for (i = 0; i < M; i++) {
-			if (i < m) {
-				SV **s = av_fetch(kernel, i, 0);
-				int n = av_len((AV*)SvRV(*s))+1;
-				for (j = 0; j < M; j++) {
-					if (j < n) {
-						SV **t = av_fetch((AV*)SvRV(*s), j, 0);
-						if (t AND *t AND SvOK(*t)) {
-							_kernel[ix] = SvNV(*t);
-						} else
-							_kernel[ix] = 0;
-					} else
-						_kernel[ix] = 0;
-					ix++;
-				}
-			} else 
-				for (j = 0; j < M; j++) {
-					_kernel[ix] = 0;
-					ix++;
-				}
-		}
+		int d;
+		RAL_CHECK(_kernel = focal2maskd(kernel, &d, 0));
 		ral_grid *g = NULL;
 		g = ral_grid_convolve_grid(gd, _kernel, d);
 		fail:
