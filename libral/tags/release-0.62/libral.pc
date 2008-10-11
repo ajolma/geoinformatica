@@ -5,7 +5,7 @@ includedir=${prefix}/include
 
 Name: libral
 Description: Raster algebra functions for in-memory grids
-Version: 0.61
+Version: 0.6
 Requires: gdal gdk-pixbuf-2.0
 Libs:  -L${exec_prefix}/lib -lral
 Cflags:  -I${prefix}/include
