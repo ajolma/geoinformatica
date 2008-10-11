@@ -1040,11 +1040,90 @@ ral_grid *ral_grid_focal_count_of_grid(ral_grid *grid, int *mask, int delta, RAL
 }
 
 
+ral_grid_handle RAL_CALL ral_grid_spread(ral_grid *grid, double *mask, int delta)
+{
+    ral_grid *ret = NULL;
+    RAL_CHECK(ret = ral_grid_create_like(grid, RAL_REAL_GRID));
+    ral_cell cell;
+    if (grid->datatype == RAL_INTEGER_GRID) {
+	RAL_FOR(cell, grid) {
+	    if (RAL_INTEGER_GRID_DATACELL(grid, cell)) {
+		int i = 0;
+		int x = RAL_INTEGER_GRID_CELL(grid, cell);
+		ral_cell c;
+		for (c.i = cell.i - delta; c.i <= cell.i + delta; c.i++)
+		    for (c.j = cell.j - delta; c.j <= cell.j + delta; c.j++) {
+			if (RAL_GRID_CELL_IN(ret, c))
+			    RAL_REAL_GRID_CELL(ret, c) += mask[i] * (double)x;
+			i++;
+		    }
+	    }
+	}
+    } else {
+	RAL_FOR(cell, grid) {
+	    if (RAL_REAL_GRID_DATACELL(grid, cell)) {
+		int i = 0;
+		double x = RAL_REAL_GRID_CELL(grid, cell);
+		ral_cell c;
+		for (c.i = cell.i - delta; c.i <= cell.i + delta; c.i++)
+		    for (c.j = cell.j - delta; c.j <= cell.j + delta; c.j++) {
+			if (RAL_GRID_CELL_IN(ret, c))
+			    RAL_REAL_GRID_CELL(ret, c) += mask[i] * x;
+			i++;
+		    }
+	    }
+	}
+    }
+    return ret;
+fail:
+    ral_grid_destroy(&ret);
+    return NULL;
+}
+
+
+ral_grid_handle RAL_CALL ral_grid_spread_random(ral_grid *grid, double *mask, int delta)
+{
+    ral_grid *ret = NULL;
+    RAL_CHECKM(grid->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ARGS_INTEGER);
+    RAL_CHECK(ret = ral_grid_create_like(grid, RAL_INTEGER_GRID));
+    ral_cell cell;
+    RAL_FOR(cell, grid) {
+	if (RAL_INTEGER_GRID_DATACELL(grid, cell)) {
+	    int x = RAL_INTEGER_GRID_CELL(grid, cell);
+	    int j;
+	    for (j = 0; j < x; j++) {
+		int i = 0;
+		ral_cell c;
+		double p = rand()/((double)RAND_MAX + 1);
+		double w = mask[0];
+		for (c.i = cell.i - delta; c.i <= cell.i + delta; c.i++) {
+		    for (c.j = cell.j - delta; c.j <= cell.j + delta; c.j++) {
+			if ((p < w) AND RAL_GRID_CELL_IN(ret, c)) {
+			    RAL_INTEGER_GRID_CELL(ret, c)++;
+			    i = -1;
+			    break;
+			    
+			}
+			w += mask[++i];
+		    }
+		    if (i < 0)
+			break;
+		}
+	    }
+	}
+    }
+    return ret;
+fail:
+    ral_grid_destroy(&ret);
+    return NULL;
+}
+
+
 ral_grid *ral_grid_convolve_grid(ral_grid *grid, double *kernel, int delta)
 {
     ral_grid *ret = NULL;
     ral_cell c;
-    RAL_CHECK(ret = ral_grid_create_copy(grid, RAL_REAL_GRID));
+    RAL_CHECK(ret = ral_grid_create_like(grid, RAL_REAL_GRID));
     RAL_FOR(c, ret) {
 	double g;
 	if (ral_grid_convolve(grid, c, kernel, delta, &g))

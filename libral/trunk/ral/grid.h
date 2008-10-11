@@ -413,6 +413,11 @@ ral_grid_handle RAL_CALL ral_grid_focal_variance_grid(ral_grid *grid, int *mask,
 ral_grid_handle RAL_CALL ral_grid_focal_count_grid(ral_grid *grid, int *mask, int delta);
 ral_grid_handle RAL_CALL ral_grid_focal_count_of_grid(ral_grid *grid, int *mask, int delta, RAL_INTEGER value);
 
+/** spread the values at each cell according to the weights mask */
+ral_grid_handle RAL_CALL ral_grid_spread(ral_grid *grid, double *mask, int delta);
+/** spread the individuals at each cell to their neighborhood; defined only for integer grids */
+ral_grid_handle RAL_CALL ral_grid_spread_random(ral_grid *grid, double *mask, int delta);
+
 ral_grid_handle RAL_CALL ral_grid_convolve_grid(ral_grid *grid, double *kernel, int delta);
 
 int RAL_CALL ral_integer_grid_get_value_range(ral_grid *gd, ral_integer_range *range);
