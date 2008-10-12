@@ -501,6 +501,9 @@ int RAL_CALL ral_grid_max_integer(ral_grid *gd, RAL_INTEGER x);
 int RAL_CALL ral_grid_min_grid(ral_grid *gd1, ral_grid *gd2);
 int RAL_CALL ral_grid_max_grid(ral_grid *gd1, ral_grid *gd2);
 
+/** the new value of each cell is a random portion of that value using uniform distribution [0..1] */
+void RAL_CALL ral_grid_random(ral_grid *gd);
+
 ral_grid_handle RAL_CALL ral_grid_cross(ral_grid *a, ral_grid *b);
 
 /** if a then b = c */

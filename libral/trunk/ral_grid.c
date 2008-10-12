@@ -2799,6 +2799,26 @@ int ral_grid_max_grid(ral_grid *gd1, ral_grid *gd2)
 }
 
 
+void RAL_CALL ral_grid_random(ral_grid *gd)
+{
+    if (gd->datatype == RAL_INTEGER_GRID) {
+	ral_cell c;
+	RAL_FOR(c, gd) {
+	    /* from i randomly to 0..i */
+	    double p = rand()/((double)RAND_MAX+1);
+	    RAL_INTEGER_GRID_CELL(gd, c) = (int)(p*(RAL_INTEGER_GRID_CELL(gd, c)+1));
+	}
+    } else {
+	ral_cell c;
+	RAL_FOR(c, gd) {
+	    /* from x randomly to [0..x] */
+	    double p = rand()/((double)RAND_MAX);
+	    RAL_REAL_GRID_CELL(gd, c) = p*RAL_REAL_GRID_CELL(gd, c);
+	}
+    }
+}
+
+
 int ral_cmp_int(const void *a, const void *b)
 {
     if (*(int *)a < *(int *)b) return -1;
