@@ -1497,6 +1497,9 @@ ral_grid_max_grid(gd1, gd2)
 		if (ral_has_msg())
 			croak(ral_get_msg());
 
+void
+ral_grid_random(ral_grid *gd)
+
 ral_grid *
 ral_grid_cross(a, b)
 	ral_grid *a

@@ -2849,6 +2849,13 @@ sub max {
     return $self if defined wantarray;
 }
 
+sub random {
+    my $self = shift;
+    $self = Geo::Raster::new($self) if defined wantarray;
+    ral_grid_random($self->{GRID});
+    return $self if defined wantarray;
+}
+
 ## @method Geo::Raster cross(Geo::Raster b)
 # 
 # @brief Cross product of raster grids.
