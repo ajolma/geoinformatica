@@ -1098,11 +1098,11 @@ ral_grid_handle RAL_CALL ral_grid_spread_random(ral_grid *grid, double *mask, in
 		double w = mask[0];
 		for (c.i = cell.i - delta; c.i <= cell.i + delta; c.i++) {
 		    for (c.j = cell.j - delta; c.j <= cell.j + delta; c.j++) {
-			if ((p < w) AND RAL_GRID_CELL_IN(ret, c)) {
-			    RAL_INTEGER_GRID_CELL(ret, c)++;
+			if (p < w) {
+			    if (RAL_GRID_CELL_IN(ret, c))
+				RAL_INTEGER_GRID_CELL(ret, c)++;
 			    i = -1;
 			    break;
-			    
 			}
 			w += mask[++i];
 		    }
