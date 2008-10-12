@@ -198,7 +198,7 @@ sub homedir {
 		"CurrentVersion/Explorer/User Shell Folders//Personal"};
 	$doc =~ s/\%USERPROFILE\%//;
     
-	return ("$drive$path\\", "$drive$path\\$doc");
+	return ("$drive$path\\", "$drive$path$doc");
 
     } else {
 
