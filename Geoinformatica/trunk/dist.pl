@@ -109,7 +109,10 @@ for (glob("$LOCAL/bin/*config")) {
     copy($_, "$DIST-$devel/bin/$file");
 }
 copy("$LOCAL/include", "$DIST-$devel/include");
-copy("$LOCAL/lib", "$DIST-$devel/lib");
+for (glob("$LOCAL/lib/*.dll.a")) {
+    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+    copy($_, "$DIST-devel/lib/$file");
+}
 
 for (glob("$GTK/bin/*.exe"), glob("$GTK/bin/*.bat")) {
     my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
