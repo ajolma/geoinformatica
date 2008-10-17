@@ -934,7 +934,7 @@ ral_grid_spread(grid, mask)
 		    _mask[i] /= s;
 		ral_grid *ret = ral_grid_spread(grid, _mask, d);
 		fail:
-		if (mask) free(mask);
+		if (_mask) free(_mask);
 		RETVAL = ret;
 	}
 	OUTPUT:

@@ -220,7 +220,7 @@ sub _interpret_datatype {
 # $new_grid = new Geo::Raster(like=>$old_grid);
 # @endcode
 #
-# @param[in] params is a list of named parameters:
+# @param[in] params is a hash of named parameters:
 # - <I>datatype</I> Can be real (float, 2), which denotes a real grid or
 # integer. Default is integer (1).
 # - <I>copy</I> A Geo::Raster object. If given, the constructor acts as an copy 
@@ -439,7 +439,7 @@ sub _with_decimal_point {
 ## @method @world(%params)
 # 
 # @brief Get or set the world (bounding box and cell size) of the raster dataset.
-# @param[in] params is a list of named parameters:
+# @param[in] params is a hash of named parameters:
 # - <I>min_x</I> The smallest x value of the datasets bounding box.
 # - <I>min_y</I> The smallest y value of the datasets bounding box.
 # - <I>max_x</I> The highest x value of the datasets bounding box.
@@ -833,7 +833,7 @@ sub _type_name {
 ## @method list value_range(%named_parameters)
 #
 # @brief Returns the minimum and maximum values of the raster grid.
-# @param[in] named_parameters Includes as named parameters:
+# @param[in] named_parameters A hash of named parameters:
 # - <I>field_name</I> The attribute whose min and max values are looked up.
 # - <I>of_GDAL</I> Boolean telling if the value range should be from GDAL.
 # - <I>filter</I> No effect currently!
@@ -934,11 +934,13 @@ sub size {
     }
 }
 
-## @method $cell_size(%o)
+## @method $cell_size(%params)
 # 
 # @brief Returns the cells size.
-# @param[in] o (optional) A hash boolean (named of_GDAL) telling if the cell size 
-# should be gotten trough GDAL, not directly from the object properties.
+# @param[in] params A hash of named parameters:
+# - <I>of_GDAL</I>=>boolean (optional) whether the cell size should be
+# queried from GDAL (the actual data source) instead from libral (the
+# memory raster).
 # @return Size of cell (lenght of one side) if possible, else undef.
 sub cell_size {
     my($self, %o) = @_;

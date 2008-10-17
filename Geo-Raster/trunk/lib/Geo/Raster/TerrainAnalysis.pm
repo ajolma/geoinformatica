@@ -7,7 +7,7 @@ use UNIVERSAL qw(isa);
 ## @method Geo::Raster aspect()
 #
 # @brief This DEM method computes the aspect (in radians, computing clockwise 
-# starting from north) for each cell. For flat cells sets -1.
+# starting from north) for each cell. For flat cells the aspect is -1.
 # @return In void context (no return grid is wanted) the method changes this 
 # grid, otherwise the method returns a new grid with the aspect ratios.
 sub aspect {
@@ -66,23 +66,31 @@ sub slope {
     }
 }
 
-## @method Geo::Raster fdg(%opt) 
+## @method Geo::Raster fdg(%params) 
 #
-# @brief This, possibly iterative, DEM method returns a flow direction grid
-# (fdg) that is computed from the DEM. 
-# @param[in] opt Named parameters include:
-# - <I>method</I>=>string (optional). The default method is 'D8', other supported 
-# methods are 'Rho8' and 'many'. 
-# - <I>drain_all</I>=>boolean (optional). Default is false. Initiates if true an 
-# iteration, which resolves the drainage of all flat areas and pit cells.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid.
+# @brief Computes a flow direction grid (FDG) from a DEM.
+# @param[in] params A hash of named parameters:
+# - <I>method</I>=>string (optional). The method for computing the
+# FDG. Currently supported methods are 'D8' and 'Rho8' and 'many'. D8
+# selects the neighbor with steepest descent. Rho8 selects randomly,
+# using the descent as a weight, a lower cell. In the 'many' method
+# all lower cells are coded with the 8 bits of a byte. The directions
+# are from 1 (up) to 8 (up left). Flat cells (no lower neighbors) are
+# marked -1. Pit cells (all neighbor cells are higher) are marked with
+# 0. The default is D8.
+# - <I>drain_all</I>=>boolean (optional). Whether to use iteration to
+# produce a FDG with drainage resolved for all cell. The iteration
+# algorithm first applies the drain_flat_areas method using the option
+# 'multiple pour points', then the same method with option 'one pour
+# point'. Next the drainage of all depressions is iteratively resolved
+# using the drain_depressions method. The default is false.
+# - <I>quiet</I>=>boolean (optional). Whether to report the result
+# (number of cells or areas drained) to STDERR.
+# @return In a void context the method effectively converts the DEM to
+# a FDG, otherwise the method returns a new FDG.
 sub fdg {
     my($dem, %opt) = @_;
-    if (!$opt{method}) {
-	$opt{method} = 'D8';
-	print STDERR "fdg: WARNING: method not set, using '$opt{method}'\n" unless $opt{quiet};
-    }
+    $opt{method} = 'D8' unless $opt{method};
     my $method;
     if ($opt{method} eq 'D8') {
 	$method = 1;
@@ -96,8 +104,8 @@ sub fdg {
     my $fdg = ral_dem_fdg($dem->{GRID}, $method);
     
     if ($opt{drain_all}) {
-	$fdg->drain_flat_areas($dem, method=>'m');
-	$fdg->drain_flat_areas($dem, method=>'o');
+	$fdg->drain_flat_areas($dem, method=>'m', quiet=>$opt{quiet});
+	$fdg->drain_flat_areas($dem, method=>'o', quiet=>$opt{quiet});
 	my $c = $fdg->contents();
 	my $pits = $$c{0} || 0;
 	my $flats = $$c{-1} || 0;
@@ -120,8 +128,7 @@ sub fdg {
     }
     
     if (defined wantarray) {
-	$fdg = new Geo::Raster $fdg;
-	return $fdg;
+	return new Geo::Raster $fdg;
     } else {
 	$dem->_new_grid($fdg);
     }
@@ -129,6 +136,7 @@ sub fdg {
 
 ## @method @outlet(@cell)
 # @brief A FDG method. Return the outlet of the catchment.
+# @param[in] cell The location of a catchment cell (row, column).
 sub outlet {
     my($fdg, @cell) = @_;
     my $cell = _find_outlet($fdg->{GRID}, @cell);
@@ -137,12 +145,13 @@ sub outlet {
 
 ## @method Geo::Raster ucg()
 #
-# @brief Puts into each grid a byte telling which cells in the neighborhood are 
-# higher (upslope cells).
+# @brief Computes an upslope cell grid (UCG) from a flow direction grid (FDG).
 #
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the directions to the 
-# upslope cells (ucg == upslope cell grid).
+# In a UCG the upslope cells of a cell are coded with the 8 bits of a
+# byte. The directions are from 1 (up) to 8 (up left).
+#
+# @return In a void context converts the FDG to a UCG, otherwise
+# returns a new grid.
 sub ucg {
     my($dem) = @_;
     my $ucg = ral_dem_ucg($dem->{GRID});
@@ -156,38 +165,25 @@ sub ucg {
 
 ## @method @upstream(Geo::Raster streams, array cell)
 #
-# @brief This FDG method returns the directions (as looked up from the FDG
-# self) of the upstream cells of the specified cell.
+# @brief This FDG method returns the direction(s) to the upstream
+# cells of the specified cell.
 #
-# Example of getting directions to the upstream cells:
+# Example of getting directions to the upstream stream cells:
 # @code
-#($up,@up) = $fdg->upstream($streams,@cell);
+# @up = $fdg->upstream($streams, $row, $column);
 # @endcode
 #
-# @param[in] streams An binary grid indicating where upstream cells can be. Should 
-# have the same dimension as the FDG-grid.
-# @param[in] cell Array having the i- and j-coordinates of the cell.
-# @return An array where the first element is the direction (from FDG) 
-# of the upstream stream cell and the second an array containing the directions 
-# to the other upstream cells.
-
-## @method @upstream(array cell)
-# 
-# @brief This FDG method returns the directions (as looked up from the FDG
-# self) of the upstream cells of the specified cell.
-#
-# Example of getting directions to the upstream cells:
-# @code
-#(@up) = $fdg->upstream(@cell);
-# @endcode
-#
-# @param[in] cell Array having the i- and j-coordinates of the cell.
-# @return Array which contains the directions to the upstream cells.
+# @param[in] streams (optional) A binary streams grid. Should have the
+# same dimension as the FDG.
+# @param[in] cell The location of the cell as (row, column).
+# @return The directions to the upstream cells. If the streams grid is
+# given, only the directions to stream cells are returned. The
+# directions are coded as usual: 1 is up, 2 is up right, etc.
 sub upstream { 
     my $fdg = shift;
     my $streams;
     my @cell;
-    if ($#_ > 1) {
+    if (@_ > 2) {
 	($streams,@cell) = @_;
     } else {
 	@cell = @_;
@@ -208,42 +204,41 @@ sub upstream {
 
 ## @method Geo::Raster drain_flat_areas(Geo::Raster dem, hash params)
 #
-# @brief This flow direction grid (fdg) method routes water off from flat
-# areas (and stores the routing into the fdg).
+# @brief Resolves the flow direction for flat areas.
 #
-# The method uses either "one pour point" (short "o") or 
-# "multiple pour points" (short "m"). The first
-# method, which is the default, finds the lowest or nodata cell just
-# outside the flat area and, if the cell is lower than the flat area
-# or a nodatacell, drains the whole area there, or into the flat area
-# cell (which is made a pit cell), which is next to the cell in
-# question. This method is guaranteed to produce a FDG without flat
-# areas. The second method drains the flat area cells iteratively into
-# their lowest non-higher neighboring cells having flow direction
-# resolved.
-# This method modifies the object to which it is applied or returns a
-# new object depending on the context it is invoked.
-# @param[in] dem a DEM-grid.
-# @param[in] params named parameters, may be:
-# - <I>method</I>=>string (optional). Default is "one pour point" (short "o") 
-# and as alternative method can be used "multiple pour points" (short "m").
-# - <I>quiet</I>=>boolean (optional). Tells if the method should print error 
-# messages.
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
+# The method uses either "one pour point" (short "o") or "multiple
+# pour points" (short "m") technique for resolving the drainage of
+# flat area cells of a FDG.
+#
+# In the one pour point technique (the default) all cells on the flat
+# area are drained to one cell. The pour point cell is selected either
+# from the border of the flat area or just outside the flat area
+# depending whether the outside cell is not higher than the inside
+# cell. If the pour point is on the border it is converted into a pit
+# cell. Thus this technique is guaranteed to produce a flatless FDG
+# but it may increase the number of pits.
+#
+# In the multiple pour points approach all flat cells are iteratively
+# drained to any non-higher neighbor whose drainage is resolved. Thus
+# this technique is not guaranteed to produce a flatless FDG.
+#
+# @param[in] dem a DEM.
+# @param[in] params named parameters:
+# - <I>method</I>=>string (optional). Either "one pour point" (short
+# "o") or "multiple pour points" (short "m"). Default is one pour
+# point.
+# - <I>quiet</I>=>boolean (optional). Whether to report the result
+# (number of cells or areas drained)to STDERR.
+# @return In void context the method changes this flow direction grid,
+# otherwise the method returns a new FDG.
 sub drain_flat_areas {
     my($fdg, $dem, %opt) = @_;
     croak "drain_flat_areas: no DEM supplied" unless $dem and ref($dem);
-    if (defined wantarray) {
-	$fdg = new Geo::Raster $fdg;
-    }
-    if (!$opt{method}) {
-	$opt{method} = 'one pour point';
-	print STDERR "drain_flat_areas: Warning: method not set, using '$opt{method}'\n" unless $opt{quiet};
-    }
+    $fdg = new Geo::Raster($fdg) unless defined wantarray;
+    $opt{method} = 'one pour point' unless $opt{method};
     if ($opt{method} =~ /^m/) {
 	my $n = ral_fdg_drain_flat_areas1($fdg->{GRID}, $dem->{GRID});
-	print STDERR "drain_flat_areas (m): $n flat areas drained\n" unless $opt{quiet};
+	print STDERR "drain_flat_areas (m): $n flat cells drained\n" unless $opt{quiet};
     } elsif ($opt{method} =~ /^o/) {
 	my $n = ral_fdg_drain_flat_areas2($fdg->{GRID}, $dem->{GRID});
 	print STDERR "drain_flat_areas (o): $n flat areas drained\n" unless $opt{quiet};
@@ -484,12 +479,14 @@ sub breach {
 
 ## @method Geo::Raster drain_depressions(Geo::Raster dem)
 #
-# @brief This FDG method drains all depressions by changing the flowpath from
-# the pit to the lowest pour point on the depression. The DEM remains
-# unchanged.
-# @param[in] dem Geo::Raster as an Digital Elevation Model.
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
+# @brief Iteratively drain the depressions in a FDG.
+#
+# This flow direction grid (FDG) method iteratively drains all
+# depressions in the FDG by reversing the flowpath from the lowest pour
+# point of the depression to the pit cell. The DEM remains unchanged.
+# @param[in] dem a DEM. The DEM is not changed in the method.
+# @return In a void context the method changes this FDG, otherwise the
+# method returns a new FDG.
 sub drain_depressions {
     my($fdg, $dem) = @_;
     $fdg = new Geo::Raster $fdg if defined wantarray;
@@ -762,6 +759,7 @@ sub distance_to_channel {
     return new Geo::Raster $g;
 }
 
+## @ignore
 # does not make sense??
 sub distance_to_divide {
     my $fdg = shift;
@@ -895,8 +893,8 @@ sub subcatchments {
 	my %ds;
 
 	for my $key (keys %{$r}) {
-	    ($i, $j) = split /,/, $key;
-	    my($i_down, $j_down) = split /,/, $r->{$key};
+	    ($i, $j) = split (/,/, $key);
+	    my($i_down, $j_down) = split (/,/, $r->{$key});
 	    my $sub = $subs->get($i, $j);
 	    my $stream = $streams->get($i, $j);
 	    my $lake = $lakes->get($i, $j);
