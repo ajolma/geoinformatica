@@ -151,7 +151,7 @@ sub _interpret_datatype {
 #
 # Example of acting as an copy constructor:
 # @code
-# $copy_grid = new Geo::Raster($other_grid);
+# $copy = new Geo::Raster($raster);
 # @endcode
 #
 # @param[in] param A reference to an another Geo::Raster object, which is copied.
@@ -183,55 +183,43 @@ sub _interpret_datatype {
 #
 # Example of starting with a new fresh raster:
 # @code
-# $grid = new Geo::Raster(datatype=>datatype_string, rows=>100, columns=>100);
+# $raster = new Geo::Raster(datatype=>datatype_string, rows=>100, columns=>100);
 # @endcode
 #
 # Example of opening a previously saved grid:
 # @code
-# $grid = new Geo::Raster(filename=>"data/dem", load=>1);
+# $raster = new Geo::Raster(filename=>"data/dem", load=>1);
 # @endcode
 #
-# Example of acting as an copy constructor:
+# Example of using the copy constructor:
 # @code
-# $copy_grid = new Geo::Raster(copy=>$other_grid);
+# $copy = new Geo::Raster(copy=>$raster);
 # @endcode
 #
-# Example of creating a grid with same size:
+# Example of creating a raster with same size:
 # @code
-# $new_grid = new Geo::Raster(like=>$old_grid);
+# $new = new Geo::Raster(like=>$old);
 # @endcode
 #
-# @param[in] params is a hash of named parameters:
-# - <I>datatype</I> Can be real (float, 2), which denotes a real grid or
-# integer. Default is integer (1).
-# - <I>copy</I> A Geo::Raster object. If given, the constructor acts as an copy 
-# constructor.
-# - <I>use</I> Reference to a ral_grid. Parameter is used only if <I>copy</I> 
-# is not defined.
-# - <I>like</I> A Geo::Raster object. Used only if <I>copy</I> and <I>use</I> 
-# are undefined.
-# - <I>filename</I> Files location as string. A raster saved previously in 
-# the given filename is loaded.
-# If filename is given then also two additional named parameter can be given 
-# with which Geo::Raster::gdal_open() is called:
-#  - <I>band</I> (optional). Default is 1.
-#  - <I>load</I> (optional). Default is false, calls cache without parameters if 
-# true.
-# .
-# Used only if previous parameters, not including <I>datatype</I>, are undefined.
-# - <I>M</I> Height of of the grid area (max(i)+1). Used if previous parameters, 
-# not including <I>datatype</I>, are undefined and <I>N</I> is given.
-# - <I>N</I> Width of of the grid area (max(j)+1). Used if previous parameters, 
-# not including <I>datatype</I>, are undefined and <I>M</I> is given.
+# @param[in] params Named parameters:
+# - <I>datatype</I> The data type for the new raster. Either "real" or
+# - "integer". Default is integer.
+# - <I>copy</I> A raster to be copied into the new raster.
+# - <I>like</I> A raster to be used as a model for the new raster.
+# - <I>filename</I> A raster file. GDAL is used for opening the file.
+# - <I>band</I> integer (optional) Which band to read from the file. Default is 1.
+# - <I>load</I> boolean (optional) Whether to convert the GDAL raster
+# into a libral raster. Default is false.
+# - <I>rows</I> Height of the new raster.
+# - <I>columns</I> Width of the new raster.
 # - <I>world</I> Named parameters suitable to define the real world boundaries. 
 # Used only if <I>M</I> and <I>N</I> are also given. Possible parameters 
 # include:
-#   -# cell_size.
-#   -# minx.
-#   -# miny.
-#   -# maxx.
-#   -# maxy.
-# .
+#   - cell_size
+#   - minx
+#   - miny
+#   - maxx
+#   - maxy
 # @return New instance of Geo::Raster.
 sub new {
     my $package = shift;
@@ -2555,7 +2543,7 @@ sub ne {
 # -1 in those cells that are greater in this raster, 1 in those that are less 
 # and 0 in those cells that have equal values (equal case is same and not equal 
 # cases just have a reversed sign compared to direct comparison results).
-# @return Geo::Raster, which has as values 1 in those cells that are greater in
+# @return a new raster, which has as values 1 in those cells that are greater in
 # this raster, -1 in those that are less and 0 in those cells that have equal 
 # values.
 sub cmp {
@@ -2613,7 +2601,7 @@ sub not {
 # cell nonzero values, else the resulting value is 0.
 # - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
-# .
+#
 # The (truth) table here shows all possible value combinations (not incl. no 
 # data):
 #<table>
@@ -2649,7 +2637,7 @@ sub and {
 # same cell 0, else the resulting value is 1.
 # - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
-# .
+#
 # The (truth) table here shows all possible value combinations (not incl. no 
 # data):
 #<table>
@@ -2685,7 +2673,7 @@ sub or {
 # cell 0, else the resulting value is 1.
 # - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
-# .
+#
 # The (truth) table here shows all possible value combinations (not incl. no 
 # data):
 #<table>
@@ -3127,22 +3115,6 @@ sub clip {
 	}
     }
 }
-
-=pod
-
-=head2 Joining two grids: (NOTE: this is from before gdal/cache)
-
-    $g3 = $g1->join($g2);
-
-The joining is based on the world coordinates of the grids.  clip and
-join without assignment clip or join the original grid, so
-
-    $a->clip($i1, $j1, $i2, $j2);
-    $a->join($b);
-
-have the effect "clip a to i1, j1, i2, j2" and "join b to a".
-
-=cut
 
 ## @method Geo::Raster join(Geo::Raster second)
 # 
