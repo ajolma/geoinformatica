@@ -466,7 +466,7 @@ sub MakeCollection {
     croak "MakeCollection method for class ".ref($self)." is not implemented";
 }
 
-## @method ApplyTransformation(transf)
+## @method ApplyTransformation($transf)
 # @param transf A point transformation method which will be applied
 # for all points in the geometry as:
 # @code
@@ -506,7 +506,7 @@ use Geo::OGC::Geometry qw/:all/;
 
 our @ISA = qw( Geo::OGC::Geometry );
 
-## @cmethod new(params)
+## @cmethod new(%params)
 # @brief Construct a new point
 # @param params The following syntaxes are allowed:
 # @code
@@ -898,7 +898,7 @@ sub as_text {
     return $text;
 }
 
-## @method AddPoint(point, i)
+## @method AddPoint($point, $i)
 # @param point A Point object
 # @param i [optional] The location in the sequence (1..N+1) where to add the Point. 
 # Adds to the end (N+1) by default.
@@ -916,7 +916,7 @@ sub AddPoint {
     }
 }
 
-## @method DeletePoint(i)
+## @method DeletePoint($i)
 # @param i The location in the sequence (1..N) from where to delete the Point. 
 # @note not in the specification
 sub DeletePoint {
@@ -946,7 +946,7 @@ sub NumPoints {
     @{$self->{Points}};
 }
 
-## @method PointN(N, point)
+## @method PointN($N, $point)
 # @param N A location in the sequence
 # @note The first point has the index 1 as OGC SF SQL conformance test uses 1-based indexing. 
 # @param point [optional] A Point object, if defined sets the point to index N
