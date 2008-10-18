@@ -2652,8 +2652,7 @@ ral_dem_lower_peaks(dem, z_limit)
 			croak(ral_get_msg());
 
 ral_grid *
-ral_dem_depressions(dem, fdg, inc_m)
-	ral_grid *dem
+ral_fdg_depressions(fdg, inc_m)
 	ral_grid *fdg
 	int inc_m
 	POSTCALL:
@@ -2778,26 +2777,6 @@ ral_fdg_upslope_count_without_op(fdg, include_self)
 		RETVAL = ral_fdg_upslope_count(fdg, NULL, include_self);
   	OUTPUT:	
 		RETVAL
-	POSTCALL:
-		if (ral_has_msg())
-			croak(ral_get_msg());
-
-ral_grid *
-ral_fdg_distance_to_pit(fdg, steps)
-	ral_grid *fdg
-	int steps
-	CODE:
-		RETVAL = ral_fdg_distance_to_channel(fdg, NULL, steps);
-	OUTPUT:	
-		RETVAL
-	POSTCALL:
-		if (ral_has_msg())
-			croak(ral_get_msg());
-
-ral_grid *
-ral_fdg_distance_to_channel(fdg, streams, int steps)
-	ral_grid *fdg
-	ral_grid *streams
 	POSTCALL:
 		if (ral_has_msg())
 			croak(ral_get_msg());

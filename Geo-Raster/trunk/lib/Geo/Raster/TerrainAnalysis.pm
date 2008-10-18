@@ -1,29 +1,18 @@
 ## @class Geo::Raster::TerrainAnalysis
 # @brief Adds terrain analysis methods into Geo::Raster
+#
+# In this module there are methods mainly for digital elevation model
+# (DEM) rasters, for flow direction (FDG) rasters, for streams
+# rasters.
+#
 package Geo::Raster;
 
 use UNIVERSAL qw(isa);
 
-## @method Geo::Raster aspect()
-#
-# @brief This DEM method computes the aspect (in radians, computing clockwise 
-# starting from north) for each cell. For flat cells the aspect is -1.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the aspect ratios.
-sub aspect {
-    my $self = shift;
-    if (defined wantarray) {
-	my $g = new Geo::Raster(ral_dem_aspect($self->{GRID}));
-	return $g;
-    } else {
-	$self->_new_grid(ral_dem_aspect($self->{GRID}));
-    }
-}
-
 ## @method @fit_surface($z_factor)
 #
-# @brief The DEM method fits a 9-term quadratic polynomial to a 3*3
-# neighborhood for each pixel of the grid.
+# @brief Fit a 9-term quadratic polynomial to the 3*3 neighborhood of
+# each cell in a DEM.
 #
 # The 9-term quadratic polynomial:
 #
@@ -32,7 +21,7 @@ sub aspect {
 # @see Moore et al. 1991. Hydrol. Proc. 5, 3-30.
 # @param[in] z_factor is the unit of z divided by the unit of x and y, the
 # default value of z_factor is 1.
-# @return Array of 9 Geo::Raster grids, one for each parameter.
+# @return 9 rasters in a list, one for each parameter.
 sub fit_surface {
     my($dem, $z_factor) = @_;
     $z_factor = 1 unless $z_factor;
@@ -47,20 +36,40 @@ sub fit_surface {
     return @ret;
 }
 
+## @method Geo::Raster aspect()
+#
+# @brief Estimate aspects from a DEM.
+#
+# The aspect is computed from a 9-term quadratic polynomial fitted
+# independently on each cell of the DEM. The aspect is stored in
+# radians increasing clockwise starting from zero in north. For flat
+# cells the aspect is undefined, denoted with the value -1.
+# @return an aspect raster. In void context converts the DEM.
+sub aspect {
+    my $self = shift;
+    if (defined wantarray) {
+	return Geo::Raster->new(ral_dem_aspect($self->{GRID}));
+    } else {
+	$self->_new_grid(ral_dem_aspect($self->{GRID}));
+    }
+}
+
 ## @method Geo::Raster slope(scalar z_factor)
 #
-# @brief This DEM method computes the slope (in radians) for each cell.
-# @param[in] z_factor is the unit of z divided by the unit of x and y, the
-# default value of z_factor is 1.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the slope ratios.
+# @brief Estimate the slope from a DEM.
+#
+# The slope is computed from a 9-term quadratic polynomial fitted
+# independently on each cell of the DEM. The slope is stored in
+# radians.
+# @param[in] z_factor The unit of z divided by the unit of x and
+# y. Default is 1.
+# @return a slope raster. In void context converts the DEM.
 sub slope {
     my $self = shift;
     my $z_factor = shift;
     $z_factor = 1 unless $z_factor;
     if (defined wantarray) {
-	my $g = new Geo::Raster(ral_dem_slope($self->{GRID}, $z_factor));
-	return $g;
+	return Geo::Raster->new(ral_dem_slope($self->{GRID}, $z_factor));
     } else {
 	$self->_new_grid(ral_dem_slope($self->{GRID}, $z_factor));
     }
@@ -68,7 +77,8 @@ sub slope {
 
 ## @method Geo::Raster fdg(%params) 
 #
-# @brief Computes a flow direction grid (FDG) from a DEM.
+# @brief Compute a flow direction raster (FDG) from a DEM.
+#
 # @param[in] params A hash of named parameters:
 # - <I>method</I>=>string (optional). The method for computing the
 # FDG. Currently supported methods are 'D8' and 'Rho8' and 'many'. D8
@@ -85,9 +95,10 @@ sub slope {
 # point'. Next the drainage of all depressions is iteratively resolved
 # using the drain_depressions method. The default is false.
 # - <I>quiet</I>=>boolean (optional). Whether to report the result
-# (number of cells or areas drained) to STDERR.
-# @return In a void context the method effectively converts the DEM to
-# a FDG, otherwise the method returns a new FDG.
+# (number of cells or areas drained).
+# @exception - Unsupported method
+# @exception - No progress in the iteration
+# @return a FDG. In void context converts the DEM.
 sub fdg {
     my($dem, %opt) = @_;
     $opt{method} = 'D8' unless $opt{method};
@@ -104,39 +115,104 @@ sub fdg {
     my $fdg = ral_dem_fdg($dem->{GRID}, $method);
     
     if ($opt{drain_all}) {
-	$fdg->drain_flat_areas($dem, method=>'m', quiet=>$opt{quiet});
-	$fdg->drain_flat_areas($dem, method=>'o', quiet=>$opt{quiet});
-	my $c = $fdg->contents();
-	my $pits = $$c{0} || 0;
-	my $flats = $$c{-1} || 0;
-	print STDERR "drain_all: $pits pit and $flats flat cells remain\n" unless $opt{quiet};
-	my $i = 1;
-	while ($pits > 0 or $flats > 0) {
-	    ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
-	    $c = $fdg->contents();
-	    my $pits_last_time = $pits;
-	    my $flats_last_time = $flats;
-	    $pits = $$c{0} || 0;
-	    $flats = $$c{-1} || 0;
-	    if ($pits_last_time == $pits and $flats_last_time == $flats) {
-		print STDERR "drain_all: bailing out, there is no progress!\n";
-		last;
-	    }
-	    print STDERR "drain_all: iteration $i: $pits pit and $flats flat cells remain\n" unless $opt{quiet};
-	    $i++;
+	my $step = 1;
+	my $pits_last_time = -1;
+	my $flats_last_time = -1;
+	while (1) {
+	    $fdg->drain_flat_areas($dem, method=>'m');
+	    $fdg->drain_flat_areas($dem, method=>'o');
+	    my $c = $fdg->contents();
+	    my $pits = $$c{0} || 0;
+	    my $flats = $$c{-1} || 0;
+	    print STDERR "drain_all: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
+	    return if ($pits == 0 and $flats == 0);
+	    my $n = ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
+	    print STDERR "drain_all: iteration step $step: $n depressions fixed\n" unless $opt{quiet};
+	    croak "there is no progress" if ($pits_last_time == $pits and $flats_last_time == $flats);
+	    $pits_last_time = $pits;
+	    $flats_last_time = $flats;	    
+	    $step++;
 	}
     }
     
     if (defined wantarray) {
-	return new Geo::Raster $fdg;
+	return Geo::Raster->new($fdg);
     } else {
 	$dem->_new_grid($fdg);
     }
 }
 
+## @method Geo::Raster drain_flat_areas(Geo::Raster dem, hash params)
+#
+# @brief Resolve the flow direction for flat areas in a FDG.
+#
+# The method uses either "one pour point" (short "o") or "multiple
+# pour points" (short "m") technique for resolving the drainage of
+# flat area cells of a FDG.
+#
+# In the one pour point technique (the default) all cells on the flat
+# area are drained to one pour point cell. The pour point cell is
+# selected either from the border of the flat area or just outside the
+# flat area depending whether the outside cell is not higher than the
+# inside cell. If the pour point is on the border it is converted into
+# a pit cell. Thus this technique is guaranteed to produce a flatless
+# FDG but it may increase the number of pits.
+#
+# In the multiple pour points approach all flat cells are iteratively
+# drained to any non-higher neighbor whose drainage is resolved. Thus
+# this technique is not guaranteed to produce a flatless FDG.
+#
+# @param[in] dem The DEM.
+# @param[in] params Named parameters:
+# - <I>method</I>=>string (optional) Either "one pour point" (short
+# "o") or "multiple pour points" (short "m"). Default is one pour
+# point.
+# - <I>quiet</I>=>boolean (optional) Whether to report the result
+# (number of cells or areas drained).
+# @exception - No DEM supplied
+# @exception - Unsupported method
+# @return In void context the method changes this flow direction raster,
+# otherwise the method returns a new FDG.
+sub drain_flat_areas {
+    my($fdg, $dem, %opt) = @_;
+    croak "drain_flat_areas: no DEM supplied" unless $dem and ref($dem);
+    $fdg = Geo::Raster->new($fdg) if defined wantarray;
+    $opt{method} = 'one pour point' unless $opt{method};
+    if ($opt{method} =~ /^m/) {
+	my $n = ral_fdg_drain_flat_areas1($fdg->{GRID}, $dem->{GRID});
+	print STDERR "drain_flat_areas (multiple pour points): $n flat cells drained\n" unless $opt{quiet};
+    } elsif ($opt{method} =~ /^o/) {
+	my $n = ral_fdg_drain_flat_areas2($fdg->{GRID}, $dem->{GRID});
+	print STDERR "drain_flat_areas (one pour point): $n flat areas drained\n" unless $opt{quiet};
+    } else {
+	croak "drain_flat_areas: $opt{method}: unknown method";
+    }
+    return $fdg if defined wantarray;
+}
+
+## @method Geo::Raster drain_depressions(Geo::Raster dem)
+#
+# @brief Scan FDG once and drain the depressions that are found.
+#
+# This method scans the given FDG once and drains all depressions that
+# are found in the FDG by reversing the flowpath from the lowest pour
+# point of the depression to the pit cell. The DEM remains unchanged.
+# @param[in] dem The DEM. The DEM is not changed in the method.
+# @return In a void context the method changes this FDG, otherwise the
+# method returns a new FDG.
+sub drain_depressions {
+    my($fdg, $dem) = @_;
+    $fdg = new Geo::Raster $fdg if defined wantarray;
+    ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
+    return $fdg if defined wantarray;
+}
+
 ## @method @outlet(@cell)
-# @brief A FDG method. Return the outlet of the catchment.
-# @param[in] cell The location of a catchment cell (row, column).
+#
+# @brief Return the outlet of a catchment in a FDG.
+#
+# @param[in] cell A cell on the catchment.
+# @return the outlet cell of the catchment.
 sub outlet {
     my($fdg, @cell) = @_;
     my $cell = _find_outlet($fdg->{GRID}, @cell);
@@ -145,19 +221,17 @@ sub outlet {
 
 ## @method Geo::Raster ucg()
 #
-# @brief Computes an upslope cell grid (UCG) from a flow direction grid (FDG).
+# @brief Compute an upslope cell raster (UCG) from a FDG.
 #
 # In a UCG the upslope cells of a cell are coded with the 8 bits of a
 # byte. The directions are from 1 (up) to 8 (up left).
 #
-# @return In a void context converts the FDG to a UCG, otherwise
-# returns a new grid.
+# @return a UCG. In void context converts the FDG.
 sub ucg {
     my($dem) = @_;
     my $ucg = ral_dem_ucg($dem->{GRID});
     if (defined wantarray) {
-	$ucg = new Geo::Raster $ucg;
-	return $ucg;
+	return Geo::Raster->new($ucg);
     } else {
 	$dem->_new_grid($ucg);
     }
@@ -165,20 +239,18 @@ sub ucg {
 
 ## @method @upstream(Geo::Raster streams, array cell)
 #
-# @brief This FDG method returns the direction(s) to the upstream
-# cells of the specified cell.
+# @brief Return the direction(s) to the upslope cells of a cell in a FDG.
 #
 # Example of getting directions to the upstream stream cells:
 # @code
 # @up = $fdg->upstream($streams, $row, $column);
 # @endcode
 #
-# @param[in] streams (optional) A binary streams grid. Should have the
-# same dimension as the FDG.
-# @param[in] cell The location of the cell as (row, column).
-# @return The directions to the upstream cells. If the streams grid is
-# given, only the directions to stream cells are returned. The
-# directions are coded as usual: 1 is up, 2 is up right, etc.
+# @param[in] streams (optional) A streams raster.
+# @param[in] cell The cell.
+# @return The directions to the upstream cells. If streams raster is
+# given, only directions to stream cells are returned. The directions
+# are coded as usual: 1 is up, 2 is up right, etc.
 sub upstream { 
     my $fdg = shift;
     my $streams;
@@ -202,156 +274,99 @@ sub upstream {
     return @up;
 }
 
-## @method Geo::Raster drain_flat_areas(Geo::Raster dem, hash params)
+## @method Geo::Raster raise_pits(%params)
 #
-# @brief Resolves the flow direction for flat areas.
+# @brief Raise each pit cell to the level of its lowest neighbor in a
+# DEM.
 #
-# The method uses either "one pour point" (short "o") or "multiple
-# pour points" (short "m") technique for resolving the drainage of
-# flat area cells of a FDG.
-#
-# In the one pour point technique (the default) all cells on the flat
-# area are drained to one cell. The pour point cell is selected either
-# from the border of the flat area or just outside the flat area
-# depending whether the outside cell is not higher than the inside
-# cell. If the pour point is on the border it is converted into a pit
-# cell. Thus this technique is guaranteed to produce a flatless FDG
-# but it may increase the number of pits.
-#
-# In the multiple pour points approach all flat cells are iteratively
-# drained to any non-higher neighbor whose drainage is resolved. Thus
-# this technique is not guaranteed to produce a flatless FDG.
-#
-# @param[in] dem a DEM.
-# @param[in] params named parameters:
-# - <I>method</I>=>string (optional). Either "one pour point" (short
-# "o") or "multiple pour points" (short "m"). Default is one pour
-# point.
-# - <I>quiet</I>=>boolean (optional). Whether to report the result
-# (number of cells or areas drained)to STDERR.
-# @return In void context the method changes this flow direction grid,
-# otherwise the method returns a new FDG.
-sub drain_flat_areas {
-    my($fdg, $dem, %opt) = @_;
-    croak "drain_flat_areas: no DEM supplied" unless $dem and ref($dem);
-    $fdg = new Geo::Raster($fdg) unless defined wantarray;
-    $opt{method} = 'one pour point' unless $opt{method};
-    if ($opt{method} =~ /^m/) {
-	my $n = ral_fdg_drain_flat_areas1($fdg->{GRID}, $dem->{GRID});
-	print STDERR "drain_flat_areas (m): $n flat cells drained\n" unless $opt{quiet};
-    } elsif ($opt{method} =~ /^o/) {
-	my $n = ral_fdg_drain_flat_areas2($fdg->{GRID}, $dem->{GRID});
-	print STDERR "drain_flat_areas (o): $n flat areas drained\n" unless $opt{quiet};
-    } else {
-	croak "drain_flat_areas: $opt{method}: unknown method";
-    }
-    return $fdg if defined wantarray;
-}
-
-## @method Geo::Raster raise_pits(hash opt)
-#
-# @brief This DEM method raises the single pit cells to the level of their
-# neighbors (the lowest of the neighbors).
-# @param[in] opt Has named parameters: 
-# - <I>z_limit</I>=>number (optional). A threshold value indicating how big 
-# differences a pit can have to its lowest neighbor. If the diffenrence is less 
-# than the the z_limit, then the pit is not raised. Default is 0 (no difference 
-# allowed).
-# - <I>quiet</I>=>boolean (optional). Tells if the method should print error 
-# messages.
-# @return In void context (no return grid is wanted) the method changes this 
-# DEM grid, otherwise the method returns a new DEM.
+# @param[in] params Named parameters: 
+# - <I>z_limit</I>=>number (optional) A threshold value for how much
+# lower that its neighbors a cell may be before it is raised. Default
+# is 0.
+# - <I>quiet</I>=>boolean (optional) Whether the method should report
+# the number of cells raised.
+# @return In void context the method changes this DEM, otherwise the
+# method returns a new DEM.
 sub raise_pits {
     my($dem, %opt) = @_;
     $opt{z_limit} = 0 unless defined($opt{z_limit});
-    $dem = new Geo::Raster $dem if defined wantarray;
+    $dem = Geo::Raster->new($dem) if defined wantarray;
     my $n = ral_dem_raise_pits($dem->{GRID}, $opt{z_limit});
     print STDERR "raise_pits: $n pit cells raised\n" unless $opt{quiet};
     return $dem if defined wantarray;
 }
 
-## @method lower_peaks(%opt)
+## @method lower_peaks(%params)
 # 
-# This DEM method lowers the single peak cells to the level of their
-# neighbors (the highest of the neighbors).
+# @brief Lower each peak cell to the level of its highest neighbor in
+# a DEM.
 #
-# @param[in] opt Has named parameters: 
-# - <I>z_limit</I>=>number (optional). A threshold value indicating how big 
-# differences a cell can have to its heighest neighbor. If the diffenrence is 
-# less than the the z_limit, then the peak is not lowered. Default is 0 (no 
-# difference allowed).
-# - <I>quiet</I>=>boolean (optional). Tells if the method should print error 
-# messages.
-# @return In void context (no return grid is wanted) the method changes this 
-# DEM grid, otherwise the method returns a new DEM.
+# @param[in] opt Named parameters:
+# - <I>z_limit</I>=>number (optional) A threshold value for how much
+# higher than its neighbors a cell may be before it is
+# lowered. Default is 0.
+# - <I>quiet</I>=>boolean (optional) Whether the method should report
+# the number of cells raised.
+# @return In void context the method changes this DEM, otherwise
+# the method returns a new DEM.
 sub lower_peaks {
     my($dem, %opt) = @_;
     $opt{z_limit} = 0 unless defined($opt{z_limit});
-    $dem = new Geo::Raster $dem if defined wantarray;
+    $dem = Geo::Raster->new($dem) if defined wantarray;
     my $n = ral_dem_lower_peaks($dem->{GRID}, $opt{z_limit});
     print STDERR "lower_peaks: $n peak cells lowered\n" unless $opt{quiet};
     return $dem if defined wantarray;
 }
 
-## @method Geo::Raster depressions(Geo::Raster fdg, $inc_m)
+## @method Geo::Raster depressions($inc_m)
 #
-# @brief Creates a depression grid.
+# @brief Return depressions defined by a FDG.
 #
-# A depression (or a ``pit'') is a connected (in the FDG sense) area in the DEM, 
-# which is lower than all its neighbors. To find and look at all the depressions 
-# use this method, which returns a grid:
-# @code
-# $depressions = $dem->depressions($fdg, $inc_m);
-# @endcode
-# 
-# @param[in] fdg (optional) Reference to an flow direction grid. The default is to 
-# calculate it using the D8 method and then route flow through flat areas using 
-# the methods "multiple pour points" and "one pour point" (in this order).
-# @param[in] inc_m (optional). The depressions grid is a 
-# binary grid unless $inc_m is given and is 1. Default is 0.   
-# @return Returns a new grid with the depressions.
+# @param[in] inc_m (optional) A boolean value indicating whether each
+# depression is marked with a unique integer. Default is false.
+# @return Depressions raster.
 sub depressions {
-    my($dem, $fdg, $inc_m) = @_;
+    my($fdg, $inc_m) = @_;
     $inc_m = 0 unless defined($inc_m) and $inc_m;
-    return new Geo::Raster(ral_dem_depressions($dem->{GRID}, $fdg->{GRID}, $inc_m));
+    return Geo::Raster->new(ral_fdg_depressions($fdg->{GRID}, $inc_m));
 }
 
-## @method Geo::Raster fill_depressions(%opt)
+## @method scalar fill_depressions(%params)
 # 
-# @brief This method can be called for a grid containing a digital elevation model 
-# (DEM), and it fills all depressions and drains all flat areas of that DEM.
+# @brief Fill the depressions in a DEM.
 #
-# Filling means raising the depression cells to the elevation of the lowest lying
-# cell just outside the depression. The filling procedure often needs to be run 
-# several times over the grid to remove all removable depressions. This method 
-# automatically re-runs the filling procedure a sufficient number of times until
-# no depressions can be removed between two consequtive runs. Typically a 
-# completely depressionless DEM is produced.
-#
-# Flat areas are drained using consequtive runs of the methods 'multiple pour points' 
-# and 'one pour point' (in this order). See also manual entry for 'drain_flat_areas'. 
-#
-# Filling depressions and draining flats is repeated alternatively until a 
-# depressionless and flat free DEM is produced (when possible). The method alters the 
-# DEM grid for which it was invoked, and returns a hydrologically continuous flow 
-# direction grid. By completion - unless surpressed using the 'quiet' option - the 
-# method prints out the number of remaining depression (pit) cells and flat cells.   
-#
-# @param[in] opt
-# - <I>quiet</I>=>boolean (optional). Suppresses all output if set to true (1). Default is false.
-#
-# @return A hydrologically continuous flow direction grid
-#
-# Examples of use:
-# @code
-# $fdg = $dem->fill_depressions();
-# $fdg = $dem->fill_depressions(quiet=>1);
-# @endcode
+# The depressions in the DEM are filled up to the lowest cell just
+# outside the depression. The depressions are obtained from a FDG.
+# @param[in] params Named parameters:
+# - <i>iterative</i>=>boolean (optional) Whether to run the depression
+# filling algorithm iteratively until a pitless and flatless FDG is
+# obtained from the DEM using the D8 method. In an iteration step a
+# FDG is first computed from the DEM using the D8 method. Then the
+# flat areas are removed from the FDG using first the multiple pour
+# point method and then the one pour point method. The depression
+# removing algorithm is then run once (one scan of the whole raster)
+# on the DEM using this FDG. If the flatless FDG that is computed from
+# this changed DEM is also pitless, then the iteration stops. If
+# iterative is true, the DEM is changed and a pitless and flatless FDG
+# is returned. Default is true.
+# - <i>FDG</i>=>raster (optional unless iterative is false) The FDG
+# for the depression filling algorithm. If FDG is given, the
+# depression filling algorithm is run only once, i.e., one scan of the
+# FDG is performed. Default is undefined.
+# - <i>quiet</i>=>boolean (optional) Whether to report the progressing
+# of the iteration.
+# @exception - FDG is not given but iterative is false.
+# @exception - There is no progress in the iteration.
+# @return a DEM from which some depressions are removed (if the
+# context is non-void and iterative is false), the number of filled
+# depressions (if FDG is given), or a pitless and flatless FDG.
 sub fill_depressions {
     my($dem, %opt) = @_;
-    if ($opt{no_iteration}) {
-	croak "fill_depressions: FDG needed if non-iterative" unless $opt{fdg};
-	$dem = new Geo::Raster $dem if defined wantarray;
+    $opt{iterative} = 1 unless exists $opt{iterative} and not $opt{iterative};
+    $opt{fdg} = $opt{FDG} if exists $opt{FDG};
+    if (not $opt{iterative}) {
+	croak "fill_depressions: FDG needed if not iterative" unless $opt{fdg};
+	$dem = Geo::Raster->new($dem) if defined wantarray;
 	ral_dem_fill_depressions($dem->{GRID}, $opt{fdg}->{GRID});
 	return $dem if defined wantarray;
 	return;
@@ -359,199 +374,122 @@ sub fill_depressions {
     if ($opt{fdg}) {
 	return ral_dem_fill_depressions($dem->{GRID}, $opt{fdg}->{GRID});
     } else {
-	my $fdg = $dem->fdg(method=>'D8', quiet=>$opt{quiet});
-	$fdg->drain_flat_areas($dem, method=>'m', quiet=>$opt{quiet});
-	$fdg->drain_flat_areas($dem, method=>'o', quiet=>$opt{quiet});
-	my $c = $fdg->contents();
-	my $pits = $$c{0} || 0;
-	my $flats = $$c{-1} || 0;
-	print STDERR "fill_depressions: $pits pit and $flats flat cells remain\n" unless $opt{quiet};
-	my $i = 1;
-	while ($pits > 0 or $flats > 0) {
-	    ral_dem_fill_depressions($dem->{GRID}, $fdg->{GRID});
-	    $fdg = $dem->fdg( method=>'D8', quiet=>$opt{quiet});
-	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>$opt{quiet});
-	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>$opt{quiet});
-	    $c = $fdg->contents();
-	    my $pits_last_time = $pits;
-	    my $flats_last_time = $flats;
-	    $pits = $$c{0} || 0;
-	    $flats = $$c{-1} || 0;
-	    if ($pits_last_time == $pits and $flats_last_time == $flats) {
-		print STDERR "fill_depressions: bailing out, there is no progress!\n";
-		last;
-	    }
-	    print STDERR "fill_depressions: iteration $i: $pits pit and $flats flat cells remain\n" unless $opt{quiet};
-	    $i++;
+	my $step = 1;
+	my $pits_last_time = -1;
+	my $flats_last_time = -1;
+	while (1) {
+	    my $fdg = $dem->fdg(method=>'D8', quiet=>0);
+	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>0);
+	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>0);
+	    my $c = $fdg->contents();
+	    my $pits = $$c{0} || 0;
+	    my $flats = $$c{-1} || 0;
+	    print STDERR "fill_depressions: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
+	    return $fdg if ($pits == 0 and $flats == 0);
+	    croak "there is no progress" if ($pits_last_time == $pits and $flats_last_time == $flats);
+	    my $n = ral_dem_fill_depressions($dem->{GRID}, $fdg->{GRID});
+	    print STDERR "fill_depressions: iteration step $step: $n depressions filled\n" unless $opt{quiet};
+	    $pits_last_time = $pits;
+	    $flats_last_time = $flats;
+	    $step++;
 	}
-	return $fdg;
     }
 }
 
-## @method breach(%opt)
+## @method scalar breach(%params)
 #
-# @brief This iterative DEM method applies the breaching method on all
-# depressions and drains all flat areas. 
+# @brief Breach the depressions in a DEM.
 #
-# Depressions may be removed by filling or by breaching. Breaching means 
-# lowering the elevation of the ``dam'' cells.  The breaching is tried at the 
-# lowest cell on the rim of the depression which has the steepest descent away 
-# from the depression (if there are more than one lowest cells) and the steepest 
-# descent into the depression (if there are more than one lowest cells with 
-# identical slope out)
+# Breaching is a depression removal method, which lowers the elevation
+# of cells, which form a dam. Breaching is tried at the lowest cell on
+# the rim of the depression which has the steepest descent away from
+# the depression (if there are more than one lowest cells) and the
+# steepest descent into the depression (if there are more than one
+# lowest cells with identical slope out)
 #
-# The treatment of flat areas and depressions in automated drainage 
-# analysis of raster digital elevation models. Hydrol. Process. 12, 843-855; 
-# the breaching algorithm implemented here is close to but not the same as 
-# theirs - the biggest difference being that the depression cells are not raised 
-# here). Breaching is often limited to a certain number of cells. Both of these 
-# methods change the DEM. Both methods need to be run iteratively to remove all 
-# removable depressions. Only the filling method is guaranteed to produce a 
-# depressionless DEM.
+# The breaching algorithm implemented here is close to but not the
+# same as in Martz and Garbrecht (1998). The biggest difference is
+# that the depression cells are not raised in this implementation.
 #
-# Example of non-iterative versions of the method:
-# @code
-# $dem->breach($fdg, $limit);
-# @endcode
-#
-# Named parameters include:
-# @param[in] opt Can have named parameters:
-# - <I>limit</I> (optional). Maximum amount of cells to be breached. Default is 
-# to not limit the breaching ($limit == 0).
-# - <I>fdg</I> (optional). Reference to an flow direction grid. Should not 
-# contain flat areas. The default is to 
-# calculate it using the D8 method and then route flow through flat areas using 
-# the methods "multiple pour points" and "one pour point" (in this order).
-# If the $fdg is not given it is calculated as above in the depressions method 
-# and the depressions are removed iteratively until all depressions are removed 
-# or the number of depressions does not diminish in one iteration loop.
-# - <I>no_iteration</I>=>boolean. Tells the metdos if it should work 
-# non-iteratively. The FDG id needed if non-iterative approach is wanted.
-# - <I>quiet</I>=>boolean (optional). Tells if the method should not print error 
-# messages.
-# @return Returns a flow direction grid (without flat or pit cells) (dem if
-# non-iterative)
-# @see Martz, L.W. and Garbrecht, J. 1998.
+# @param[in] params Named parameters:
+# - <I>limit</I> (optional) Maximum amount of cells (width of the dam)
+# to be breached. Default is to not limit the breaching ($limit == 0).
+# - <i>iterative</i>=>boolean (optional) Whether to run the breach
+# algorithm iteratively until a pitless and flatless FDG is obtained
+# from the DEM using the D8 method or there is no progress in the
+# iteration. In an iteration step a FDG is first computed from the DEM
+# using the D8 method. Then the flat areas are removed from the FDG
+# using first the multiple pour point method and then the one pour
+# point method. The breaching algorithm is then run once (one scan of
+# the whole raster) on the DEM using this FDG. If the flatless FDG
+# that is computed from this changed DEM is also pitless or there is
+# no progress in the iteration, then the iteration stops. If iterative
+# is true, the DEM is changed and a FDG is returned. Default is true.
+# - <i>FDG</i>=>raster (optional unless iterative is false) The FDG
+# for the breaching algorithm. If FDG is given it must not contain
+# flat areas. The algorithm is run only once, i.e., one scan of the
+# FDG is performed. Default is undefined.  - <i>quiet</i>=>boolean
+# (optional) Whether to report the progressing of the iteration.
+# @return a DEM from which some depressions are removed (if the
+# context is non-void and iterative is false), nothing (if FDG is
+# given), or a pitless and flatless FDG.
+# @exception - FDG is not given but iterative is false.
+# @see Martz, L.W. and Garbrecht, J. 1998. The treatment of flat areas
+# and depressions in automated drainage analysis of raster digital
+# elevation models. Hydrol. Process. 12, 843-855
 sub breach {
     my($dem, %opt) = @_;
+    $opt{fdg} = $opt{FDG} if exists $opt{FDG};
     $opt{limit} = 0 unless defined($opt{limit});
-    if ($opt{no_iteration}) {
-	croak "breach: FDG needed if non-iterative" unless $opt{fdg};
-	my $g = ral_dem_breach($dem->{GRID}, $opt{fdg}->{GRID}, $opt{limit});
-	if (defined wantarray) {
-	    return new Geo::Raster $g;
-	} else {
-	    $dem->_new_grid($g);
-	    return;
-	}
+    $opt{iterative} = 1 unless exists $opt{iterative} and not $opt{iterative};
+    if (not $opt{iterative}) {
+	croak "breach: FDG needed if not iterative" unless $opt{fdg};
+	$dem = Geo::Raster->new($dem) if defined wantarray;
+	ral_dem_breach($dem->{GRID}, $opt{fdg}->{GRID}, $opt{limit});
+	return $dem if defined wantarray;
+	return;
     }
     if ($opt{fdg}) {
 	return ral_dem_breach($dem->{GRID}, $opt{fdg}->{GRID}, $opt{limit});
     } else {
-	my $fdg = $dem->fdg(method=>'D8', quiet=>$opt{quiet});
-	$fdg->drain_flat_areas($dem, method=>'m', quiet=>$opt{quiet});
-	$fdg->drain_flat_areas($dem, method=>'o', quiet=>$opt{quiet});
-	my $c = $fdg->contents();
-	my $pits = $$c{0} || 0;
-	my $flats = $$c{-1} || 0;
-	print STDERR "breach: $pits pit and $flats flat cells remain\n" unless $opt{quiet};
-	my $i = 1;
-	while ($pits > 0 or $flats > 0) {
-	    ral_dem_breach($dem->{GRID}, $fdg->{GRID}, $opt{limit});
-	    $fdg = $dem->fdg(method=>'D8', quiet=>$opt{quiet});
-	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>$opt{quiet});
-	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>$opt{quiet});
-	    $c = $fdg->contents();
-	    my $pits_last_time = $pits;
-	    my $flats_last_time = $flats;
-	    $pits = $$c{0} || 0;
-	    $flats = $$c{-1} || 0;
-	    if ($pits_last_time == $pits and $flats_last_time == $flats) {
-		print STDERR "breach: bailing out, there is no progress!\n";
-		last;
-	    }
-	    print STDERR "breach: iteration $i: $pits pit and $flats flat cells remain\n" unless $opt{quiet};
-	    $i++;
+	my $step = 1;
+	my $pits_last_time = -1;
+	my $flats_last_time = -1;
+	while (1) {
+	    my $fdg = $dem->fdg(method=>'D8', quiet=>0);
+	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>0);
+	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>0);
+	    my $c = $fdg->contents();
+	    my $pits = $$c{0} || 0;
+	    my $flats = $$c{-1} || 0;
+	    print STDERR "breach: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
+	    return $fdg if ($pits == 0 and $flats == 0);
+	    return $fdg if ($pits_last_time == $pits and $flats_last_time == $flats);
+	    my $n = ral_dem_breach($dem->{GRID}, $fdg->{GRID}, $opt{limit});
+	    print STDERR "breach: iteration step $step: $n depressions filled\n" unless $opt{quiet};
+	    $pits_last_time = $pits;
+	    $flats_last_time = $flats;
+	    $step++;
 	}
-	return $fdg;
     }
 }
 
-## @method Geo::Raster drain_depressions(Geo::Raster dem)
-#
-# @brief Iteratively drain the depressions in a FDG.
-#
-# This flow direction grid (FDG) method iteratively drains all
-# depressions in the FDG by reversing the flowpath from the lowest pour
-# point of the depression to the pit cell. The DEM remains unchanged.
-# @param[in] dem a DEM. The DEM is not changed in the method.
-# @return In a void context the method changes this FDG, otherwise the
-# method returns a new FDG.
-sub drain_depressions {
-    my($fdg, $dem) = @_;
-    $fdg = new Geo::Raster $fdg if defined wantarray;
-    ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
-    return $fdg if defined wantarray;
-}
-
-## @method route(Geo::Raster dem, Geo::Raster fdg, Geo::Raster flow, Geo::Raster k, Geo::Raster d, $f, $r)
-#
-# @brief This method routes water downstream.
-#
-# The method should be used for a grid having the current water quantities for 
-# each cell.
-#
-# The method is recursive and routes water from each cell downslope if water 
-# from all its upslope cells have been routed downslope.
-#
-# The catchment tree is traversed using the flow direction grid, which thus 
-# must contain only valid directions (no pits nor flat area cells).
-#
-# Example of routing water out from a catchment:
-# @code
-# $water_grid->route($dem_grid, $fdg_grid, $flow_grid, $k_grid, $d_grid, $f, $r);
-# @endcode
-#
-# @param[in] dem The elevation of the ground as an real grid.
-# @param[in] fdg The flow directions of the ground as an integer grid. Defines 
-# into which direction the water flows.
-# @param[out] flow The amount of water routed forward from this grid (leaving 
-# each cell).
-# @param[in] k Values to be added to the slope.
-# @param[in] d Values to be used for multiplying the effect of slopes (current?).
-# @param[in] f (optional). If true then water is routed from each cell to all of 
-# its neighbors having the same or lower elevation, else if false only to a 
-# single cell pointed by FDG. Default value is 1 (true).
-# @param[in] r (optional). Unit of z dived by the unit of x and y. By default is 1.
-# @note All the grids have to be overlayable and all grids except the flow 
-# direction grid have to have as datatype real.
-sub route {
-    my($water, $dem, $fdg, $flow, $k, $d, $f, $r) = @_;
-    $f = 1 unless defined $f;
-    $r = 1 unless defined $r;
-    croak ("usage: $water->route($dem, $fdg, $flow, $k, $d, $f, $r)") unless $flow;
-    return water_route($water->{GRID}, $dem->{GRID}, $fdg->{GRID}, $flow->{GRID}, $k->{GRID}, $d->{GRID}, $f, $r);
-}
-
-## @method Geo::Raster path($i, $j, Geo::Raster stop)
+## @method Geo::Raster path(@cell, Geo::Raster stop)
 # 
-# @brief This FDG method returns the path from the given cell to the end of
-# the path as a raster. 
+# @brief Return the flow path from the given FDG cell onwards.
 #
 # The end of the path is where flow direction is not specified, where it goes 
-# out of the boundaries, or where the stop grid is > 0.
+# out of the raster, or where the stop raster has a positive value.
 #
-# @param[in] i The beginning cells i-coordinate.
-# @param[in] j The beginning cells j-coordinate.
-# @param[in] stop (optional) Grid defining where a path can not pass and must end
-# (like a well for water :) ).
-# @return Returns the path from the given cell to the end of
-# the path as grid. 
+# @param[in] cell The origin of the path.
+# @param[in] stop (optional) Raster denoting end cells for paths.
+# @return raster, where the path cells have the value 1 and otherwise
+# no data value. In void context changes the FDG.
 sub path {
     my($fdg, $i, $j, $stop) = @_;
     my $g = ral_fdg_path($fdg->{GRID}, $i, $j, $stop ? $stop->{GRID} : undef);
     if (defined wantarray) {
-	return new Geo::Raster $g;
+	return Geo::Raster->new($g);
     } else {
 	$fdg->_new_grid($g);
     }
@@ -559,16 +497,17 @@ sub path {
 
 ## @method Geo::Raster path_length(Geo::Raster stop, Geo::Raster op)
 #
-# @brief This FDG method returns a raster, where the value of each cell is
-# the length of the path from that cell to the end of the path.
+# @brief Compute a path length raster from a FDG.
 #
 # The path is assumed to go from a center point of a cell to another
 # center point. The length is not recorded if op is nodata. The length
-# is calculated in the raster units.
-# @param[in] stop (optional)
-# @param[in] op (optional)
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
+# is calculated in the raster units. A path ends at the border of the
+# FDG, at a FDG cell with undefined direction, or at a cell in the
+# stop raster with positive value.
+# @param[in] stop (optional) Raster denoting end cells for paths.
+# @param[in] op (optional) Raster denoting cells which are included in
+# the length computation.
+# @return a flow path length raster. In void context changes the FDG.
 sub path_length {
     my($fdg, $stop, $op) = @_;
     my $g = ral_fdg_path_length($fdg->{GRID}, $stop ? $stop->{GRID} : undef, $op ? $op->{GRID} : undef);
@@ -581,18 +520,16 @@ sub path_length {
 
 ## @method Geo::Raster path_sum(Geo::Raster stop, Geo::Raster op)
 # 
-# @brief This FDG method returns a raster, where the value of each cell is
-# the weighted (with length) sum along the path from that cell to the
-# end of the path.
+# @brief Compute a cost-to-go raster from a FDG.
 #
-# The path is assumed to go from a center point of a
+# This FDG method returns a raster, where the value of each cell is
+# the weighted (with length) sum along the path from that cell to the
+# end of the path. The path is assumed to go from a center point of a
 # cell to another center point. The length is not recorded if op is
 # nodata. The length is calculated in the raster units.
-# @param[in] stop (optional) Grid defining where a path can not pass and must end.
-# @param[in] op Weight of the cells value, which is summed.
-# Must be overlayable with this flow direction grid. 
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
+# @param[in] stop (optional) Raster denoting end cells for paths.
+# @param[in] op Weights (cost) for the summing.
+# @return a cost-to-go raster. In void context changes the FDG.
 sub path_sum {
     my($fdg, $stop, $op) = @_;
     my $g = ral_fdg_path_sum($fdg->{GRID}, $stop ? $stop->{GRID} : undef, $op->{GRID});
@@ -603,44 +540,19 @@ sub path_sum {
     }
 }
 
-## @method Geo::Raster upslope_sum(Geo::Raster a, $b)
+## @method Geo::Raster upslope_count(Geo::Raster mask, $include_self)
 # 
-# @brief This FDG method computes the sum of the cell values from the upslope
-# cells for all cells of the operand raster. 
-# 
-# @param[in] a The operand raster grid.
-# @param[in] b (optional). Boolean value specifying whether the cell itself is 
-# included into the upslope area. By default 1 (true).
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
-# @note DO NOT call if the FDG contains loops.
-sub upslope_sum {
-    my($fdg, $a, $b) = @_;
-    my $op = ref $a ? $a : $b;
-    my $include_self = ref $a ? $b : $a;
-    $include_self = 1 unless defined $include_self;
-    croak "usage: \$fdg->upslope_sum(\$op); where \$op is a raster whose values are to be summed" 
-	unless $op and $op->{GRID};
-    my $g = ral_fdg_upslope_sum($fdg->{GRID}, $op->{GRID}, $include_self);
-    if (defined wantarray) {
-	return new Geo::Raster $g;
-    } else {
-	$fdg->_new_grid($g);
-    }
-}
-
-## @method Geo::Raster upslope_count(Geo::Raster a, $b)
-# 
-# @brief This FDG method computes the count of the upslope cells for all
-# cells of the operand raster. 
+# @brief Compute the count of the upslope cells in a FDG.
 #
-# @param[in] a The operand raster grid. The operand may be used to specify which 
-# cells to count and which not (the nodata cells are not counted).
-# @param[in] b Boolean value, which specifies whether the cell itself is included 
-# into the upslope area (default is yes). 
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
+# @param[in] mask (optional) Can be used to mask out cells from the
+# count. Nodata cells of the mask are not included in the count.
+# @param[in] include_self (optional) Boolean value, which specifies
+# whether the cell itself is included in its upslope area. Default is
+# true.
+# @return the upslope count raster. In void context changes the FDG.
 # @note DO NOT call if the FDG contains loops.
+# @note This is the method for computing an upslope area raster (UAG)
+# from a flow direction raster (FDG).
 sub upslope_count {
     my($fdg, $a, $b) = @_;
     my $op = ref $a ? $a : $b;
@@ -656,18 +568,42 @@ sub upslope_count {
     }
 }
 
+## @method Geo::Raster upslope_sum(Geo::Raster a, $include_self)
+# 
+# @brief Compute the sum of the values of the upslope cells in a
+# raster (FDG method).
+# 
+# @param[in] a The operand raster.
+# @param[in] include_self (optional). Boolean value specifying whether
+# the cell itself is included in its upslope area. Default is true.
+# @return In void context changes this flow direction raster,
+# otherwise returns a new FDG.
+# @note DO NOT call if the FDG contains loops.
+sub upslope_sum {
+    my($fdg, $a, $b) = @_;
+    croak "usage: \$fdg->upslope_sum(\$op); where \$op is a raster whose values are to be summed" unless $a and $a->{GRID}; 
+    $b = 1 unless defined $b;
+    my $g = ral_fdg_upslope_sum($fdg->{GRID}, $a->{GRID}, $b);
+    if (defined wantarray) {
+	return Geo::Raster->new($g);
+    } else {
+	$fdg->_new_grid($g);
+    }
+}
+
 ## @method Geo::Raster kill_extra_outlets(Geo::Raster lakes, Geo::Raster uag)
 # 
-# @brief This FDG method checks its sanity against the lakes in the terrain,
-# so that no flow paths exit and enter the same lake again. 
+# @brief Checks and possibly correct the sanity of the flow paths in a
+# terrain with lakes (FDG method).
 #
-# The FDG is modified (or a new FDG is returned) so that each lake has only one
-# outlet.
-# @param[in] lakes an integer raster of the lakes in the terrain (each lake may have 
-# its own id)
-# @param[in] uag (optional) Upslope area grid.
-# @return In void context (no return grid is wanted) the method changes this 
-# flow direction grid, otherwise the method returns a new FDG.
+# The FDG is modified so that each lake has only one outlet. The lakes
+# raster is typically a reclassified land cover raster.
+# @param[in] lakes an integer raster of the lakes in the terrain (each
+# lake may have its own non-zero id)
+# @param[in] uag (optional) Upslope area raster. Computed using the
+# upslope_count method unless given.
+# @return In void context changes this flow direction raster,
+# otherwise returns a new FDG.
 sub kill_extra_outlets {
     my ($fdg, $lakes, $uag) = @_;
     $fdg = new Geo::Raster $fdg if defined wantarray;
@@ -676,28 +612,18 @@ sub kill_extra_outlets {
     return $fdg if defined wantarray;
 }
 
-## @method Geo::Raster catchment(array cell, scalar m)
+## @method Geo::Raster catchment(Geo::Raster catchment, @cell, $m)
 #
-# @brief This FDG method computes the catchment area of the given cell and
-# marks it on the returned raster using m.
-# @param[in] cell The i- and j-coordinates of the cell.
-# @param[in] m (optional). Number used to mark the cells belonging to the 
-# catchment. By default 1 (true). 
-# @return Returns the catchment as Geo::Raster. Alternatively returns a list 
-# containing the catchment Geo::Raster and the size of the catchment.
-
-## @method Geo::Raster catchment(Geo::Raster catchment, array cell, scalar m)
+# @brief Return the catchment area of the given cell (FDG method).
 #
-# @brief This FDG method computes the catchment area of the given cell and
-# marks it on the given raster using m.
-# @param[out] catchment
-# @param[in] cell The i- and j-coordinates of the cell.
-# @param[in] m (optional). Number used to mark the cells belonging to the 
-# catchment. By default 1 (true).
-# @return Returns the catchment Geo::Raster, which is the given grid, with the
-# catchment cells marked. Alternatively returns a list containing the catchment 
-# Geo::Raster, which is the given grid with the catchment cells marked, 
-# and the size of the catchment.
+# @param[in,out] catchment (optional) The raster in which to return
+# the catchment of the given cell.
+# @param[in] cell The cell.
+# @param[in] m (optional). Number used to mark the cells belonging to
+# the catchment. Default is 1.
+# @return Depending on the context returns the catchment raster or a
+# list containing the catchment raster and the number of cells in the
+# catchment.
 sub catchment {
     my $fdg = shift;
     my $i = shift;
@@ -718,74 +644,23 @@ sub catchment {
     return wantarray ? ($catchment, $size) : $catchment;
 }
 
-## @method Geo::Raster distance_to_pit(scalar steps)
-# 
-# @brief This FDG method computes the distance to the outlet of the
-# catchment.
-# @param[in] steps (optional) Boolean telling if the distances between pixels along 
-# the path are calculated in pixel units and not in grid units. By default 
-# false (0).
-# @return Returns a new grid with the distances.
-sub distance_to_pit {
-    my $fdg = shift;
-    my $steps = shift;
-    my $g = ral_fdg_distance_to_pit($fdg->{GRID}, $steps);
-    return unless $g;
-    my $ret = new Geo::Raster $g;
-    return $ret;
-}
-
-## @method Geo::Raster distance_to_channel(Geo::Raster streams, $steps)
-#
-# @brief Returns a new grid whose cell values represent the distance to nearest 
-# channel along the flow path (defined by this flow direction grid).
-#
-# Example of usage:
-# @code 
-# $d = $fdg->distance_to_channel($open_water_grid,[$steps])
-# @endcode
-#
-# @param[in] streams A raster grid having non-zero values for channels.
-# @param[in] steps (optional) Boolean telling if the distances between pixels along 
-# the path are calculated in pixel units and not in grid units. By default 
-# false (0).
-# @return Returns a new grid with the distances.
-sub distance_to_channel {
-    my $fdg = shift;
-    my $streams = shift;
-    my $steps = shift;
-    my $g = ral_fdg_distance_to_channel($fdg->{GRID}, $streams->{GRID}, $steps);
-    return unless $g;
-    return new Geo::Raster $g;
-}
-
-## @ignore
-# does not make sense??
-sub distance_to_divide {
-    my $fdg = shift;
-    my $steps = shift;
-    my $g = ral_fdg_distance_to_divide($fdg->{GRID}, $steps);
-    return unless $g;
-    return new Geo::Raster $g;
-}
-
 ## @method Geo::Raster prune(Geo::Raster fdg, Geo::Raster lakes, $min_length, @cell)
 # 
-# @brief This streams method removes streams shorter than min_length (in grid
-# scale!).
+# @brief Delete streams that are shorter than min_length in a streams raster.
 #
 # Example of removing streams shorter than min_lenght:
 # @code
-# $streams->prune($fdg_grid, $lakes_grid, $min_lenght, $i, $j);
+# $streams->prune($fdg, $lakes, $min_lenght, @cell);
 # @endcode
-# @param[in] fdg Flow direction grid, which gives the flow directions of the stream.
-# @param[in] lakes (optional) Raster grid defining lakes.
-# @param[in] min_length Minimum length of an stream to be not deleted.
-# @param[in] cell (optional) The cells i- and j-coordinates, from where the method
-# begins to remove too short streams (the root of that stream tree). If not 
-# given then all streams are pruned if they are too short.
-# @return In void context (no return grid is wanted) the method changes this 
-# streams grid, otherwise returns a new grid with only the longer streams.
+# @param[in] fdg Flow direction raster.
+# @param[in] lakes (optional) Lakes raster.
+# @param[in] min_length (optional) Minimum length (in raster scale!)
+# of streams to be not deleted. Default is 1.5*cell_size.
+# @param[in] cell (optional) The root cell (a catchment outlet) from
+# which the method begins to remove too short streams. If not given
+# then all streams are pruned.
+# @return In void context changes this streams raster, otherwise
+# returns a new streams raster.
 sub prune {
     my $streams = shift;
     my $fdg = shift;
@@ -798,7 +673,7 @@ sub prune {
     my $i = shift;
     my $j = shift;
     $min_length = 1.5*$streams->{CELL_SIZE} unless defined($min_length);
-    $streams = new Geo::Raster $streams if defined wantarray;
+    $streams = Geo::Raster->new($streams) if defined wantarray;
     $i = -1 unless defined $i;
     if ($lakes) {
 	ral_streams_prune($streams->{GRID}, $fdg->{GRID}, $lakes->{GRID}, $i, $j, $min_length);
@@ -808,16 +683,19 @@ sub prune {
     return $streams if defined wantarray;
 }
 
-## @method Geo::Raster number_streams(Geo::Raster fdg, Geo::Raster lakes, @cell, $sid)
+## @method Geo::Raster number_streams(Geo::Raster fdg, Geo::Raster lakes, @cell, $id)
 #
-# @brief This streams method numbers streams with unique id.
-# @param[in] fdg Flow direction grid, which gives the flow directions of the stream.
-# @param[in] lakes (optional) Raster grid defining lakes.
-# @param[in] cell (optional) The cells i- and j-coordinates, from where the method
-# begins to number the streams (the root of that stream tree). If not 
-# given then all streams are pruned if they are too short.
-# @param[in] sid Id number for the first found stream, the next streams will get
-# higher unique numbers.
+# @brief Number streams in a streams raster with unique id.
+#
+# @param[in] fdg Flow direction raster.
+# @param[in] lakes (optional) Lakes raster.
+# @param[in] cell (optional) The root cell (a catchment outlet) from
+# which the method begins to treat the streams. If not given
+# then all stream trees are treated.
+# @param[in] id (optional) Number for the first found stream, the next
+# streams will get higher unique numbers. Default is 1.
+# @return In void context changes this streams raster, otherwise
+# returns a new streams raster.
 sub number_streams {
     my $streams = shift;
     my $fdg = shift;
@@ -830,7 +708,7 @@ sub number_streams {
     my $j = shift;
     my $sid = shift;
     $sid = 1 unless defined($sid);
-    $streams = new Geo::Raster $streams if defined wantarray;
+    $streams = Geo::Raster->new($streams) if defined wantarray;
     $i = -1 unless defined $i;
     ral_streams_number($streams->{GRID}, $fdg->{GRID}, $i, $j, $sid);
     if ($lakes) {
@@ -840,27 +718,27 @@ sub number_streams {
     return $streams if defined wantarray;
 }
 
-## @method Geo::Raster subcatchments(Geo::Raster fdg, Geo::Raster lakes, array cell, scalar head)
+## @method Geo::Raster subcatchments(Geo::Raster fdg, Geo::Raster lakes, @cell, $head)
 #
-# @brief This streams raster method divides the catchment into subcatchments
-# defined by the stream network.
+# @brief Divide catchments into subcatchments defined by a streams
+# raster.
 #
 # Example of usage:
 # @code
-# $subcatchments = $streams->subcatchments($fdg, $i, $j);
+# $subcatchments = $streams->subcatchments($fdg, @cell);
 # @endcode
 # or 
 # @code
-# ($subcatchments, $topo) = $streams->subcatchments($fdg, $lakes, $i, $j);
+# ($subcatchments, $topo) = $streams->subcatchments($fdg, $lakes, @cell);
 # @endcode
 #
 # @param[in] fdg The FDG from which the streams raster has been computed.
-# @param[in] lakes (optional) Raster grid defining lakes.
-# @param[in] cell (optional) The cells i- and j-coordinates, which is the outlet 
-# point of the whole catchment.
-# @param[in] head (optional) 0 or 1, if 1 the algorithm divides the
-# catchment of a headstream to head and regular subcatchment. Head
-# catchment drains into the last cell of the stream.
+# @param[in] lakes (optional) Lakes raster.
+# @param[in] cell (optional) The outlet cell of the catchment.
+# @param[in] head (optional) Boolean value denoting whether the
+# algorithm should divide the catchment of a headstream to the
+# catchment of the first cell of the headstream and the catchment
+# draining to the rest of the headstream. Default is false.
 # @return Returns a subcatchments raster or a subcatchments raster and
 # topology, topology is a reference to a hash of
 # $upstream_element=>$downstream_element associations.
@@ -885,7 +763,7 @@ sub subcatchments {
 				     $lakes->{GRID}, $i, $j, $headwaters);
 	
 	# drainage structure:
-	# head -> stream (if exist)
+	# head -> stream (if exist)<
 	# sub -> lake or stream
 	# lake -> stream
 	# stream -> lake or stream
@@ -926,30 +804,31 @@ sub subcatchments {
     }
 }
 
-## @method save_catchment_structure(hashref topology, $streams, $lakes, $ogr_datasource, $ogr_layer)
+## @method save_catchment_structure(hashref topology, Geo::Raster streams, Geo::Raster lakes, $datasource, $layer)
 #
-# @brief Saves the subcatchment structure as a vector layer.
+# @brief Save the subcatchment structure as a vector layer (a subcatchments raster method).
+#
 # @param[in] topology Reference to an hash having as keys = type id i j, and as 
 # values = type id.
-# @param[in] streams Raster grid defining streams.
-# @param[in] lakes (optional) Raster grid defining lakes.
-# @param[in] ogr_datasource is an OGR datasource name, e.g., a directory.
-# @param[in] ogr_layer Name for the new layer.
+# @param[in] streams Streams raster.
+# @param[in] lakes (optional) Lakes raster.
+# @param[in] datasource OGR datasource string, e.g., a directory.
+# @param[in] layer Name for the new layer.
 sub save_catchment_structure {
-    my ($self, $topology, $streams, $lakes, $ogr_datasource, $ogr_layer) = @_;
+    my ($self, $topology, $streams, $lakes, $datasource_string, $layer) = @_;
 
     my $cell_size = $self->cell_size();
 
     my ($minX, $minY, $maxX, $maxY) = $self->world();
 
-    my $datasource = Geo::OGR::Open($ogr_datasource, 1) or 
-	croak "can't open '$ogr_datasource' as an OGR datasource";
+    my $datasource = Geo::OGR::Open($datasource_string, 1) or 
+	croak "can't open '$datasource' as an OGR datasource";
 
     my $osr;
     #$osr = new osr::SpatialReference;
     #$osr->SetWellKnownGeogCS('WGS84');
 
-    my $catchment = $datasource->CreateLayer($ogr_layer, $osr, $Geo::OGR::wkbPolygon);
+    my $catchment = $datasource->CreateLayer($layer, $osr, $Geo::OGR::wkbPolygon);
     my $defn = new Geo::OGR::FieldDefn('element', $Geo::OGR::OFTInteger);
     $defn->SetWidth(5);
     $catchment->CreateField($defn);
@@ -964,7 +843,7 @@ sub save_catchment_structure {
     $catchment->CreateField($defn);
     my $schema = $catchment->GetLayerDefn();
 
-    my $layer = $self*1;
+    $layer = $self*1;
     my ($minval, $maxval) = $layer->value_range();
 
     # add only lakes which exist in the structure
@@ -1080,24 +959,52 @@ sub save_catchment_structure {
     $catchment->SyncToDisk;
 }
 
-## @method void vectorize_streams(Geo::Raster fdg, $i, $j)
+## @method route(Geo::Raster dem, Geo::Raster fdg, Geo::Raster flow, Geo::Raster k, Geo::Raster d, $f, $r)
 #
-# @brief The method creates an OGR-layer from this streams raster grid.
+# @brief Route water downstream (a water state raster method).
+#
+# The water in each cell of the self raster is routed downstream. A
+# recursive routing method is applied, which first routes water from
+# upslope cells.
+#
+# Example of routing water out from a catchment:
+# @code
+# $water_grid->route($dem, $fdg, $flow, $k, $d, $f, $r);
+# @endcode
+#
+# @param[in] dem The DEM.
+# @param[in] fdg The flow directions raster.
+# @param[out] flow The amount of water routed forward (leaving each
+# cell).
+# @param[in] k Values to be added to the slope.
+# @param[in] d Values to be used for multiplying the effect of slopes (current?).
+# @param[in] f (optional). If true then water is routed from each cell to all of 
+# its neighbors having the same or lower elevation, else if false only to a 
+# single cell pointed by FDG. Default value is 1 (true).
+# @param[in] r (optional). Unit of z dived by the unit of x and y. By default is 1.
+# @todo IN DEVELOPMENT DO NOT USE
+sub route {
+    my($water, $dem, $fdg, $flow, $k, $d, $f, $r) = @_;
+    $f = 1 unless defined $f;
+    $r = 1 unless defined $r;
+    croak ("usage: $water->route($dem, $fdg, $flow, $k, $d, $f, $r)") unless $flow;
+    return water_route($water->{GRID}, $dem->{GRID}, $fdg->{GRID}, $flow->{GRID}, $k->{GRID}, $d->{GRID}, $f, $r);
+}
+
+## @method void vectorize_streams(Geo::Raster fdg, @cell)
+#
+# @brief Create an OGR layer from a streams raster.
+#
 # @param fdg The FDG from which the streams raster has been computed.
-# @param i The cells i-coordinate, from where the method begins to vectorize
-# the streams (the root of that stream tree).
-# @param j The cells j-coordinate, from where the method begins to vectorize
-# the streams (the root of that stream tree).
-# @note The FDG has to be overlayable with this grid.
-# @todo This method is still unfinished.
+# @param cell The outlet cell of the catchment.
+# @todo IN DEVELOPMENT DO NOT USE
 sub vectorize_streams {
-    my ($self, $fdg, $i, $j, $ogr_datasource, $ogr_layer) = @_;
+    my ($self, $fdg, $i, $j, $datasource, $layer) = @_;
     ral_streams_vectorize($self->{GRID}, $fdg->{GRID}, $i, $j);
 }
 
-## @method compare_dem_derived_ws_attribs(Geo::Raster uag, Geo::Raster dem, $filename, $iname, $ielev, $idarea)
+## @ignore
 #
-# @todo Documentation
 sub compare_dem_derived_ws_attribs {
     my ($self, $uag, $dem, $filename, $iname, $ielev, $idarea) = @_;
     #my ($self, $filename) = @_;

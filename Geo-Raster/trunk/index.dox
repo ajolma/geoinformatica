@@ -29,19 +29,37 @@ can be linked to Gtk2::Ex::Geo::Glue for plotting.
 
 \section index_geo_raster Introduction to Geo::Raster
 
-A Geo::Raster object (a blessed reference to an anonymous hash) is
-either a temporary cache of one band of a GDAL raster dataset or an
-in-memory libral raster. Geo::Raster objects are either integer or
-real valued grids. The Perl layer overlays the basic operators and
-functions to make raster algebra easy.
+A Geo::Raster object is either a temporary cache of one band of a GDAL
+raster dataset or an in-memory libral raster. In this documentation
+Geo::Raster objects are referred to simply as rasters. Technically a
+raster is a blessed reference to an anonymous hash. Generally, the
+user should treat the hash values as read-only or not access them at
+all and instead use the methods. Rasters are either integer or real
+valued. The Geo::Raster class provides many basic operators and
+functions for raster computations. 
 
-Many Geo::Raster methods can be used in-place or to return a value. For example: 
+\note
+The raster operations and methods almost always make sense only if the
+raster is an in-memory libral raster. Technically GDAL rasters are
+libral rasters too, but the libral raster is only a snapshot created
+for display. To convert a GDAL raster to a libral raster in the GUI
+use the clip menu command and dialog.
+
+Many Geo::Raster methods can be used in-place or to return a
+value. For example:
 @code
 $a->sin(); 
 @endcode
 vs. 
 @code
 $b = $a->sin();
+@endcode
+
+A raster is a rectangular matrix of cells. A cell is referred to by a
+list ($row, $column) or ($i, $j). For example:
+@code
+@cell = (30, 40);
+$value = $a->get(@cell);
 @endcode
 
 \section index_geo_vector Introduction to Geo::Vector

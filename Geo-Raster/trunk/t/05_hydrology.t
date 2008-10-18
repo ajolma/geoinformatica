@@ -66,15 +66,15 @@ sub diff {
     for $i (0..3) {
 	ok($test[$i] == $c->get($i,0),"upslope count including self with op at index $i");
     }
-    $c = $fdg->upslope_sum(0,$op);
+    $c = $fdg->upslope_sum($op,0);
     @test = (0,0,0,2);
     for $i (0..3) {
-	ok($test[$i] == $c->get($i,0),"upslope sum at index $i");
+	ok($test[$i] == $c->get($i,0),"upslope sum at index $i ".$c->get($i,0));
     }
-    $c = $fdg->upslope_sum(1,$op);
+    $c = $fdg->upslope_sum($op,1);
     @test = (0,0,2,5);
     for $i (0..3) {
-	ok($test[$i] == $c->get($i,0),"upslope sum including self at index $i");
+	ok($test[$i] == $c->get($i,0),"upslope sum including self at index $i ".$c->get($i,0));
     }
 
     $fdg->set(1);
@@ -98,12 +98,12 @@ sub diff {
     for $i (0..3) {
 	ok($test[$i] == $c->get($i,0),"upslope count including self with op at index $i");
     }
-    $c = $fdg->upslope_sum(0,$op);
+    $c = $fdg->upslope_sum($op,0);
     @test = (5,5,3,0);
     for $i (0..3) {
 	ok($test[$i] == $c->get($i,0),"upslope sum at index $i");
     }
-    $c = $fdg->upslope_sum(1,$op);
+    $c = $fdg->upslope_sum($op);
     @test = (5,5,5,3);
     for $i (0..3) {
 	ok($test[$i] == $c->get($i,0),"upslope sum including self at index $i");
@@ -118,7 +118,6 @@ sub diff {
 	fdg=>['method=>"D8"'],
 	raise_pits=>['quiet=>1'],
 	lower_peaks=>['quiet=>1'],ucg=>[],
-	depressions=>['$fdg'],
 	fill_depressions=>['fdg=>$fdg'],
 	breach=>['fdg=>$fdg']
     };
@@ -129,6 +128,7 @@ sub diff {
     ok(@s == 9, 'fit_surface');
 
     my $fdg = $dem->fdg(method=>'D8');
+    my $d = $fdg->depressions;
 
     for my $method (keys %{$args[0]}) {
 
@@ -163,8 +163,6 @@ sub diff {
     $args[0] = {
 	drain_flat_areas=>['$dem','method=>"one pour point",quiet=>1'],
 	catchment=>[50,50,1],
-	distance_to_pit=>['10'],
-	distance_to_channel=>['$streams','10'],
     };
     $args[1] = {};
 
