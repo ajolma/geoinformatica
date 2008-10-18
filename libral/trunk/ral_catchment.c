@@ -946,25 +946,24 @@ long ral_fdg_catchment(ral_grid *fdg, ral_grid *mark, ral_cell c, int m)
 }
 
 
-ral_grid *ral_dem_depressions(ral_grid *dem, ral_grid *fdg, int inc_m)
+ral_grid *ral_fdg_depressions(ral_grid *fdg, int inc_m)
 {
     long m = 1;
     ral_cell c;
+    ral_grid *mark = NULL;
     ral_pour_point_struct pp;
-    RAL_CHECK(ral_init_pour_point_struct(&pp, fdg, dem, ral_grid_create_like(fdg, RAL_INTEGER_GRID)));
+    RAL_CHECK(mark = ral_grid_create_like(fdg, RAL_INTEGER_GRID));
+    RAL_CHECK(ral_init_pour_point_struct(&pp, fdg, NULL, mark));
     RAL_FOR(c, fdg) {
 	if (RAL_INTEGER_GRID_CELL(fdg, c) == RAL_PIT_CELL) {
-
 	    ral_mark_upslope_cells(&pp, c, m);
-	    
 	    if (inc_m) m++;
 	    RAL_CHECKM(m < RAL_INTEGER_MAX, RAL_ERRSTR_IOB);
-
 	}
     }
-    return pp.mark;
+    return mark;
  fail:
-    ral_grid_destroy(&pp.mark);
+    ral_grid_destroy(&mark);
     return NULL;
 }
 
@@ -1518,119 +1517,6 @@ int ral_water_route(ral_grid *water, ral_grid *dem, ral_grid *fdg, ral_grid *flo
     return 1;
  fail:
     return 0;
-}
-
-
-/* without streams =  distance to outlet */
-ral_grid *ral_fdg_distance_to_channel(ral_grid *fdg, ral_grid *streams, int steps) 
-{
-    ral_grid *g = NULL;
-    ral_cell c;
-    RAL_CHECKM(fdg->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_FDG_INTEGER);
-    if (streams) {
-	RAL_CHECKM(ral_grid_overlayable(fdg, streams), RAL_ERRSTR_ARGS_OVERLAYABLE);
-	RAL_CHECKM(streams->datatype = RAL_INTEGER_GRID, RAL_ERRSTR_STREAMS_INTEGER);
-    }
-    if (steps) {
-	RAL_CHECK(g = ral_grid_create_like(fdg, RAL_INTEGER_GRID));
-    } else {
-	RAL_CHECK(g = ral_grid_create_like(fdg, RAL_REAL_GRID));
-    }
-    RAL_FOR(c, fdg) {
-	ral_cell f = c;
-	double d = 0;
-	int id = 0;
-	while (RAL_GRID_CELL_IN(fdg, f) AND RAL_INTEGER_GRID_DATACELL(fdg, f) AND 
-	       (RAL_GRID_CELL(g, f) <= 0) AND (!streams OR !RAL_INTEGER_GRID_CELL(streams, f)) AND
-	       (RAL_INTEGER_GRID_CELL(fdg, f) > 0)
-	    ) {
-	    if (steps)
-		id++;
-	    else
-		d += RAL_DISTANCE_UNIT(RAL_INTEGER_GRID_CELL(fdg, f)) * fdg->cell_size;
-	    f = RAL_FLOW(fdg, f);
-	}
-	if (steps)
-	    RAL_INTEGER_GRID_CELL(g, c) = (RAL_GRID_CELL_IN(fdg, f) AND RAL_INTEGER_GRID_DATACELL(fdg, f)) ? id + RAL_INTEGER_GRID_CELL(g, f) : id;
-	else
-	    RAL_REAL_GRID_CELL(g, c) = (RAL_GRID_CELL_IN(fdg, f) AND RAL_INTEGER_GRID_DATACELL(fdg, f)) ? d + RAL_REAL_GRID_CELL(g, f) : d;
-    }
-    return g;
- fail:
-    ral_grid_destroy(&g);
-    return NULL;
-}
-
-
-/* 
-   warning: this includes an eternal loop if the fdg contains a loop 
-   this does not make any sense??
-*/
-ral_grid *ral_fdg_distance_to_divide(ral_grid *fdg, int steps) 
-{
-    ral_grid *g = NULL;
-    ral_cell c;
-    RAL_CHECKM(fdg->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ARG_INTEGER);
-    if (steps) {
-	RAL_CHECK(g = ral_grid_create_like(fdg, RAL_INTEGER_GRID));
-    } else {
-	RAL_CHECK(g = ral_grid_create_like(fdg, RAL_REAL_GRID));
-    }
-    RAL_FOR(c, fdg) {
-	if (RAL_GRID_DATACELL(fdg, c)) {
-	    ral_cell t = c;
-	    int id = 0;
-	    double d = 0;
-	    int i_from_up = 0;
-	    double from_up = 0;
-	    int done = 0;
-	    while (!done) {
-		ral_cell up;
-		int go_up = 0;
-		int dir;
-		RAL_DIRECTIONS(dir) {
-		    up = ral_cell_move(t, dir);
-		    if (RAL_GRID_CELL_IN(fdg, up) AND 
-			RAL_INTEGER_GRID_DATACELL(fdg, up) AND 
-			RAL_INTEGER_GRID_CELL(fdg, up) == RAL_INV_DIR(dir)) {
-			if (steps) {
-			    if (RAL_INTEGER_GRID_CELL(g, t)) {
-				i_from_up = RAL_INTEGER_GRID_CELL(g, t);
-				break;
-			    }
-			} else {
-			    if (RAL_REAL_GRID_CELL(g, t) > 0) {
-				from_up = RAL_REAL_GRID_CELL(g, t);
-				break;
-			    }
-			}
-			go_up = 1;
-			break;
-		    }
-		}
-		if (go_up) {
-		    if (steps)
-			id++;
-		    else
-			d += RAL_DISTANCE_UNIT(RAL_INTEGER_GRID_CELL(fdg, up)) * fdg->cell_size;
-		    t = up;
-		} else {
-		    if (steps) 
-			RAL_INTEGER_GRID_CELL(g, c) = id + i_from_up;
-		    else
-			RAL_REAL_GRID_CELL(g, c) = d + from_up;
-		    done = 1;
-		}
-	    }
-	    
-	}
-	else
-	    RAL_REAL_GRID_SETNODATACELL(g, c);
-    }
-    return g;
- fail:
-    ral_grid_destroy(&g);
-    return NULL;
 }
 
 

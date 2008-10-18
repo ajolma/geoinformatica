@@ -124,10 +124,10 @@ int RAL_CALL ral_dem_raise_pits(ral_grid *dem, double z_limit);
 int RAL_CALL ral_dem_lower_peaks(ral_grid *dem, double z_limit);
 
 /**
-   Return the depressions in the DEM, each depression is marked with a
+   Return the depressions in the FDG, each depression is marked with a
    unique integer if inc_m is true.
 */
-ral_grid_handle RAL_CALL ral_dem_depressions(ral_grid *dem, ral_grid *fdg, int inc_m);
+ral_grid_handle RAL_CALL ral_fdg_depressions(ral_grid *fdg, int inc_m);
 
 /**
    fills the depressions in the dem, returns the number of filled depressions
@@ -180,10 +180,6 @@ ral_grid_handle RAL_CALL ral_fdg_upslope_integer_range(ral_grid *fdg, ral_grid *
 
 /** focal range, focal defined as upslope cells and possibly self */
 ral_grid_handle RAL_CALL ral_fdg_upslope_real_range(ral_grid *fdg, ral_grid *op, int include_self, ral_real_range *range);
-
-/** steps: do we want to measure the distance or steps?
-    streams may be NULL, then distance is to a pit */
-ral_grid_handle RAL_CALL ral_fdg_distance_to_channel(ral_grid *fdg, ral_grid *streams, int steps);
 
 /** create a grid of the subcatchments defined by the streams grid, fdg grid, and root cell c
     each subcatchment is marked with unique id */
