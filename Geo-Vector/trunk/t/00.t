@@ -28,7 +28,8 @@ for (keys %Geo::Vector::GEOMETRY_TYPE) {
     eval {
 	$test = Geo::Vector->new(driver=>'ESRI Shapefile', data_source=>'./t', layer=>'test'.$_, geometry_type=>$_);
     };
-    ok($_ eq $test->geometry_type(),"Create layer with $_ type: $@");
+    my $tt = $test->geometry_type() unless $@;
+    ok($_ eq $tt,"Create layer with $_ type: $@");
     for my $e ('dbf','prj','shp','shx') {
 	unlink "t/test$_.$e";
     }
@@ -125,4 +126,4 @@ ok($within->[0]->GetGeometry->ExportToWkt eq 'POINT (1 1)', 'Within, WKT');
 $g = Geo::OGR::Geometry->create(WKT => 'POINT (1 1)');
 $v = Geo::Vector->new(geometries => [$g]);
 $p = $v->geometry(0);
-ok($g->AsText eq $p->AsText, "geometries");
+ok($g->ExportToWkt eq $p->ExportToWkt, "geometries");

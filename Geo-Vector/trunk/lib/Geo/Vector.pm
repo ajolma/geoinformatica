@@ -156,14 +156,14 @@ sub delete_layer {
 # $v = Geo::Vector->new("borders.shp");
 # @endcode
 #
-# @param <i>data_source</i> An OGR datasource string
+# @param data_source An OGR datasource string
 # @return A new Geo::Vector object
 
-## @cmethod Geo::Vector new(%parameters)
+## @cmethod Geo::Vector new(%params)
 #
 # @brief Use named parameters to open or create a new Geo::Vector object.
 #
-# @param <i>paramters</i> a list of named parameters: (see also the named parameters of
+# @param params Named parameters: (see also the named parameters of
 # the Geo::Vector::layer method)
 # - <i>driver</i> => string (optional), used only if data source is not given (Default is 'Memory').
 # - <i>driver_options</i> (optional), forwarded to Geo::OGR::CreateDataSource.
@@ -427,10 +427,10 @@ sub dump_geom {
     }
 }
 
-## @method $copy(%parameters)
+## @method $copy(%params)
 #
 # @brief Copy this layer into a new layer.
-# @param[in] parameters is a list of names parameters: (see the named
+# @param[in] params Named parameters (see the named
 # parameters of Geo::Vector::new).
 # @return The new Geo::Vector object.
 sub copy {
@@ -460,11 +460,11 @@ sub copy {
     return $new;
 }
 
-## @method $buffer(%parameters)
+## @method $buffer(%params)
 #
 # @brief Create a new Geo::Vector object, whose features are buffer
 # areas to the original.
-# @param[in] parameters is a list of names parameters: (see also the named
+# @param[in] params Named parameters: (see also the named
 # parameters of Geo::Vector::new).
 # - <i>distance</i> => float (default is 1.0). The width of the buffer.
 # - <i>quad_segs</i> => int (default is 30). The number of segments used to approximate a 90
@@ -514,7 +514,7 @@ sub buffer {
     return $new;
 }
 
-## @method $within($other, %parameters)
+## @method $within($other, %params)
 #
 # @brief Return the features from this layer that are within the
 # features of other.
@@ -564,11 +564,11 @@ sub within {
     return $new;
 }
 
-## @method $add($other, %parameters)
+## @method $add($other, %params)
 #
 # @brief Add features from the other layer to this layer.
 # @param other A Geo::Vector object
-# @param parameters Named parameters, used for creating the new object,
+# @param params Named parameters, used for creating the new object,
 # if one is created.
 # @return (If used in non-void context) A new Geo::Vector object, which
 # contain features from both this and from the other.
@@ -634,7 +634,7 @@ sub feature_count {
 # SRS (Spatial reference system) is a geographic coordinate system code number
 # in the EPSG database (European Petroleum Survey Group, http://www.epsg.org/).
 # Default value is 4326, which is for WGS84.
-# @param[in] params (optional) is a list of named parameters:
+# @param[in] params (optional) Named parameters:
 # - format => string. Name of the wanted return format, like 'Wkt'. Wkt is for 
 # Well-known text and is defined by the The OpenGIS Consortium specification for 
 # the exchange (and easy persistance) of geometry data in ASCII format.
@@ -679,7 +679,7 @@ sub field_count {
 # @brief For a layer object returns the geometry type of the layer.
 # For a feature set object requires a named parameter that specifies the feature.
 #
-# @param[in] params is a list of named parameters:
+# @param[in] params Named parameters:
 # - flatten => true/false. Default is false.
 # - feature => integer. Index of the feature whose geometry type is queried.
 # @return For a layer object returns the geometry type of the layer.
@@ -702,7 +702,7 @@ sub geometry_type {
     return $GEOMETRY_TYPE_INV{$t};
 }
 
-## @method hashref schema(ref % schema, ref Geo::OGR::Feature feature)
+## @method hashref schema(hashref schema, Geo::OGR::Feature feature)
 #
 # @brief For a layer object gets or sets the schema of the layer.
 # For a feature set object requires a named parameter that specifies the feature.
@@ -833,7 +833,7 @@ sub schema {
 ## @method @value_range(%params)
 #
 # @brief Returns a list of the value range of the field.
-# @param[in] params
+# @param[in] params Named parameters:
 # - field_name => string. The attribute whose min and max values are looked up.
 # - filter => reference to a Geo::OGR::Geometry (optional). Used by 
 # Geo::OGR::SetSpatialFilter() if the layer is an OGR layer.
