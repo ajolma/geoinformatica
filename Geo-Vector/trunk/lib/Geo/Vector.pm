@@ -135,6 +135,8 @@ sub layers {
 ## @cmethod void delete_layer($driver, $data_source, $layer)
 #
 # @brief Attempts to delete a layer from a datasource.
+# @param[in] driver
+# @param[in] data_source
 # @param[in] layer Name of the layer that should be deleted.
 sub delete_layer {
     my($driver, $data_source, $layer) = @_;
