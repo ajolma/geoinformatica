@@ -301,7 +301,7 @@ sub raise_pits {
 # @brief Lower each peak cell to the level of its highest neighbor in
 # a DEM.
 #
-# @param[in] opt Named parameters:
+# @param[in] params Named parameters:
 # - <I>z_limit</I>=>number (optional) A threshold value for how much
 # higher than its neighbors a cell may be before it is
 # lowered. Default is 0.

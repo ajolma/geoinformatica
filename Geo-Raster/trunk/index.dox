@@ -47,6 +47,7 @@ use the clip menu command and dialog.
 
 Many Geo::Raster methods can be used in-place or to return a
 value. For example:
+
 @code
 $a->sin(); 
 @endcode
@@ -55,8 +56,10 @@ vs.
 $b = $a->sin();
 @endcode
 
-A raster is a rectangular matrix of cells. A cell is referred to by a
-list ($row, $column) or ($i, $j). For example:
+A raster is a rectangular matrix of cells. A cell is referred to by
+its coordinates, i.e., a list ($row, $column) or ($i, $j). For
+example:
+
 @code
 @cell = (30, 40);
 $value = $a->get(@cell);

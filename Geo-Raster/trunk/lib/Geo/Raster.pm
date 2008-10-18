@@ -70,7 +70,6 @@ our @EXPORT_OK = qw ( $INTEGER_GRID $REAL_GRID
 		      &not &and &or );
 
 ## @ignore
-# tell dynaloader to load this module so that xs functions are available to all:
 sub dl_load_flags {0x01}
 
 XSLoader::load( 'Geo::Raster', $VERSION );
@@ -115,12 +114,7 @@ use overload (
 	      'sqrt'     => 'sqrt',
 	      );
 
-## @method protected @_new_grid(ref ral_grid grid)
-#
-# @brief Adds to the object the given grid.
-# @param[in] grid Reference to a raster grid to add to the object.
-# @return Array of the objects attributes defined by the grid.
-# @note If the method had an grid already, that is destroyed..
+## @ignore
 sub _new_grid {
     my $self = shift;
     my $grid = shift;
@@ -130,11 +124,7 @@ sub _new_grid {
     attributes($self);
 }
 
-## @method protected $_interpret_datatype($number)
-#
-# @brief Returns the parammeters datatype.
-# @param[in] number Number which datatype is wanted to know.
-# @return Datatype of the number.
+## @ignore
 sub _interpret_datatype {
     return $INTEGER_GRID if $_[0] =~  m/^i/i;
     return $REAL_GRID if $_[0] =~ m/^real/i;
@@ -146,27 +136,18 @@ sub _interpret_datatype {
 
 ## @cmethod Geo::Raster new($file_name)
 #
-# @brief The constructor can be used to load a previously saved raster grid.
+# @brief Create a new raster from a file.
 #
 # Example of loading a previously saved raster
 # @code
-# $grid = new Geo::Raster("data/dem");
+# $raster = new Geo::Raster->new("data/dem");
 # @endcode
-# @param[in] file_name Name of file, from where the new Geo::Raster is loaded. 
-# @return New instance of Geo::Raster.
-
-## @cmethod Geo::Raster new(ral_gridPtr param)
-#
-# @brief The constructor can be used to load a previously saved raster grid, 
-# create a new or to act as an copy constructor.
-#
-# @param[in] param A reference to a ral_grid, returned for example by a libral 
-# function (through the XS interface).
-# @return New instance of Geo::Raster.
+# @param[in] file_name Name of file, from where the raster is loaded. 
+# @return New raster.
 
 ## @cmethod Geo::Raster new(Geo::Raster param)
 #
-# @brief The constructor can be used to act as an copy constructor.
+# @brief Create a new raster as a copy of an existing raster.
 #
 # Example of acting as an copy constructor:
 # @code
@@ -174,35 +155,35 @@ sub _interpret_datatype {
 # @endcode
 #
 # @param[in] param A reference to an another Geo::Raster object, which is copied.
-# @return New instance of Geo::Raster.
+# @return a new raster
 
-## @cmethod Geo::Raster new($datatype, $M, $N)
+## @cmethod Geo::Raster new($datatype, $rows, $columns)
 #
-# @brief The constructor can be used to create a new grid.
+# @brief Create a new raster.
 #
-# Example of creating a new raster grid with real type:
+# Example of creating a new raster with real type:
 # @code
-# $real_grid = new Geo::Raster(2, 100, 100);
+# $raster = new Geo::Raster('real', 100, 100);
 # @endcode
-# Example of creating a new raster grid with integer type:
+# Example of creating a new raster with integer type:
 # @code
-# $int_grid = new Geo::Raster(100, 100);
+# $raster = new Geo::Raster(100, 100);
 # @endcode
 #
-# @param[in] datatype (optional) Creates a new grid with the given datatype. 
-# By default the datatype will be integer (1).
-# @param[in] M Vertical cell amount of the grid.
-# @param[in] N Horizontal cell amount of the grid.
-# @return New instance of Geo::Raster.
+# @param[in] datatype (optional) The datatype for the new raster,
+# either "integer" or "real".  Default is integer.
+# @param[in] rows Height of the new raster.
+# @param[in] columns Width of the new raster.
+# @return a new raster
 
 ## @cmethod Geo::Raster new(%params)
 #
-# @brief The constructor can be used to load a previously saved raster grid, 
+# @brief The constructor can be used to load a previously saved raster, 
 # create a new or to act as an copy constructor.
 #
-# Example of starting with a new fresh raster grid:
+# Example of starting with a new fresh raster:
 # @code
-# $grid = new Geo::Raster(datatype=>datatype_string, M=>100, N=>100);
+# $grid = new Geo::Raster(datatype=>datatype_string, rows=>100, columns=>100);
 # @endcode
 #
 # Example of opening a previously saved grid:
@@ -229,7 +210,7 @@ sub _interpret_datatype {
 # is not defined.
 # - <I>like</I> A Geo::Raster object. Used only if <I>copy</I> and <I>use</I> 
 # are undefined.
-# - <I>filename</I> Files location as string. A raster grid saved previously in 
+# - <I>filename</I> Files location as string. A raster saved previously in 
 # the given filename is loaded.
 # If filename is given then also two additional named parameter can be given 
 # with which Geo::Raster::gdal_open() is called:
@@ -285,10 +266,14 @@ sub new {
 	$params{N} = shift;
 
     }
-    
-    my %p = @_;
-    for (keys %p) {
-	$params{$_} = $p{$_} unless exists $params{$_};
+
+    if (@_) {
+	my %p = @_;
+	for (keys %p) {
+	    $params{$_} = $p{$_} unless exists $params{$_};
+	}
+	$params{M} = $params{rows} if exists $params{rows};
+	$params{N} = $params{columns} if exists $params{columns};
     }
 
     my $self = {};
@@ -354,9 +339,9 @@ sub shallow_copy {
 
 ## @method $has_field($field_name)
 #
-# @brief The subroutine tells if the asked field name exists in the raster grid. 
+# @brief The subroutine tells if the asked field name exists in the raster. 
 # @param[in] field_name Name of the field whose existence is checked.
-# @return True if the raster grid has a field having the same name as the given 
+# @return True if the raster has a field having the same name as the given 
 # parameter, else returns false.
 sub has_field {
     my($self, $field_name) = @_;
@@ -498,19 +483,19 @@ sub world {
     $self->attributes;
 }
 
-## @method void copy_world_to(Geo::Raster to)
+## @method copy_world_to(Geo::Raster to)
 #
-# @brief The method copies the objects raster grid bounding box to the given 
-# raster grid.
-# @param[out] to A raster grid to which the world is copied to.
+# @brief The method copies the objects raster bounding box to the given 
+# raster.
+# @param[out] to A raster to which the world is copied to.
 sub copy_world_to {
     my($self, $to) = @_;
-    return ral_grid_copy_bounds($self->{GRID}, $to->{GRID});
+    ral_grid_copy_bounds($self->{GRID}, $to->{GRID});
 }
 
 ## @method boolean cell_in(@cell)
 #
-# @brief Tells if the raster grid has a cell with given grid coordinates.
+# @brief Tells if the raster has a cell with given coordinates.
 # @param[in] cell The i- and j-coordinates to test against the raster set.
 # @return True if the raster has a cell with given coordinates, else false.
 sub cell_in {
@@ -536,7 +521,7 @@ sub point_in {
 #
 # @brief The method converts the given grid cell to the cells 
 # center points world coordinates (x, y). 
-# @param[in] cell The raster grid cell (i, j).
+# @param[in] cell The raster cell (i, j).
 # @return The center point of the cell in world coordinates (x,y).
 sub g2w {
     my($self, @cell) = @_;
@@ -574,7 +559,7 @@ sub w2g {
 #
 # @brief The subroutine converts the boundary of an grid area into a rectangle 
 # defined by world coordinates.
-# @param[in] ga The boundary coordinates of an raster grid as an array (i_min, 
+# @param[in] ga The boundary coordinates of an raster as an array (i_min, 
 # i_max, j_min, j_max).
 # @return The rectangles upper left and lower right corners (center points of 
 # the corner grid cells) in world coordinates (x, y).
@@ -594,7 +579,7 @@ sub ga2wa {
 #
 # @brief The subroutine converts the boundary of an area defined by world 
 # coordinates into the areas rectangle in grid coordinates (i, j).
-# @param[in] wa The boundary coordinates of an raster grid as an array (x_min, 
+# @param[in] wa The boundary coordinates of an raster as an array (x_min, 
 # x_max, y_min, y_max).
 # @return A rectangles upper left and lower right corners cells. Cells are given 
 # in grid coordinates (i, j).
@@ -610,7 +595,7 @@ sub wa2ga {
     return (@$ul,@$lr);
 }
 
-## @method void mask(Geo::Raster mask)
+## @method mask(Geo::Raster mask)
 #
 # @brief Set or remove the mask.
 # @param[in] mask (optional). If mask is undef, the method removes the current 
@@ -622,12 +607,12 @@ sub mask {
 	ral_grid_clear_mask($self->{GRID});
 }
 
-## @method void set($i, $j, $value)
+## @method void set(@cell, $value)
 #
 # @brief Sets a value to a single grid cell or to all cells.
 #
-# If grid coordinates i and j are given then the method sets given value 
-# to all cells in the raster set.
+# If cell coordinates row and column are not given then the method
+# sets the given value to all cells in the raster.
 #
 # Example of setting to single cell a new value:
 # @code
@@ -646,11 +631,9 @@ sub mask {
 # $grid->set();
 # @endcode
 #
-# @param[in] i (optional) the cells i-coordinate. 
-# @param[in] j (optional) the cells j-coordinate.
+# @param[in] cell (optional) the cell coordinates
 # @param[in] value (optional) The value to set, which can be a number, 
-# "nodata" or a reference to Geo::Raster. If not given then the cell gets a
-# <I>nodata</I> value.
+# "nodata" or a reference to Geo::Raster. Default is "nodata".
 sub set {
     my($self, $i, $j, $value) = @_;
     croak "set: GRID is undefined" unless $self->{GRID};
@@ -678,25 +661,23 @@ sub set {
     }
 }
 
-## @method $get($i, $j)
+## @method $get(@cell)
 # 
 # @brief Retrieve the value of a cell.
 #
 # If the cell has a nodata or out-of-world value undef is returned.
-# @param[in] i The i-coordinate of the cell.
-# @param[in] j The j-coordinate of the cell.
+# @param[in] cell The cell coordinates
 # @return Value of the cell.
 
-## @method @get($i, $j, $distance)
+## @method @get(@cell, $distance)
 # 
 # @brief Retrieve the value of a cell or the values of its neighborhood 
 # (a rectangle) cells.
 #
 # If the cell has a nodata or it is out-of-world value undef is returned.
-# @param[in] i The i-coordinate of the (center) cell.
-# @param[in] j The j-coordinate of the (center) cell.
+# @param[in] cell The cell coordinates
 # @param[in] distance (optional) Integer value that specifies how large 
-# neighborhood is returned.
+# neighborhood is returned
 # @return Values of the cell or its neighborhood cells. The maximum total amount 
 # of returned values in the array is (2*distance+1)^2.
 # @note If the distance is zero (0) then only one cells value is returned.
@@ -715,11 +696,10 @@ sub get {
     }
 }
 
-## @method $cell($i, $j, $value)
+## @method $cell(@cell, $value)
 #
 # @brief Set or get the value of a cell.
-# @param[in] i The i-coordinate of the cell.
-# @param[in] j The j-coordinate of the cell.
+# @param[in] cell The cell coordinates
 # @param[in] value (optional) The value to set. If no value if given then the 
 # method returns the cells current value.
 # @return The cells current value. Only returned if no value is given to the 
@@ -818,10 +798,7 @@ sub schema {
     }
 }
 
-## @method protected $_type_name()
-#
-# @brief Returns the datatype of the object.
-# @return Name of type. Type can be 'Integer', 'Real' or undef.
+## @ignore
 sub _type_name {
     my $self = shift;
     return undef unless $self->{DATATYPE}; # may happen if not cached
@@ -830,10 +807,10 @@ sub _type_name {
     return undef;
 }
 
-## @method list value_range(%named_parameters)
+## @method list value_range(%params)
 #
-# @brief Returns the minimum and maximum values of the raster grid.
-# @param[in] named_parameters A hash of named parameters:
+# @brief Returns the minimum and maximum values of the raster.
+# @param[in] params Named parameters:
 # - <I>field_name</I> The attribute whose min and max values are looked up.
 # - <I>of_GDAL</I> Boolean telling if the value range should be from GDAL.
 # - <I>filter</I> No effect currently!
@@ -891,8 +868,8 @@ sub attributes {
 
 ## @method $datatype()
 #
-# @brief Returns the datatype of the raster grid as a string.
-# @return Name of type if the object has a raster grid. Type can be 'Integer'
+# @brief Returns the datatype of the raster as a string.
+# @return Name of type if the object has a raster. Type can be 'Integer'
 # or 'Real'.
 sub datatype {
     my $self = shift;
@@ -908,14 +885,12 @@ sub data_type {
     return $self->datatype;
 }
 
-## @method @size($row, $column)
+## @method @size(@cell)
 #
-# @brief Returns the size (height, width) of the grid. If row and
-# column of a cell are given returns the size of the zone of which the
-# cell is a part of.
-# @param[in] row (optional) 
-# @param[in] column (optional)
-# @return The size (height, width) of the grid.
+# @brief Returns the size (height, width) of the raster or that of a zone.
+#
+# @param[in] cell (optional) A cell
+# @return The size (height, width) of the raster or the number of cells in the zone.
 sub size {
     my $self = shift;
     my($i, $j) = @_;
@@ -937,11 +912,11 @@ sub size {
 ## @method $cell_size(%params)
 # 
 # @brief Returns the cells size.
-# @param[in] params A hash of named parameters:
+# @param[in] params Named parameters:
 # - <I>of_GDAL</I>=>boolean (optional) whether the cell size should be
-# queried from GDAL (the actual data source) instead from libral (the
-# memory raster).
-# @return Size of cell (lenght of one side) if possible, else undef.
+# queried from GDAL (the actual data source, if there is one) instead
+# from libral (the in-memory raster).
+# @return Cell size, i.e., the length of its edge in raster scale.
 sub cell_size {
     my($self, %o) = @_;
     if ($self->{GDAL} and $o{of_GDAL}) {
@@ -1017,24 +992,7 @@ sub neg {
     return $copy;
 }
 
-## @method protected $_typeconversion(Geo::Raster other)
-#
-# @brief Compares two datatypes and returns 'integer' if both have an integer as 
-# datatype. Else returns a 'real'.
-#
-# @param[in] other A reference to an another Geo::Raster object.
-# @return Returns integer if both have an integer as datatype, else a real type.
-# @exception Parameter is not reference to a Geo::Raster object.
-
-## @method protected $_typeconversion($datatype)
-#
-# @brief Compares two datatypes and returns 'integer' if both have an integer as 
-# datatype. Else returns a 'real'.
-#
-# @param[in] datatype A datatype to compare with the objects datatype.
-# @return Returns integer if both have an integer as datatype, else a real type.
-# @exception Parameter is not a numeric datatype.
-# @note Datatypes are only allowed to be real or integer.
+## @ignore
 sub _typeconversion {
     my($self,$other) = @_;
     if (ref($other)) {
@@ -1062,11 +1020,11 @@ sub _typeconversion {
 
 ## @method Geo::Raster plus($value)
 #
-# @brief Adds to returned raster grids cells this grids values plus the 
+# @brief Adds to returned rasters cells this grids values plus the 
 # given number.
 #
-# If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster grid will have as datatype real.
+# If this raster and the number differ in datatypes (other is integer and 
+# the other real) then the returned raster will have as datatype real.
 # 
 # Example of summing
 # @code
@@ -1078,20 +1036,20 @@ sub _typeconversion {
 # @endcode
 #
 # @param[in] value A number to add to this objects cell values.
-# @return A copy of this raster grid with the additions from the other grid.
+# @return A copy of this raster with the additions from the other grid.
 # @note In the case that this raster and the value differ in datatype, the 
 # datatype conversion of the returned grid into real type makes it possible not 
 # to use rounding.
 
 ## @method Geo::Raster plus(Geo::Raster second)
 #
-# @brief Adds to returned raster grids cells this grids values plus the 
+# @brief Adds to returned rasters cells this grids values plus the 
 # given grids values.
 #
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If raster grids differ in datatypes (other is integer and the other real) 
-# then the returned raster grid will have as datatype real.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If rasters differ in datatypes (other is integer and the other real) 
+# then the returned raster will have as datatype real.
 # 
 # Example of summing
 # @code
@@ -1103,7 +1061,7 @@ sub _typeconversion {
 # @endcode
 #
 # @param[in] second Reference to an another Geo::Raster.
-# @return A copy of this raster grid with the additions from the other grid.
+# @return A copy of this raster with the additions from the other grid.
 # @note In the case of the two rasters differ in datatype, the datatype 
 # conversion of the returned grid into real type makes it possible not to use 
 # rounding (Also note that without the conversion the libral functions will 
@@ -1131,8 +1089,8 @@ sub plus {
 # @brief Subtracts the given number from this grids values (or 
 # vice versa if reversed is true) and gives those values to the returned grid.
 #
-# If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster grid will have as datatype real.
+# If this raster and the number differ in datatypes (other is integer and 
+# the other real) then the returned raster will have as datatype real.
 #
 # Example of subtraction
 # @code
@@ -1158,10 +1116,10 @@ sub plus {
 # @brief Subtracts the given grids values from this grids values (or 
 # vice versa if reversed is true) and gives those values to the returned grid.
 #
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If raster grids differ in datatypes (other is integer and the other real) 
-# then the returned raster grid will have as datatype real.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If rasters differ in datatypes (other is integer and the other real) 
+# then the returned raster will have as datatype real.
 #
 # Example of subtraction
 # @code
@@ -1210,11 +1168,11 @@ sub minus {
 
 ## @method Geo::Raster times($value)
 #
-# @brief Multiplies the raster grids values with the given number 
+# @brief Multiplies the rasters values with the given number 
 # and returns a new grid with the resulting values.
 #
-# If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster grid will have as datatype real.
+# If this raster and the number differ in datatypes (other is integer and 
+# the other real) then the returned raster will have as datatype real.
 #
 # Example of multiplication
 # @code
@@ -1233,13 +1191,13 @@ sub minus {
 
 ## @method Geo::Raster times(Geo::Raster second)
 #
-# @brief Multiplies the raster grids values with the given grids
+# @brief Multiplies the rasters values with the given grids
 # values and returns a new grid with the resulting values.
 #
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If raster grids differ in datatypes (other is integer and the other real) 
-# then the returned raster grid will have as datatype real.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If rasters differ in datatypes (other is integer and the other real) 
+# then the returned raster will have as datatype real.
 #
 # Example of multiplication
 # @code
@@ -1275,7 +1233,7 @@ sub times {
 ## @method Geo::Raster over($value, $reversed)
 #
 # @brief Divides the grids values with the number (or vice versa if reversed is 
-# true) and returns the resulting values as a new raster grid.
+# true) and returns the resulting values as a new raster.
 #
 # Example of division
 # @code
@@ -1293,16 +1251,16 @@ sub times {
 # false then the given number is used as denominator (the same thing as if 
 # parameter would not be given at all).
 # @return A copy of this Geo::Raster with the division made.
-# @note The returned raster grid will always have as datatype real.
+# @note The returned raster will always have as datatype real.
 
 ## @method Geo::Raster over(Geo::Raster second, $reversed)
 #
 # @brief Divides the grids values with the other grids values(or 
 # vice versa if reversed is true) and returns the resulting values as a new 
-# raster grid.
+# raster.
 #
-# The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 #
 # Example of division
 # @code
@@ -1319,7 +1277,7 @@ sub times {
 # false then given grid values are denominators (the same thing as if parameter
 # would not be given at all).
 # @return A copy of this Geo::Raster with the division made.
-# @note The returned raster grid will always have as datatype real.
+# @note The returned raster will always have as datatype real.
 sub over {
     my($self, $second, $reversed) = @_;
     my $copy = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
@@ -1402,8 +1360,8 @@ sub over2 {
 # false then the given number is used as denominator (the same thing as if 
 # parameter would not be given at all).
 # @return A copy of this Geo::Raster with the division remainders.
-# @note This raster grid has to have integer as datatype and
-# the returned raster grid will always have integer as datatype.
+# @note This raster has to have integer as datatype and
+# the returned raster will always have integer as datatype.
 
 ## @method Geo::Raster modulo(Geo::Raster second, $reversed)
 #
@@ -1411,8 +1369,8 @@ sub over2 {
 # the given grids values (or vice versa if reversed is true) and 
 # returns a new grid with result values.
 #
-# The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 #
 # Example of modulus
 # @code
@@ -1429,8 +1387,8 @@ sub over2 {
 # denominators, if false then given grid values or the number are denominators 
 # (the same thing as if parameter would not be given at all).
 # @return A copy of this Geo::Raster with the division remainders.
-# @note This raster grid has to have integer as datatype and
-# the returned raster grid will always have integer as datatype.
+# @note This raster has to have integer as datatype and
+# the returned raster will always have integer as datatype.
 sub modulo {
     my($self, $second, $reversed) = @_;
     my $copy = new Geo::Raster($self);
@@ -1453,8 +1411,8 @@ sub modulo {
 # as bases the given number as exponents (or vice versa if 
 # reversed is true) and returns a new grid with the calculated values.
 #
-# If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster grid will have as datatype real.
+# If this raster and the number differ in datatypes (other is integer and 
+# the other real) then the returned raster will have as datatype real.
 #
 # Example of rising to the power defined by the parameter
 # @code
@@ -1479,10 +1437,10 @@ sub modulo {
 # as bases the given grids values as exponents (or vice versa if 
 # reversed is true) and returns a new grid with the calculated values.
 #
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If the raster grids differ in datatypes (other is integer and the other real) 
-# then the returned raster grid will have as datatype real.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If the rasters differ in datatypes (other is integer and the other real) 
+# then the returned raster will have as datatype real.
 #
 # Example of rising to the powers defined the given grid
 # @code
@@ -1523,8 +1481,8 @@ sub power {
 #
 # - The method is almost the same as Geo::Raster::plus(), except that in this 
 # method the addition is done directly to this grid, not a new one.
-# - If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then this raster grid will have as datatype real after the 
+# - If this raster and the number differ in datatypes (other is integer and 
+# the other real) then this raster will have as datatype real after the 
 # operation.
 #
 # Example of addition
@@ -1542,10 +1500,10 @@ sub power {
 #
 # @brief Adds to the cells the respective cell values of the given raster 
 #
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If raster grids differ in datatypes (other is integer and the other real) 
-# then the this raster grid will have as datatype real.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If rasters differ in datatypes (other is integer and the other real) 
+# then the this raster will have as datatype real.
 # - The method is almost the same as Geo::Raster::plus(), except that in this 
 # method the addition is done directly to this grid, not a new one.
 # 
@@ -1584,8 +1542,8 @@ sub add {
 # - The method is almost the same as Geo::Raster::minus(), except that in this 
 # method the subtraction is done directly to this grid, not a new one. And there
 # is also no reversed possibility.
-# - If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then this raster grid will have as datatype real after the 
+# - If this raster and the number differ in datatypes (other is integer and 
+# the other real) then this raster will have as datatype real after the 
 # operation.
 #
 # Example of subtraction
@@ -1606,10 +1564,10 @@ sub add {
 # - The method is almost the same as Geo::Raster::minus(), except that in this 
 # method the subtraction is done directly to this grid, not a new one. And there
 # is also no reversed possibility.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If raster grids differ in datatypes (other is integer and the other real) 
-# then this raster grid will have as datatype real after the method.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If rasters differ in datatypes (other is integer and the other real) 
+# then this raster will have as datatype real after the method.
 #
 # Example of subtraction
 # @code
@@ -1644,8 +1602,8 @@ sub subtract {
 #
 # - The method is almost the same as Geo::Raster::times(), except that in this 
 # method the multiplication is done directly to this grid, not a new one!
-# - If this raster grid and the number differ in datatypes (other is integer and 
-# the other real) then this raster grid will have as datatype real after the 
+# - If this raster and the number differ in datatypes (other is integer and 
+# the other real) then this raster will have as datatype real after the 
 # operation.
 #
 # Example of multiplication
@@ -1665,10 +1623,10 @@ sub subtract {
 #
 # - The method is almost the same as Geo::Raster::times(), except that in this 
 # method the multiplication is done directly to this grid, not a new one!
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If raster grids differ in datatypes (other is integer and the other real) 
-# then this raster grids datatype will be real after the calculation.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If rasters differ in datatypes (other is integer and the other real) 
+# then this rasters datatype will be real after the calculation.
 #
 # Example of multiplication
 # @code
@@ -1715,7 +1673,7 @@ sub multiply_by {
 # @endcode
 #
 # @param[in] value Number used as denominator.
-# @note The returned raster grid will always have as datatype real.
+# @note The returned raster will always have as datatype real.
 
 ## @method Geo::Raster divide_by(Geo::Raster second)
 #
@@ -1724,8 +1682,8 @@ sub multiply_by {
 # - The method is almost the same as Geo::Raster::over(), except that in this 
 # method the division is done directly to this grid, not a new one. And there
 # is also no reversed possibility.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 #
 # Example of division
 # @code
@@ -1738,7 +1696,7 @@ sub multiply_by {
 #
 # @param[in] second Reference to an another Geo::Raster, which cells values are 
 # used as denominators.
-# @note The returned raster grid will always have as datatype real.
+# @note The returned raster will always have as datatype real.
 sub divide_by {
     my($self, $second) = @_;
     $self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
@@ -1783,8 +1741,8 @@ sub divide_by {
 # - The method is almost the same as Geo::Raster::modulo(), except that in this 
 # method the modulus is done directly to this grid, not a new one. And there
 # is also no reversed possibility.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 #
 # Example of calculating the modulus
 # @code
@@ -1815,8 +1773,8 @@ sub modulus_with {
 # - The method is almost the same as Geo::Raster::power(), except that in this 
 # method the power is calculated directly to this grid, not a new one. And there
 # is also no reversed possibility.
-# - If this raster grid and the parameter differ in datatypes (other is integer 
-# and the other real) then this raster grid will have as datatype real after the 
+# - If this raster and the parameter differ in datatypes (other is integer 
+# and the other real) then this raster will have as datatype real after the 
 # operation.
 #
 # Example of calculating the power
@@ -1837,10 +1795,10 @@ sub modulus_with {
 # - The method is almost the same as Geo::Raster::power(), except that in this 
 # method the power is calculated directly to this grid, not a new one. And there
 # is also no reversed possibility.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If the raster grids differ in datatypes (other is integer and the other real) 
-# then this raster grids datatype will have after the operation as datatype real.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If the rasters differ in datatypes (other is integer and the other real) 
+# then this rasters datatype will have after the operation as datatype real.
 #
 # Example of calculating the power
 # @code
@@ -1874,12 +1832,12 @@ sub to_power_of {
 # - With the arctangent we get the direction between the two cell values in
 # 2-dimemsional Euclidean space.
 # - The operation is performed in-place in void context
-# - The second raster grids real world boundaries must be the same as this
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this
+# rasters. The cell sizes and amounts in both directions must also be equal.
 #
 # @param[in] second Reference to an another Geo::Raster.
 # @return A new Geo::Raster having the calculated directions.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub atan2 {
     my($self, $second) = @_;
     if (ref($self) and ref($second)) {
@@ -1899,11 +1857,11 @@ sub atan2 {
 #
 # @brief Calculates the cosine of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated cosine values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub cos {
     my $self = shift;
     if (defined wantarray) {
@@ -1919,11 +1877,11 @@ sub cos {
 #
 # @brief Calculates the sine of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the sine values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub sin {
     my $self = shift;
     if (defined wantarray) {
@@ -1940,11 +1898,11 @@ sub sin {
 # @brief Calculates the exponential function with Euler's number as base of the 
 # grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculation results.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub exp {
     my $self = shift;
     if (defined wantarray) {
@@ -1960,7 +1918,7 @@ sub exp {
 #
 # @brief Calculates the absolute value of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having non-negative values.
@@ -1979,11 +1937,11 @@ sub abs {
 #
 # @brief Calculates the logarithm of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the logarithmic values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub log {
     my $self = shift;
     if (defined wantarray) {
@@ -1999,11 +1957,11 @@ sub log {
 #
 # @brief Calculates the square root of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub sqrt {
     my $self = shift;
     if (defined wantarray) {
@@ -2019,13 +1977,13 @@ sub sqrt {
 #
 # @brief Rounds grids each value to the nearest integer value.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
-# - If the raster grid has already a as datatype integer, the operation does 
+# - If the raster has already a as datatype integer, the operation does 
 # nothing.
 #
 # @return A new Geo::Raster having the integer values.
-# @note The resulting raster grid will always have as datatype integer.
+# @note The resulting raster will always have as datatype integer.
 sub round {
     my $self = shift;
     if (ref($self)) {
@@ -2049,11 +2007,11 @@ sub round {
 #
 # @brief Calculates the arccosine of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub acos {
     my $self = shift;
     if (defined wantarray) {
@@ -2069,11 +2027,11 @@ sub acos {
 #
 # @brief Calculates the arctangent of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub atan {
     my $self = shift;
     if (defined wantarray) {
@@ -2091,7 +2049,7 @@ sub atan {
 #
 # Ceiling is the smallest integer value not less than the grids original value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values.
@@ -2110,11 +2068,11 @@ sub ceil {
 #
 # @brief Calculates the hyperbolic cosine of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated cosine values.
-# @note The resulting raster grid will always have as datatype real
+# @note The resulting raster will always have as datatype real
 sub cosh {
     my $self = shift;
     if (defined wantarray) {
@@ -2132,7 +2090,7 @@ sub cosh {
 #
 # Floor is the largest integer value not higher than the grids original value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values
@@ -2151,11 +2109,11 @@ sub floor {
 #
 # @brief Calculates the base-10 logarithm of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the logarithmic values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub log10 {
     my $self = shift;
     if (defined wantarray) {
@@ -2171,11 +2129,11 @@ sub log10 {
 #
 # @brief Calculates the hyperbolic sine of the grids each value.
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated hyperbolic sine values.
-# @note The resulting raster grid will always have as datatype real
+# @note The resulting raster will always have as datatype real
 sub sinh {
     my $self = shift;
     if (defined wantarray) {
@@ -2191,11 +2149,11 @@ sub sinh {
 #
 # @brief Calculates the tangent of the grids each value.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub tan {
     my $self = shift;
     if (defined wantarray) {
@@ -2211,11 +2169,11 @@ sub tan {
 #
 # @brief Calculates the hyperbolic tangent of the grids each value.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
 # @return A new Geo::Raster having the calculated values.
-# @note The resulting raster grid will always have as datatype real.
+# @note The resulting raster will always have as datatype real.
 sub tanh {
     my $self = shift;
     if (defined wantarray) {
@@ -2230,7 +2188,7 @@ sub tanh {
 
 ## @method Geo::Raster lt($number, $reversed)
 #
-# @brief The method tells if the raster grids cells have smaller values than the 
+# @brief The method tells if the rasters cells have smaller values than the 
 # given given number. Comparison result is returned if needed.
 #
 # There are four cases of the use of comparison operations between this grid and a number:
@@ -2242,25 +2200,25 @@ sub tanh {
 # <tr><td>4.</td><td>b = n < a;</td>      <td>yes</td>        <td>a</td>    <td>n</td>       <td>yes</td>        <td>yes</td></tr>
 # </table></center>
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed (look at case 2), else a new grid with the comparison results 
 # is returned.
 # 
 # @param[in] number Number used for comparison.
 # @param[in] reversed (optional) Tells the comparison order. If true then the 
-# method checks if the given parameters value(s) are less than the raster grids 
+# method checks if the given parameters value(s) are less than the rasters 
 # cells values. If false, then the method acts as no reverse parameter would 
 # have given.
 # @return Geo::Raster, which has zeros (0) in those cells that are greater or 
-# equal and therefor don't fulfil the comparison condition. If the raster grids 
+# equal and therefor don't fulfil the comparison condition. If the rasters 
 # value is less than the comparison value, then the cell gets a value true (1).
 # @note If this grids some cells do not have any value, those cells 
 # resulting value will also be undef.
 
 ## @method Geo::Raster lt(Geo::Raster second)
 #
-# @brief The method tells if the raster grids cells have smaller values than the 
-# given raster grids cells. Comparison result is returned if needed.
+# @brief The method tells if the rasters cells have smaller values than the 
+# given rasters cells. Comparison result is returned if needed.
 #
 # There are three cases of the use of comparison operations between two grids:
 # <table border="1">
@@ -2270,15 +2228,15 @@ sub tanh {
 # <tr><td>3.</td><td>c = a < b;</td>      <td>yes</td>        <td>a</td>    <td>b</td>       <td>yes</td></tr>
 # </table>
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed (look at case 2), else a new grid with the comparison results 
 # is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # 
 # @param[in] second Reference to an another Geo::Raster.
 # @return Geo::Raster, which has zeros (0) in those cells that are greater or 
-# equal and therefor don't fulfil the comparison condition. If the raster grids 
+# equal and therefor don't fulfil the comparison condition. If the rasters 
 # value is less than the comparison value, then the cell gets a value true (1).
 # @note If the given or this grids some cells do not have any value, those cells 
 # resulting value will also be undef.
@@ -2308,10 +2266,10 @@ sub lt {
 
 ## @method Geo::Raster gt($number, $reversed)
 #
-# @brief The method tells if the raster grids cells have greater values than the 
+# @brief The method tells if the rasters cells have greater values than the 
 # given number. Comparison result is returned if  needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
 # 
 # @param[in] number Number used for comparison.
@@ -2320,7 +2278,7 @@ sub lt {
 # grids cells values. If false, then the method acts as no reverse parameter 
 # would have been given.
 # @return Geo::Raster, which has zeros (0) in those cells that are less or 
-# equal and therefor don't fulfil the comparison condition. If the raster grids 
+# equal and therefor don't fulfil the comparison condition. If the rasters 
 # value is greater than the comparison value, then the cell gets a value true 
 # (1).
 # @note If this grids some cells do not have any value, those cells 
@@ -2328,8 +2286,8 @@ sub lt {
 
 ## @method Geo::Raster gt(Geo::Raster second)
 #
-# @brief The method tells if the raster grids cells have greater values than the 
-# given raster grids cells. Comparison result is returned if needed.
+# @brief The method tells if the rasters cells have greater values than the 
+# given rasters cells. Comparison result is returned if needed.
 #
 # There are three cases of the use of comparison operations between two grids:
 # <table border="1">
@@ -2339,15 +2297,15 @@ sub lt {
 # <tr><td>3.</td><td>c = a > b;</td>      <td>yes</td>        <td>a</td>    <td>b</td>       <td>yes</td></tr>
 # </table>
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed (look at case 2), else a new grid with the comparison results 
 # is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # 
 # @param[in] second Reference to an another Geo::Raster.
 # @return Geo::Raster, which has zeros (0) in those cells that are less or 
-# equal and therefor don't fulfil the comparison condition. If the raster grids 
+# equal and therefor don't fulfil the comparison condition. If the rasters 
 # value is greater than the comparison value, then the cell gets a value true 
 # (1).
 sub gt {
@@ -2376,16 +2334,16 @@ sub gt {
 
 ## @method Geo::Raster le($number, $reversed)
 #
-# @brief The method tells if the raster grids cells have smaller or equal values 
+# @brief The method tells if the rasters cells have smaller or equal values 
 # compared to the given number. Comparison result is returned if needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
 # 
 # @param[in] number Number used for comparison.
 # @param[in] reversed (optional) Tells the comparison order. If true then the 
 # method checks if the given parameters value(s) are less or equal than the 
-# raster grids cells values. If false, then the method acts as no reverse 
+# rasters cells values. If false, then the method acts as no reverse 
 # parameter would have given.
 # @return Geo::Raster, which has zeros (0) in those cells that are greater 
 # and therefor don't fulfil the comparison condition. Else the cell gets a value 
@@ -2395,14 +2353,14 @@ sub gt {
 
 ## @method Geo::Raster le(Geo::Raster second)
 #
-# @brief The method tells if the raster grids cells have smaller or equal values 
-# compared to the given raster grids cells. Comparison result is returned if 
+# @brief The method tells if the rasters cells have smaller or equal values 
+# compared to the given rasters cells. Comparison result is returned if 
 # needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # 
 # @param[in] second Reference to an another Geo::Raster.
 # @return Geo::Raster, which has zeros (0) in those cells that are greater 
@@ -2436,16 +2394,16 @@ sub le {
 
 ## @method Geo::Raster ge($number, $reversed)
 #
-# @brief The method tells if the raster grids cells have greater or equal values 
+# @brief The method tells if the rasters cells have greater or equal values 
 # compared to the given number. Comparison result is returned if needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
 # 
 # @param[in] number Number used for comparison.
 # @param[in] reversed (optional) Tells the comparison order. If true then the 
 # method checks if the given parameters value(s) are greater or equal than the 
-# raster grids cells values. If false, then the method acts as no reverse 
+# rasters cells values. If false, then the method acts as no reverse 
 # parameter would have given.
 # @return Geo::Raster, which has zeros (0) in those cells that are less 
 # and therefor don't fulfil the comparison condition. Else the cell gets a value 
@@ -2455,14 +2413,14 @@ sub le {
 
 ## @method Geo::Raster ge(Geo::Raster second)
 #
-# @brief The method tells if the raster grids cells have greater or equal values 
-# compared to the given raster grids cells. Comparison result is returned if 
+# @brief The method tells if the rasters cells have greater or equal values 
+# compared to the given rasters cells. Comparison result is returned if 
 # needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # 
 # @param[in] second Reference to an another Geo::Raster.
 # @return Geo::Raster, which has zeros (0) in those cells that are less 
@@ -2496,10 +2454,10 @@ sub ge {
 
 ## @method Geo::Raster eq($number)
 #
-# @brief The method tells if the raster grids cells have equal values 
+# @brief The method tells if the rasters cells have equal values 
 # compared to the given number. Comparison result is returned if needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
 # 
 # @param[in] number Number used for comparison.
@@ -2511,14 +2469,14 @@ sub ge {
 
 ## @method Geo::Raster ge(Geo::Raster second)
 #
-# @brief The method tells if the raster grids cells have equal values 
-# compared to the given raster grids cells. Comparison result is returned if 
+# @brief The method tells if the rasters cells have equal values 
+# compared to the given rasters cells. Comparison result is returned if 
 # needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # 
 # @param[in] second Reference to an another Geo::Raster.
 # @return Geo::Raster, which has zeros (0) in those cells that are not equal 
@@ -2545,14 +2503,14 @@ sub eq {
 
 ## @method Geo::Raster ne($second)
 #
-# @brief The method tells if the raster grids cells have not equal values 
-# compared to the given raster grids cells or given number. Comparison result is 
+# @brief The method tells if the rasters cells have not equal values 
+# compared to the given rasters cells or given number. Comparison result is 
 # returned if needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # 
 # @param[in] second Reference to an another Geo::Raster or a number.
 # @return Geo::Raster, which has zeros (0) in those cells that are equal 
@@ -2579,14 +2537,14 @@ sub ne {
 
 ## @method Geo::Raster cmp($second, $reversed)
 #
-# @brief The method tells if the raster grids cells have not equal values 
-# compared to the given raster grids cells or given number. Comparison result is 
+# @brief The method tells if the rasters cells have not equal values 
+# compared to the given rasters cells or given number. Comparison result is 
 # returned if needed.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
 # - The comparison rasters can differ in datatype.
 # - If the given or this grids some cells do not have any value, those cells 
 # resulting value will also be undef.
@@ -2627,14 +2585,14 @@ sub cmp {
 #
 # @brief The operator returns the logical negation of each raster cell value.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The raster grids datatype must be integer.
+# - The rasters datatype must be integer.
 # - The resulting value is 1 if the original raster cell has a value 0, else the
 # resulting value is 0.
 #
 # @return Geo::Raster with results from using the not operator.
-# @exception The raster grids datatype is not integer.
+# @exception The rasters datatype is not integer.
 sub not {
     my $self = shift;
     $self = Geo::Raster::new($self) if defined wantarray;
@@ -2644,16 +2602,16 @@ sub not {
 
 ## @method Geo::Raster and(Geo::Raster second)
 #
-# @brief The operator returns the logical conjuction of this raster grid and
+# @brief The operator returns the logical conjuction of this raster and
 # given grids cells values.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The raster grids must have the same amount of cells in both directions.
-# - The raster grids datatypes must be integer.
-# - The resulting cell value will be 1 if both raster grids have in the same 
+# - The rasters must have the same amount of cells in both directions.
+# - The rasters datatypes must be integer.
+# - The resulting cell value will be 1 if both rasters have in the same 
 # cell nonzero values, else the resulting value is 0.
-# - If the other or both raster grid cells have an <I>no data</I> value, then 
+# - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
 # .
 # The (truth) table here shows all possible value combinations (not incl. no 
@@ -2669,7 +2627,7 @@ sub not {
 # @param[in] second A Geo::Raster, which cell values are used to calculate the 
 # logical conjunction.
 # @return Geo::Raster with results from using the AND operator.
-# @exception The raster grids datatype is not integer.
+# @exception The rasters datatype is not integer.
 sub and {
     my $self = shift;
     my $second = shift;
@@ -2680,16 +2638,16 @@ sub and {
 
 ## @method Geo::Raster or(Geo::Raster second)
 #
-# @brief The operator returns the logical disjuction of this raster grid and
+# @brief The operator returns the logical disjuction of this raster and
 # given grids cells values.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The raster grids must have the same amount of cells in both directions.
-# - The raster grids datatypes must be integer.
-# - The resulting cell value will be 1 if both raster grids don't have in the 
+# - The rasters must have the same amount of cells in both directions.
+# - The rasters datatypes must be integer.
+# - The resulting cell value will be 1 if both rasters don't have in the 
 # same cell 0, else the resulting value is 1.
-# - If the other or both raster grid cells have an <I>no data</I> value, then 
+# - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
 # .
 # The (truth) table here shows all possible value combinations (not incl. no 
@@ -2705,7 +2663,7 @@ sub and {
 # @param[in] second A Geo::Raster, which cell values are used to calculate the 
 # logical disjunction.
 # @return Geo::Raster with results from using the OR operator.
-# @exception The raster grids datatype is not integer.
+# @exception The rasters datatype is not integer.
 sub or {
     my $self = shift;
     my $second = shift;
@@ -2719,13 +2677,13 @@ sub or {
 # @brief The operator returns the inverse of disjunction of this raster 
 # grid and given grids cells values.
 #
-# - The operation is performed to this raster grid, if no resulting new raster 
+# - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the comparison results is returned.
-# - The raster grids must have the same amount of cells in both directions.
-# - The raster grids datatypes must be integer.
-# - The resulting cell value will be 1 if both raster grids have in the same 
+# - The rasters must have the same amount of cells in both directions.
+# - The rasters datatypes must be integer.
+# - The resulting cell value will be 1 if both rasters have in the same 
 # cell 0, else the resulting value is 1.
-# - If the other or both raster grid cells have an <I>no data</I> value, then 
+# - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
 # .
 # The (truth) table here shows all possible value combinations (not incl. no 
@@ -2741,7 +2699,7 @@ sub or {
 # @param[in] second A Geo::Raster, which cell values are used to calculate the 
 # logical inverse of disjunction.
 # @return Geo::Raster with results from using the NOR operator.
-# @exception The raster grids datatype is not integer.
+# @exception The rasters datatype is not integer.
 sub nor {
     my $self = shift;
     my $second = shift;
@@ -2756,11 +2714,11 @@ sub nor {
 # @brief Set each cell to the minimum of cell's own value or parameter (which 
 # ever is smaller).
 # 
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the minimum values is returned.
 #
 # @param[in] param Number to compare with the raster cell values.
-# @return A raster grid with values equal to those of this grids or parameters, 
+# @return A raster with values equal to those of this grids or parameters, 
 # which ever are smaller.
 
 ## @method Geo::Raster min(Geo::Raster second)
@@ -2768,18 +2726,18 @@ sub nor {
 # @brief Set each cell to the minimum of cells own value or parameter grids 
 # cells value (which ever is smaller).
 #
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the minimum values is returned.
 #
 # @param[in] second A reference to an another raster, whose cells define the 
-# comparison value for each of this raster grids cells.
-# @return A raster grid with values equal to those of this grids or parameter 
+# comparison value for each of this rasters cells.
+# @return A raster with values equal to those of this grids or parameter 
 # grids, which ever are smaller.
 
 ## @method $min()
 # 
-# @brief Returns the smallest value in the raster grid.
-# @return The minimum of the raster grid.
+# @brief Returns the smallest value in the raster.
+# @return The minimum of the raster.
 sub min {
     my $self = shift;
     my $second = shift;
@@ -2806,11 +2764,11 @@ sub min {
 # @brief Set each cell to the maximum of cell's own value or parameter (which 
 # ever is greater).
 # 
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the maximum values is returned.
 #
 # @param[in] param Number to compare with the raster cell values.
-# @return A raster grid with values equal to those of this grids or parameters, 
+# @return A raster with values equal to those of this grids or parameters, 
 # which ever are higher.
 
 ## @method Geo::Raster max(Geo::Raster second)
@@ -2818,18 +2776,18 @@ sub min {
 # @brief Set each cell to the maximum of cell's own value or parameter grids 
 # cells value (which ever is greater).
 # 
-# The operation is performed to this raster grid, if no resulting new raster 
+# The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the maximum values is returned.
 #
 # @param[in] second A reference to an another raster, whose cells define the 
-# comparison value for each of this raster grids cells.
-# @return A raster grid with values equal to those of this grids or parameters, 
+# comparison value for each of this rasters cells.
+# @return A raster with values equal to those of this grids or parameters, 
 # which ever are higher.
 
 ## @method $max()
 # 
-# @brief Returns the highest value in the raster grid.
-# @return The maximum of the raster grid.
+# @brief Returns the highest value in the raster.
+# @return The maximum of the raster.
 sub max {
     my $self = shift;
     my $second = shift;   
@@ -2860,7 +2818,7 @@ sub random {
 
 ## @method Geo::Raster cross(Geo::Raster b)
 # 
-# @brief Cross product of raster grids.
+# @brief Cross product of rasters.
 #
 # Example of usage: Creates a new Geo::Raster with cross product values 
 # (c = a x b).
@@ -2876,17 +2834,17 @@ sub random {
 # b1, ..., bnb (bi < bj, nb distinct values) then c will have nc = na * nb
 # distinct values 1, ..., nc. The c will have value 1 where a = a1 and b
 # = b1, 2 where a = a1 and b = b2, etc.
-# - The operation results are given to this raster grid, if no resulting new 
-# raster grid is needed, else a new grid with the cross product values is 
+# - The operation results are given to this raster, if no resulting new 
+# raster is needed, else a new grid with the cross product values is 
 # returned.
-# - The raster grids datatypes must be integer.
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be equal.
-# - If the other or both raster grid cells have an <I>no data</I> value, then 
+# - The rasters datatypes must be integer.
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be equal.
+# - If the other or both raster cells have an <I>no data</I> value, then 
 # also the resulting cell will have that value.
 #
 # @param[in] b A reference to an another Geo::Raster object.
-# @return A new raster grid with the calculated cross product values.
+# @return A new raster with the calculated cross product values.
 sub cross {
     my($a, $b) = @_;
     my $c = ral_grid_cross($a->{GRID}, $b->{GRID}); 
@@ -2919,16 +2877,16 @@ sub cross {
 # set to v on that zone. A zone mapping hash can, for example, be
 # obtained using the zonal functions (see for example 
 # Geo::Raster::zonal_count(), ...).
-# - The second raster grids real world boundaries must be the same as this 
-# raster grids. The cell sizes and amounts in both directions must also be 
+# - The second rasters real world boundaries must be the same as this 
+# rasters. The cell sizes and amounts in both directions must also be 
 # equal.
-# - The operation results are given to this raster grid, if no resulting new 
-# raster grid is needed.
+# - The operation results are given to this raster, if no resulting new 
+# raster is needed.
 #
-# @param[in] b Reference to an another raster grid.
-# @param[in] c Reference to an another raster grid or zonal mapping hash or a 
+# @param[in] b Reference to an another raster.
+# @param[in] c Reference to an another raster or zonal mapping hash or a 
 # number.
-# @return A raster grid with the results gotten according to the statement.
+# @return A raster with the results gotten according to the statement.
 
 ## @method Geo::Raster if(Geo::Raster b, $c, $d)
 # 
@@ -2955,18 +2913,18 @@ sub cross {
 # set to v on that zone. A zone mapping hash can, for example, be
 # obtained using the zonal functions (see for example 
 # Geo::Raster::zonal_count(), ...).
-# - The second and third raster grids real world boundaries must be the same as 
-# this raster grids. The cell sizes and amounts in both directions must also be 
+# - The second and third rasters real world boundaries must be the same as 
+# this rasters. The cell sizes and amounts in both directions must also be 
 # equal.
-# - The operation results are given to this raster grid, if no resulting new 
-# raster grid is needed.
+# - The operation results are given to this raster, if no resulting new 
+# raster is needed.
 #
-# @param[in] b Reference to an another raster grid.
-# @param[in] c Reference to an another raster grid or zonal mapping hash or a 
+# @param[in] b Reference to an another raster.
+# @param[in] c Reference to an another raster or zonal mapping hash or a 
 # number.
-# @param[in] d Reference to an another raster grid or zonal mapping hash or a 
+# @param[in] d Reference to an another raster or zonal mapping hash or a 
 # number.
-# @return A raster grid with the results gotten according to the statement.
+# @return A raster with the results gotten according to the statement.
 sub if {
     my $a = shift;
     my $b = shift;    
@@ -3082,7 +3040,7 @@ sub variance {
 # @brief Computes and stores into nodata cells the distance
 # (in world units) to the nearest data cell.
 # @return If a return value is wanted, then the method returns a new grid with 
-# values only in this raster grids <I>no data</I> cells having the distance
+# values only in this rasters <I>no data</I> cells having the distance
 # to the nearest data cell. 
 sub distances {
     my($self) = @_;
@@ -3102,7 +3060,7 @@ sub distances {
 # Directions are given in radians and direction zero is to the direction of 
 # x-axis, Pi/2 is to the direction of y-axis.
 # @return If a return value is wanted, then the method returns a new grid, with 
-# values only in this raster grids <I>no data</I> cells, having the direction
+# values only in this rasters <I>no data</I> cells, having the direction
 # to the nearest data cell. 
 sub directions {
     my($self) = @_;
@@ -3116,7 +3074,7 @@ sub directions {
 
 ## @method Geo::Raster clip($i1, $j1, $i2, $j2)
 # 
-# @brief Clips a part of the raster grid according the given rectangle.
+# @brief Clips a part of the raster according the given rectangle.
 #
 # Example of clipping a grid:
 # @code
@@ -3132,7 +3090,7 @@ sub directions {
 
 ## @method Geo::Raster clip(Geo::Raster area_to_clip)
 # 
-# @brief Clips a part of the raster grid according the given raster grids real 
+# @brief Clips a part of the raster according the given rasters real 
 # world boundaries.
 #
 # Example of clipping a grid:
@@ -3207,9 +3165,9 @@ have the effect "clip a to i1, j1, i2, j2" and "join b to a".
 # $a->join($b);
 # @endcode
 #
-# @param[in] second A raster grid to join to this raster grid. 
+# @param[in] second A raster to join to this raster. 
 # @return If a return value is wanted, then the method returns a new grid.
-# @exception The raster grids have a different cell size.
+# @exception The rasters have a different cell size.
 sub join {
     my $self = shift;
     my $second = shift;
@@ -3223,7 +3181,7 @@ sub join {
 
 ## @method void assign(Geo::Raster src)
 #
-# @brief Assigns the values from an another raster grid to this. 
+# @brief Assigns the values from an another raster to this. 
 #
 # The values are looked up simply based on the center point of cell.
 # 
@@ -3269,7 +3227,7 @@ sub clip_to {
 
 ## @method listref array()
 #
-# @brief Creates a list of the raster grids values.
+# @brief Creates a list of the rasters values.
 #
 # Example of making an array of data in a grid
 # @code
@@ -3350,7 +3308,7 @@ sub histogram {
 # @param[in] mask The mask is [[], [], ..., []], i.e., a 2D table that 
 # determines the focal area. The table is read from left to right, top to down,
 # and its center element is the cell for which the focal sum is computed.
-# @return The focal sums for the entire raster grid. If no return value is 
+# @return The focal sums for the entire raster. If no return value is 
 # needed then the focal sums are given to this grids cells.
 
 ## @method $focal_sum(listref mask, @cell)
@@ -3388,7 +3346,7 @@ sub focal_sum {
 # @param[in] mask The mask is [[], [], ..., []], i.e., a 2D table that 
 # determines the focal area. The table is read from left to right, top to down,
 # and its center element is the cell for which the focal mean is computed.
-# @return The focal means for the entire raster grid. If no return value is 
+# @return The focal means for the entire raster. If no return value is 
 # needed then the focal means are given to this grids cells.
 
 ## @method $focal_mean(listref mask, @cell)
@@ -3426,7 +3384,7 @@ sub focal_mean {
 # @param[in] mask The mask is [[], [], ..., []], i.e., a 2D table that 
 # determines the focal area. The table is read from left to right, top to down,
 # and its center element is the cell for which the focal variance is computed.
-# @return The focal variances for the entire raster grid. If no return value is 
+# @return The focal variances for the entire raster. If no return value is 
 # needed then the focal variances are given to this grids cells.
 
 ## @method $focal_variance(listref mask, @cell)
@@ -3464,7 +3422,7 @@ sub focal_variance {
 # @param[in] mask The mask is [[], [], ..., []], i.e., a 2D table that 
 # determines the focal area. The table is read from left to right, top to down,
 # and its center element is the cell for which the focal count is computed.
-# @return The focal counts for the entire raster grid. If no return value is 
+# @return The focal counts for the entire raster. If no return value is 
 # needed then the focal counts are given to this grids cells.
 
 ## @method $focal_count(listref mask, @cell)
@@ -3504,7 +3462,7 @@ sub focal_count {
 # and its center element is the cell for which the focal count of the value is 
 # computed.
 # @param[in] value Value whose apperance times are calculated.
-# @return The focal counts of the value for the entire raster grid. If no return 
+# @return The focal counts of the value for the entire raster. If no return 
 # value is needed then the focal of the value counts are given to this grids 
 # cells.
 
@@ -3606,15 +3564,15 @@ sub contents {
 
 ## @method ref %zones(Geo::Raster zones)
 #
-# @brief Return a hash defining the raster grids values for each zone.
+# @brief Return a hash defining the rasters values for each zone.
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return A reference to a hash having all values of the zones grid (the zones) 
 # as keys (as has the return value of Geo::Raster::contents() for the raster 
-# grid). As values of the hash are references to arrays having this raster grids 
+# grid). As values of the hash are references to arrays having this rasters 
 # values, which belong to the zone defined by the key.
-# @exception The zones grid is not overlayable with the raster grid.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zones {
     my($self, $zones) = @_;
@@ -3623,13 +3581,13 @@ sub zones {
 
 ## @method hashref zonal_fct(Geo::Raster zones, $fct)
 #
-# @brief Calculates the mean of this raster grids values for each zone.
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @brief Calculates the mean of this rasters values for each zone.
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @param fct (string) a method supported by Statistics::Descrptive ('mean' by default)
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the means of this raster grids cells belonging to the zones.
-# @exception The zones grid is not overlayable with the raster grid.
+# values the means of this rasters cells belonging to the zones.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_fct {
     my($self, $zones, $fct) = @_;
@@ -3647,19 +3605,19 @@ sub zonal_fct {
 
 ## @method hashref zonal_count(Geo::Raster zones)
 #
-# @brief Calculates the amount of this raster grids cells for each zone.
+# @brief Calculates the amount of this rasters cells for each zone.
 #
 # Example of getting count of cells having values for each zone:
 # @code
 # $zonalcount = $grid->zonal_count($zones);
 # @endcode
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the amount of this raster grids cells having some value and belonging 
+# values the amount of this rasters cells having some value and belonging 
 # to zone.
-# @exception The zones grid is not overlayable with the raster grid.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_count {
     my($self, $zones) = @_;
@@ -3668,18 +3626,18 @@ sub zonal_count {
 
 ## @method hashref zonal_sum(Geo::Raster zones)
 #
-# @brief Calculates the sum of this raster grids cells for each zone.
+# @brief Calculates the sum of this rasters cells for each zone.
 #
 # Example of getting sum of values for each zone:
 # @code
 # $zonalsum = $grid->zonal_sum($zones);
 # @endcode
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the sum of this raster grids cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster grid.
+# values the sum of this rasters cells belonging to the zone.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_sum {
     my($self, $zones) = @_;
@@ -3688,18 +3646,18 @@ sub zonal_sum {
 
 ## @method hashref zonal_min(Geo::Raster zones)
 #
-# @brief Calculates the minimum of this raster grids cells for each zone.
+# @brief Calculates the minimum of this rasters cells for each zone.
 #
 # Example of getting smallest value for each zone:
 # @code
 # $zonalmin = $grid->zonal_min($zones);
 # @endcode
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the minimum of this raster grids cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster grid.
+# values the minimum of this rasters cells belonging to the zone.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_min {
     my($self, $zones) = @_;
@@ -3708,18 +3666,18 @@ sub zonal_min {
 
 ## @method hashref zonal_max(Geo::Raster zones)
 #
-# @brief Calculates the maximum of this raster grids cells for each zone.
+# @brief Calculates the maximum of this rasters cells for each zone.
 #
 # Example of getting highest value for each zone:
 # @code
 # $zonalmax = $grid->zonal_max($zones);
 # @endcode
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the maximum of this raster grids cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster grid.
+# values the maximum of this rasters cells belonging to the zone.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_max {
     my($self, $zones) = @_;
@@ -3728,18 +3686,18 @@ sub zonal_max {
 
 ## @method hashref zonal_mean(Geo::Raster zones)
 #
-# @brief Calculates the mean of this raster grids cells for each zone.
+# @brief Calculates the mean of this rasters cells for each zone.
 #
 # Example of getting mean of all values for each zone:
 # @code
 # $zonalmean = $grid->zonal_mean($zones);
 # @endcode
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the mean of this raster grids cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster grid.
+# values the mean of this rasters cells belonging to the zone.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_mean {
     my($self, $zones) = @_;
@@ -3748,18 +3706,18 @@ sub zonal_mean {
 
 ## @method hashref zonal_variance(Geo::Raster zones)
 #
-# @brief Calculates the variance of this raster grids cells for each zone.
+# @brief Calculates the variance of this rasters cells for each zone.
 #
 # Example of getting variance of all values for each zone:
 # @code
 # $zonalvar = $grid->zonal_variance($zones);
 # @endcode
 #
-# @param[in] zones An integer raster grid, which defines the zones. All 
+# @param[in] zones An integer raster, which defines the zones. All 
 # different integers point to a different zone.
 # @return Returns a reference to an hash having as keys the zones and as 
-# values the variance of this raster grids cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster grid.
+# values the variance of this rasters cells belonging to the zone.
+# @exception The zones grid is not overlayable with the raster.
 # @exception The zones grid is not of type integer.
 sub zonal_variance {
     my($self, $zones) = @_;
@@ -3812,7 +3770,7 @@ sub grow_zones {
 # which creates a plane.
 #
 # @param[in] fct A string having a function.
-# @return Returns a new raster grid, if a return value is wanted, else the 
+# @return Returns a new raster, if a return value is wanted, else the 
 # values gotten by the function will be added to this grid.
 # @note This method should be used only with care, because the command given as 
 # parameter will be run even if it is harmful!
@@ -3859,7 +3817,7 @@ sub function {
 # value is a new value for the value the key specifies. If the value
 # is a real number (i.e., contains '.') the result is a real valued
 # raster.
-# @return eturns a new raster grid, if a return value is wanted, else the 
+# @return eturns a new raster, if a return value is wanted, else the 
 # reclassifications are done to this grid.
 # @note Use this method this way only for integer valued rasters.
 
@@ -3874,7 +3832,7 @@ sub function {
 # The value is a new value for the
 # value or value range the key specifies. If the value is a real
 # number (i.e., contains '.') the result is a real valued raster.
-# @return Returns a new raster grid, if a return value is wanted, else the 
+# @return Returns a new raster, if a return value is wanted, else the 
 # reclassifications are done to this grid.
 # @note This method can be used for real valued rasters if value
 # ranges are used.
@@ -3889,7 +3847,7 @@ sub function {
 # list denoting a value range: [min_value, max_value]. The value is a new value 
 # for the value or value range the key specifies. If the value is a real
 # number (i.e., contains '.') the result is a real valued raster.
-# @return Returns a new raster grid, if a return value is wanted, else the 
+# @return Returns a new raster, if a return value is wanted, else the 
 # reclassifications are done to this grid.
 # @note This method can be used for real valued rasters if value
 # ranges are used.
