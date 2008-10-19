@@ -873,12 +873,23 @@ sub data_type {
     return $self->datatype;
 }
 
-## @method @size(@cell)
+## @method @size(%params)
 #
-# @brief Returns the size (height, width) of the raster or that of a zone.
+# @brief Returns the size (height, width) of the raster.
 #
-# @param[in] cell (optional) A cell
-# @return The size (height, width) of the raster or the number of cells in the zone.
+# @param params Named parameters:
+# - <i>of_GDAL</i>=>boolean Force the method to return the size of the
+# underlying GDAL raster, if there is one.
+#
+# @return The size (height, width) of the raster or an empty list if
+# no part of the GDAL raster has yet been cached.
+
+## @method $size(@cell)
+#
+# @brief Returns the number of cells in a zone.
+#
+# @param[in] cell Zone cell. Identifies the zone.
+# @return The number of cells in the zone.
 sub size {
     my $self = shift;
     my($i, $j) = @_;
@@ -901,10 +912,9 @@ sub size {
 # 
 # @brief Returns the cells size.
 # @param[in] params Named parameters:
-# - <I>of_GDAL</I>=>boolean (optional) whether the cell size should be
-# queried from GDAL (the actual data source, if there is one) instead
-# from libral (the in-memory raster).
-# @return Cell size, i.e., the length of its edge in raster scale.
+# - <I>of_GDAL</I>=>boolean (optional) Force the method to return the
+# cell size of the underlying GDAL raster if there is one.
+# @return Cell size, i.e., the length of the cell edge in raster scale.
 sub cell_size {
     my($self, %o) = @_;
     if ($self->{GDAL} and $o{of_GDAL}) {
@@ -945,18 +955,14 @@ sub nodata_value {
     return $nodata_value;
 }
 
-## @fn $bool()
-#
-# @brief Method returns a true value accepted by all methods of the object.
-# @return True.
+## @ignore
 sub bool {
-    my $self = shift;
     return 1;
 }
 
 ## @method Geo::Raster clone()
 #
-# @brief Creates a clone from the Geo::Raster object, which is returned.
+# @brief Clone a raster.
 # @return A clone of this object.
 sub clone {
     my $self = shift;
@@ -965,17 +971,12 @@ sub clone {
 
 ## @method Geo::Raster neg()
 #
-# @brief Creates a new copy of the Geo::Raster object with opposite values 
-# compared to the current grids values.
+# @brief Unary minus.
 #
-# For example a cell with value 1 becomes a cell with value -1, and a cell
-# with value -2.5 becomes a cell with value 2.5. Values can be of type 'Real' or
-# 'Integer'.
-# @return An Geo::Raster object with reverse values compared to the current 
-# values.
+# @return A negated (multiplied by -1) raster.
 sub neg {
     my $self = shift;
-    my $copy = Geo::Raster::new($self);
+    my $copy = Geo::Raster->new($self);
     ral_grid_mult_integer($copy->{GRID}, -1);
     return $copy;
 }
