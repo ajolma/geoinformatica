@@ -64,7 +64,7 @@ sub convolve {
 # @param[in] value (optional) The value for the cells along the line.
 # @return the values of the cells along the line if value is not
 # given. The returned value is a reference to an anonymous array of
-# the form: (@cell, value, @cell, value, ...).
+# the form: (\@cell, value, \@cell, value, ...).
 sub line {
     my($self, $i1, $j1, $i2, $j2, $pen) = @_;
     unless (defined $pen) {
@@ -133,7 +133,7 @@ sub transect {
 # @param[in] value (optional) The value for the cells within the rectangle.
 # @return the values of the cells within the rectangle if value is not
 # given. The returned value is a reference to an anonymous array of
-# the form: (@cell, value, @cell, value, ...).
+# the form: (\@cell, value, \@cell, value, ...).
 sub rect {
     my($self, $i1, $j1, $i2, $j2, $pen) = @_;
     unless (defined $pen) {
@@ -152,7 +152,7 @@ sub rect {
 # @param[in] value (optional) The value for the cells within the circle.
 # @return the values of the cells within the circle if value is not
 # given. The returned value is a reference to an anonymous array of
-# the form: (@cell, value, @cell, value, ...).
+# the form: (\@cell, value, \@cell, value, ...).
 sub circle {
     my($self, $i, $j, $r, $pen) = @_;
     unless (defined $pen) {
@@ -183,7 +183,7 @@ sub floodfill {
 # This is an implementation of the algorithm in Jang, B-K., Chin,
 # R.T. 1990. Analysis of Thinning Algorithms Using Mathematical
 # Morphology. IEEE Trans. Pattern Analysis and Machine
-# Intelligence. 12(6). 541-551. (Same as in Grass but done in a bit
+# Intelligence. 12(6). 541-551. (Same as in GRASS but done in a bit
 # different, and more generic way, I believe). 
 #
 # The thinning algorithm defines a set of structuring templates and
