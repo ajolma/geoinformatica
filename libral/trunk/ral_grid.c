@@ -1173,7 +1173,8 @@ int ral_grid_data(ral_grid *gd)
 	}
 	ral_grid_steal_data(gd, g);
 	ral_grid_destroy(&g);
-    } 
+    }
+    ral_grid_remove_nodata_value(gd);
     return 1;
  fail:
     return 0;
