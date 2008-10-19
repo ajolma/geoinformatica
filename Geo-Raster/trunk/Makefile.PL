@@ -60,6 +60,10 @@ if ($^O eq 'MSWin32') {
 our %pm_files = 
     (
      'lib/Geo/Raster.pm'                  => '$(INST_LIBDIR)/Raster.pm',
+     'lib/Geo/Raster/Operations.pm'       => '$(INST_LIBDIR)/Raster/Operations.pm',
+     'lib/Geo/Raster/Focal.pm'            => '$(INST_LIBDIR)/Raster/Focal.pm',
+     'lib/Geo/Raster/Zonal.pm'            => '$(INST_LIBDIR)/Raster/Zonal.pm',
+     'lib/Geo/Raster/Global.pm'            => '$(INST_LIBDIR)/Raster/Global.pm',
      'lib/Geo/Raster/IO.pm'               => '$(INST_LIBDIR)/Raster/IO.pm',
      'lib/Geo/Raster/Image.pm'            => '$(INST_LIBDIR)/Raster/Image.pm',
      'lib/Geo/Raster/Algorithms.pm'       => '$(INST_LIBDIR)/Raster/Algorithms.pm',

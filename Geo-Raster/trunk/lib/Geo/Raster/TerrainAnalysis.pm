@@ -362,9 +362,9 @@ sub depressions {
 # depressions (if FDG is given), or a pitless and flatless FDG.
 sub fill_depressions {
     my($dem, %opt) = @_;
-    $opt{iterative} = 1 unless exists $opt{iterative} and not $opt{iterative};
+    $opt{iterative} = 1 unless exists $opt{iterative} and CORE::not $opt{iterative};
     $opt{fdg} = $opt{FDG} if exists $opt{FDG};
-    if (not $opt{iterative}) {
+    if (CORE::not $opt{iterative}) {
 	croak "fill_depressions: FDG needed if not iterative" unless $opt{fdg};
 	$dem = Geo::Raster->new($dem) if defined wantarray;
 	ral_dem_fill_depressions($dem->{GRID}, $opt{fdg}->{GRID});
@@ -441,8 +441,8 @@ sub breach {
     my($dem, %opt) = @_;
     $opt{fdg} = $opt{FDG} if exists $opt{FDG};
     $opt{limit} = 0 unless defined($opt{limit});
-    $opt{iterative} = 1 unless exists $opt{iterative} and not $opt{iterative};
-    if (not $opt{iterative}) {
+    $opt{iterative} = 1 unless exists $opt{iterative} and CORE::not $opt{iterative};
+    if (CORE::not $opt{iterative}) {
 	croak "breach: FDG needed if not iterative" unless $opt{fdg};
 	$dem = Geo::Raster->new($dem) if defined wantarray;
 	ral_dem_breach($dem->{GRID}, $opt{fdg}->{GRID}, $opt{limit});

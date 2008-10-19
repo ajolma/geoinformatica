@@ -9,9 +9,8 @@ and libral. These pages document the Perl modules specific to
 Geoinformatica.
 
 The source code for these modules and libral are developed at <a
-href="https://hoslab.cs.helsinki.fi/savane/">HOSLAB</a>. HOSLAB does
-not yet offer an anonymous access to the subversion repository, there
-are nightly snapshots available at <a
+href="http://trac.osgeo.org/geoinformatica/">OSGeo Trac</a>. There are
+nightly snapshots available at <a
 href="http://map.hut.fi/files/Geoinformatica/">http://map.hut.fi/files/Geoinformatica/</a>. In
 the same ftp site there are Windows binaries available.
 
@@ -51,10 +50,14 @@ value. For example:
 @code
 $a->sin(); 
 @endcode
-vs. 
+
+takes sin of all cell values of $a, while
+
 @code
 $b = $a->sin();
 @endcode
+
+creates a new raster and assigns the sin values to it.
 
 A raster is a rectangular matrix of cells. A cell is referred to by
 its coordinates, i.e., a list ($row, $column) or ($i, $j). For
@@ -64,6 +67,17 @@ example:
 @cell = (30, 40);
 $value = $a->get(@cell);
 @endcode
+
+\note
+Usually, if operations involve more than one raster, then the rasters
+need to be overlayable, i.e., their sizes and world coordinates must
+match.
+
+The world coordinates of a raster are simple linear transformations
+from the (row, column) cell coordinates. x has the value min_x on the
+left edge of the leftmost column and each cell is cell_size wide. y
+has the value min_y on the bottom edge of the lowest row and the
+height of each cell is cell_size.
 
 \section index_geo_vector Introduction to Geo::Vector
 

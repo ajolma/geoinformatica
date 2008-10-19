@@ -8,6 +8,10 @@ lib/Geo/typemap
 lib/Geo/arrays.c
 lib/Geo/arrays.h
 lib/Geo/help.c
+lib/Geo/Raster/Operations.pm
+lib/Geo/Raster/Focal.pm
+lib/Geo/Raster/Zonal.pm
+lib/Geo/Raster/Global.pm
 lib/Geo/Raster/Algorithms.pm
 lib/Geo/Raster/Geostatistics.pm
 lib/Geo/Raster/IO.pm

@@ -22,7 +22,7 @@ sub gdal_open {
     unless ($t) {
 		@$t = (0,1,0,0,0,1);
     }
-    $t->[5] = abs($t->[5]);
+    $t->[5] = CORE::abs($t->[5]);
     croak "Cells are not squares: dx=$t->[1] != dy=$t->[5]" 
 	unless $t->[1] == $t->[5];
     croak "The raster is not a strict north up image."
@@ -44,18 +44,43 @@ sub gdal_open {
 }
 
 ## @method Geo::GDAL::Dataset dataset()
+#
+# @brief Return the underlying GDAL dataset or, in the case of pure
+# libral raster, create a GDAL memory dataset and return it.
+#
 sub dataset {
     my $self = shift;
-    return unless $self->{GDAL};
-    return $self->{GDAL}->{dataset};
+    return $self->{GDAL}->{dataset} if $self->{GDAL};
+    my @size = $self->size;
+    my $datapointer = ral_pointer_to_data($self->{GRID});
+    my $datatype = ral_data_element_type($self->{GRID});
+    my $size = ral_sizeof_data_element($self->{GRID});
+    my %gdal_type = (
+	'short' => 'Int',
+	'float' => 'Float',
+	);
+    my $ds = Geo::GDAL::Open(
+	"MEM:::DATAPOINTER=$datapointer,".
+	"PIXELS=$size[1],LINES=$size[0],DATATYPE=$gdal_type{$datatype}$size");
+    my $world = ral_grid_get_world($self->{GRID});
+    my $cell_size = ral_grid_get_cell_size($self->{GRID});
+    $ds->SetGeoTransform([$world->[0], $cell_size, 0, $world->[3], 0, -$cell_size]);
+    return $ds;
 }
 
 ## @method Geo::GDAL::Band band()
+#
+# @brief Return the used band from the underlying GDAL dataset or, in
+# the case of pure libral raster, create a GDAL memory dataset and
+# return the (only) band of it.
+#
 sub band {
     my $self = shift;
-    return unless $self->{GDAL};
-    return unless $self->{GDAL}->{dataset};
-    return $self->{GDAL}->{dataset}->GetRasterBand($self->{GDAL}->{band});
+    if ($self->{GDAL}->{dataset}) {
+	return $self->{GDAL}->{dataset}->GetRasterBand($self->{GDAL}->{band});
+    }
+    my $ds = $self->dataset;
+    return $ds->Band(1);
 }
 
 ## @method Geo::Raster cache($min_x, $min_y, $max_x, $max_y, $cell_size)
@@ -290,7 +315,7 @@ sub restore {
     }
     ral_grid_set_all($self->{GRID}, 0);
     while (<$from>) {
-	my($i, $j, $x) = split /,/;
+	my($i, $j, $x) = split(/,/);
 	ral_grid_set($self->{GRID}, $i, $j, $x);
     }
     $from->close if $close;
