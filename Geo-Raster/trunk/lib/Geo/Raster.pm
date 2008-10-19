@@ -823,11 +823,9 @@ sub cell_size {
 
 ## @method $nodata_value($value)
 #
-# @brief Set a nodata value for the grid. If 
-# @param[in] value (optional) Value that represents <I>no data</I> in the grid.
-# @return The value set for no data.
-# @note It might be wise to use zero (0) for representing no data. 
-# @note Do not use a real number for <I>no data</I> for a grid of type integer.
+# @brief Get or set the value used to denote nodata values. 
+# @param[in] value (optional) Value that represents <I>no data</I> in the raster.
+# @return the value for nodata if called without parameter.
 sub nodata_value {
     my $self = shift;
     my $nodata_value = shift;
@@ -851,28 +849,20 @@ sub nodata_value {
 
 ## @method Geo::Raster min($param)
 # 
-# @brief Set each cell to the minimum of cell's own value or parameter (which 
-# ever is smaller).
+# @brief Set each cell to the minimum of its value and the parameter
+# value.
 # 
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the minimum values is returned.
-#
 # @param[in] param Number to compare with the raster cell values.
-# @return A raster with values equal to those of this grids or parameters, 
-# which ever are smaller.
+# @return A new raster. In void context changes this raster.
 
 ## @method Geo::Raster min(Geo::Raster second)
 # 
-# @brief Set each cell to the minimum of cells own value or parameter grids 
-# cells value (which ever is smaller).
+# @brief Set each cell to the minimum of its value and the value of
+# the respective cell in the parameter raster.
 #
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the minimum values is returned.
-#
-# @param[in] second A reference to an another raster, whose cells define the 
-# comparison value for each of this rasters cells.
-# @return A raster with values equal to those of this grids or parameter 
-# grids, which ever are smaller.
+# @param[in] second A raster, whose values are compared the values of
+# this raster.
+# @return A new raster. In void context changes this raster.
 sub min {
     my $self = shift;
     my $second = shift;
@@ -896,28 +886,20 @@ sub min {
 
 ## @method Geo::Raster max($param)
 # 
-# @brief Set each cell to the maximum of cell's own value or parameter (which 
-# ever is greater).
+# @brief Set each cell to the maximum of its value and the parameter
+# value.
 # 
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the maximum values is returned.
-#
 # @param[in] param Number to compare with the raster cell values.
-# @return A raster with values equal to those of this grids or parameters, 
-# which ever are higher.
+# @return A new raster. In void context changes this raster.
 
 ## @method Geo::Raster max(Geo::Raster second)
 # 
-# @brief Set each cell to the maximum of cell's own value or parameter grids 
-# cells value (which ever is greater).
-# 
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the maximum values is returned.
+# @brief Set each cell to the maximum of its value and the value of
+# the respective cell in the parameter raster.
 #
-# @param[in] second A reference to an another raster, whose cells define the 
-# comparison value for each of this rasters cells.
-# @return A raster with values equal to those of this grids or parameters, 
-# which ever are higher.
+# @param[in] second A raster, whose values are compared the values of
+# this raster.
+# @return A new raster. In void context changes this raster.
 sub max {
     my $self = shift;
     my $second = shift;   
@@ -941,8 +923,7 @@ sub max {
 
 ## @method Geo::Raster random()
 # @brief Return a random part of values of the values of this raster.
-# @return raster with a random portion of the values of this
-# raster. In void context changes the values of this raster.
+# @return a new raster. In void context changes the values of this raster.
 sub random {
     my $self = shift;
     $self = Geo::Raster::new($self) if defined wantarray;
@@ -969,7 +950,7 @@ sub random {
 # distinct values 1, ..., nc. The c will have value 1 where a = a1 and b
 # = b1, 2 where a = a1 and b = b2, etc.
 # - The operation results are given to this raster, if no resulting new 
-# raster is needed, else a new grid with the cross product values is 
+# raster is needed, else a new raster with the cross product values is 
 # returned.
 # - The rasters datatypes must be integer.
 # - The second rasters real world boundaries must be the same as this 
@@ -1095,13 +1076,13 @@ sub if {
 #
 # @brief Creates buffer zones around cells having the given value
 #
-# Creates (or converts a grid to) a binary grid, where all cells
+# Creates (or converts a raster to) a binary raster, where all cells
 # within distance w of a cell (measured as pixels from cell center to cell center)
-# having the value z will have value 1, all other cells will
-# have values 0. 
+# having the value z will have value of 1, all other cells will
+# have values of 0. 
 # @param[in] z Denotes cell values for which the bufferzone is computed.
 # @param[in] w Width of the bufferzone.
-# @note Defined only for integer grids.
+# @note Defined only for integer rasters.
 sub bufferzone {
     my($self, $z, $w) = @_;
     croak "method usage: bufferzone($z, $w)" unless defined($w);
@@ -1117,7 +1098,7 @@ sub bufferzone {
 #
 # @brief Computes and stores into nodata cells the distance
 # (in world units) to the nearest data cell.
-# @return If a return value is wanted, then the method returns a new grid with 
+# @return If a return value is wanted, then the method returns a new raster with 
 # values only in this rasters <I>no data</I> cells having the distance
 # to the nearest data cell. 
 sub distances {
@@ -1137,7 +1118,7 @@ sub distances {
 # 
 # Directions are given in radians and direction zero is to the direction of 
 # x-axis, Pi/2 is to the direction of y-axis.
-# @return If a return value is wanted, then the method returns a new grid, with 
+# @return If a return value is wanted, then the method returns a new raster, with 
 # values only in this rasters <I>no data</I> cells, having the direction
 # to the nearest data cell. 
 sub directions {
@@ -1154,7 +1135,7 @@ sub directions {
 # 
 # @brief Clips a part of the raster according the given rectangle.
 #
-# Example of clipping a grid:
+# Example of clipping a raster:
 # @code
 # $g2 = $g1->clip($i1, $j1, $i2, $j2);
 # @endcode
@@ -1163,7 +1144,7 @@ sub directions {
 # @param[in] j1 Upper left corners j-coordinate of the rectangle to clip.
 # @param[in] i2 Bottom right corners i-coordinate of the rectangle to clip.
 # @param[in] j2 Bottom right corners j-coordinate of the rectangle to clip.
-# @return If a return value is wanted, then the method returns a new grid with
+# @return If a return value is wanted, then the method returns a new raster with
 # size defined by the parameters.
 
 ## @method Geo::Raster clip(Geo::Raster area_to_clip)
@@ -1171,7 +1152,7 @@ sub directions {
 # @brief Clips a part of the raster according the given rasters real 
 # world boundaries.
 #
-# Example of clipping a grid:
+# Example of clipping a raster:
 # @code
 # $g2 = $g1->clip($g3);
 # @endcode
@@ -1179,7 +1160,7 @@ sub directions {
 # If there is no lvalue, $g1 is clipped.
 # 
 # @param[in] area_to_clip A Geo::Raster, which defines the area to clip.
-# @return If a return value is wanted, then the method returns a new grid with
+# @return If a return value is wanted, then the method returns a new raster with
 # size defined by the parameter.
 sub clip {
     my $self = shift;
@@ -1211,7 +1192,7 @@ sub clip {
 # @brief The method joins the two given rasters.
 #
 # - The upper and left world boundaries must must have equal values.
-# - If the others or boths grid types are real, then the joined raster will have 
+# - If both rasters are of type real, then the joined raster will have 
 # real as type.
 #
 # Example of joining
@@ -1219,8 +1200,8 @@ sub clip {
 # $g3 = $g1->join($g2);
 # @endcode
 #
-# The joining is based on the world coordinates of the grids. clip and
-# join without assignment clip or join the original grid, so
+# The joining is based on the world coordinates of the rasters. clip and
+# join without assignment clip or join the original raster, so
 # @code
 # $a->clip($i1, $j1, $i2, $j2);
 #
@@ -1228,7 +1209,7 @@ sub clip {
 # @endcode
 #
 # @param[in] second A raster to join to this raster. 
-# @return If a return value is wanted, then the method returns a new grid.
+# @return If a return value is wanted, then the method returns a new raster.
 # @exception The rasters have a different cell size.
 sub join {
     my $self = shift;
@@ -1252,7 +1233,7 @@ sub join {
 # $dest->assign($src);
 # @endcode
 #
-# @param[in] src Source grid from where the values looked up.
+# @param[in] src Source raster from where the values looked up.
 sub assign {
     my($dest, $src) = @_;
     ral_grid_pick($dest->{GRID}, $src->{GRID});
@@ -1260,16 +1241,12 @@ sub assign {
 
 ## @method void clip_to(Geo::Raster like)
 #
-# @brief Creates a grid like the given and assigns to that grid this grids values.
+# @brief Creates a raster like the given raster and assigns to that
+# raster values from this raster.
 #
-# Makes a new grid g3, which is like g2 and assigns values from g1 to it. If
-# called without return value, discards GDAL dataset if there is one.
-# Also if g2 has GDAL, calls sg1->cache($g2) first.
-# Example of clipping to a new grid
-# @code
-# $g3 = $g1->clip_to($g2);
-# @endcode
-# @param[in] like Source grid, where the values
+# @param[in] like Raster that defines the window for the new raster.
+# @return a new raster. In void context copies to this raster and
+# discards the reference to a GDAL raster.
 sub clip_to {
     my($self, $like) = @_;
     if ($self->{GDAL}) {
@@ -1291,16 +1268,15 @@ sub clip_to {
 #
 # @brief Creates a list of the rasters values.
 #
-# Example of making an array of data in a grid
+# Example of making an array of data in a raster
 # @code
-# $aref = $gd->array;
+# $aref = $a->array;
 # @endcode
 # where $aref is a reference to a list of references to arrays of cells and values:
 #
 # [[i0, j0, val0], [i1, j1, val1], [i2, j2, val2], ...].
 #
-# @return Returns a reference to a list, where first is given a grids 
-# coordinates and then the value of that grid.
+# @return a reference to a list.
 sub array {
     my($self) = @_;
     my $a = ral_grid2list($self->{GRID});
