@@ -56,10 +56,9 @@ sub dijkstra {
 
 ## @method Geo::Raster colored_map()
 #
-# @brief Maps all the values creating areas in the map in to the smallest 
-# numbers (unique colors).
-# @return Returns a new raster grid if wanted, else the method reclassifies this
-# grids values.
+# @brief Attempts to use the smallest possible number of integers for
+# the zones in the raster.
+# @return a new raster. In void context changes this raster.
 sub colored_map {
     my $self = shift;
     my $n = $self->neighbors();
@@ -104,14 +103,13 @@ sub colored_map {
 
 ## @method Geo::Raster applytempl(listref templ, $new_val)
 #
-# @brief Goes trough the grid comparing the given template to each cell and its 
-# neighbours returning the comparison result or gives it to this grid.
+# @brief Apply a modifying template on the raster.
 #
 # The "apply template" method is a generic method which is, e.g., used
 # in the thinning algorithm.
 #
 # @code
-# $gd->applytempl(\@templ, $new_val);
+# $a->applytempl(\@templ, $new_val);
 # @endcode
 #
 # @param[in] templ The structuring template (or mask) to use
@@ -128,9 +126,7 @@ sub colored_map {
 # @param[in] new_val (optional). New value to give to the center cell if the 
 # template rules match the cell and its 8 neighbours. If not given, then 1 is 
 # used to inform about match success.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the comparison results.
-# @note This grid has to be of type integer grid and specially a binary grid.
+# @return a new raster. In void context changes this raster.
 sub applytempl {
     my($self, $templ, $new_val) = @_;
     croak "applytempl: too few values in the template" if $#$templ < 8;
@@ -148,14 +144,13 @@ sub applytempl {
 #
 # @param[in] connectivity (optional). Connectivity between cells as a number:4 
 # or 8. If connectivity is not given then 8-connectivity is used.
-# @return Returns a reference to an hash including each polygon.
+# @return a reference to a hash including each polygon.
 # The hash has named parameters, which have as keys the keys of the polygons (unigue 
 # numbers) that have as values a reference to a hash having two named parameters:
 # - <I>value</I>=>number. The polygons value.
 # - <I>lines</I>=>array. A two dimensional array having the left and right 
 # endings of each single connected piece on every row [[left, right], 
 # [left, right], ...].
-# The polygon can naturally have several pieces on a single row.
 sub polygonize {
     my($self, $connectivity) = @_;
     $connectivity = 8 unless defined $connectivity and $connectivity == 4;
@@ -206,7 +201,7 @@ sub polygonize {
 # [left, right], ...].
 # @param[in, out] key Key (a number) of the last polygon added to the polygon hash.
 # @param[in] value Value of the piece to add to the polygon. 
-# @param[in] line Number of the grid column where the piece is located (a 
+# @param[in] line Number of the column where the piece is located (a 
 # number between 0-(N-1).
 # @param[in] left The most left j-coordinate of the piece to add.
 # @param[in] right The most right j-coordinate of the piece to add.
@@ -258,7 +253,7 @@ sub add_piece {
 #
 # @brief Jois the given polygons and removes all other except one from the 
 # polygon hashref.
-# @param[in, out] polygons Reference to an hash including each polygon.
+# @param[in, out] polygons Reference to an hash containing the polygons.
 # The hash has named parameters, which have as keys the keys of the polygons (unigue 
 # numbers) that have as values a reference to a hash having two named parameters:
 # - <I>value</I>=>number. The polygons value.
@@ -266,7 +261,6 @@ sub add_piece {
 # endings of each single connected piece on every row [[left, right], 
 # [left, right], ...].
 # @param[in] k Keys of the polygons in the polygon hashref, which should be joined.
-# @return Returns the key of that 
 sub join_polygons {
     my $polygons = shift;
     my $k = shift;
@@ -503,9 +497,9 @@ sub add_face_to_path {
 # values is a two dimensional array having the left and right 
 # endings of each single connected piece on every row [[left, right], 
 # [left, right], ...].
-# @param[in] line The number of the row in a grid to check for the polygon.
-# @param[in] j The number of the column in a grid to check for the polygon..
-# @return Returns true if a polygon includes the given coordinates, else false.
+# @param[in] line The number of the row to check for the polygon.
+# @param[in] j The number of the column to check for the polygon..
+# @return true if the polygon includes the given coordinates, else false.
 sub in_polygon {
     my($polygon, $line, $j) = @_;
     return 0 unless exists $polygon->{$line};
@@ -522,7 +516,7 @@ sub in_polygon {
 # constructor of the new Geo::Vector. The
 # named parameter 'connectivity' (default 8) can be used to set the
 # connectivity by which the polygons are delineated.
-# @return The new vector layer.
+# @return a new vector layer.
 sub vectorize {
     my ($self, %param) = @_;
 
@@ -566,19 +560,19 @@ sub vectorize {
 
 ## @method Geo::Raster ca_step(@k)
 #
-# @brief Converts each cell value of the grid into a value gotten by summing the 
-# neighbor values of the cell multiplied by the given mask.
+# @brief Perform a cellular automata step.
 #
-# @param[in] k Array (having 0-9 values) defining the values with which the cell 
-# neighbor and the cell is multiplied. The indexes of the array for the 
-# neighbors are:<BR>
+# @param[in] k Array defining the cellular automaton defining the
+# values with which the cell neighbor and the cell is multiplied. The
+# indexes of the array for the neighbors are:<BR>
 # 8 1 2<BR>
 # 7 0 3<BR>
 # 6 5 4
 #
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the thinning done.
-# @note The grid can have real or integer type.
+# The new value for the cell is a k weighted sum of the neighborhood
+# cell values.
+#
+# @return a new raster. In void context changes this raster.
 sub ca_step {
     my($self, @k) = @_;
     if (defined wantarray) {
