@@ -79,6 +79,12 @@ left edge of the leftmost column and each cell is cell_size wide. y
 has the value min_y on the bottom edge of the lowest row and the
 height of each cell is cell_size.
 
+\note
+For maintenance the Geo::Raster class is split into several
+files. These files appear as subclasses of Geo::Raster in this
+documentation, but technically there are only classes Geo::Raster and
+Geo::Raster::Layer.
+
 \section index_geo_vector Introduction to Geo::Vector
 
 A Geo::Vector object (a blessed reference to an anonymous hash) is a

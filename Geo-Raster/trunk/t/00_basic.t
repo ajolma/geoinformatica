@@ -47,7 +47,7 @@ sub diff {
 for my $datatype1 ('int','real') {
     my $gd1 = new Geo::Raster($datatype1,5,10);
 
-    my $mem = $gd1->gdal_mem_band;
+    my $mem = $gd1->band;
 
     ok($mem->{XSize} == 10, "GDAL mem dataset and band");
 
@@ -157,15 +157,15 @@ for my $datatype1 ('','int','real') {
 	#    print STDERR "bo: $_ $o{$_}\n";
 	#}
 	$gd1->world(%o);
-	my @attrib = $gd1->attributes();
+	my @attrib = $gd1->_attributes();
 	for (1..5) {
 	    ok(diff($bounds{$bm{$_}},$attrib[2+$_]),"setting world");
 	}
     }
     my $gd2 = new Geo::Raster(5,10);
     $gd1->copy_world_to($gd2);
-    my @attrib1 = $gd1->attributes();
-    my @attrib2 = $gd2->attributes();
+    my @attrib1 = $gd1->_attributes();
+    my @attrib2 = $gd2->_attributes();
     for (1..5) {
 	ok(diff($attrib1[2+$_],$attrib2[2+$_]),"copy world to");
     }

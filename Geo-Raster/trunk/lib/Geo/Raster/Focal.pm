@@ -54,7 +54,7 @@ sub focal_sum {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    attributes($self);
+	    _attributes($self);
 	}
     }
 }
@@ -92,7 +92,7 @@ sub focal_mean {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    attributes($self);
+	    _attributes($self);
 	}
     }
 }
@@ -130,7 +130,7 @@ sub focal_variance {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    attributes($self);
+	    _attributes($self);
 	}
     }
 }
@@ -168,7 +168,7 @@ sub focal_count {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    attributes($self);
+	    _attributes($self);
 	}
     }
 }
@@ -212,7 +212,7 @@ sub focal_count_of {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    attributes($self);
+	    _attributes($self);
 	}
     }
 }
@@ -240,7 +240,7 @@ sub spread {
     } else {
 	ral_grid_destroy($self->{GRID});
 	$self->{GRID} = $grid;
-	attributes($self);
+	_attributes($self);
     }
 }
 
@@ -253,7 +253,7 @@ sub spread_random {
     } else {
 	ral_grid_destroy($self->{GRID});
 	$self->{GRID} = $grid;
-	attributes($self);
+	_attributes($self);
     }
 }
 

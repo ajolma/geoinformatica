@@ -89,7 +89,7 @@ sub _new_grid {
     return unless $grid;
     ral_grid_destroy($self->{GRID}) if $self->{GRID};
     $self->{GRID} = $grid;
-    attributes($self);
+    _attributes($self);
 }
 
 ## @ignore
@@ -154,7 +154,7 @@ sub _interpret_datatype {
 # $raster = new Geo::Raster(datatype=>datatype_string, rows=>100, columns=>100);
 # @endcode
 #
-# Example of opening a previously saved grid:
+# Example of opening a raster from a file into a libral raster:
 # @code
 # $raster = new Geo::Raster(filename=>"data/dem", load=>1);
 # @endcode
@@ -260,7 +260,7 @@ sub new {
 			      maxx=>$params{world}->[2] );
 	}
     }
-    $self->attributes() if $self->{GRID};
+    $self->_attributes() if $self->{GRID};
     return $self;
 }
 
@@ -344,7 +344,7 @@ sub world {
 	my $w = ral_grid_get_world($self->{GRID});
 	return @$w;
     }
-    $self->attributes;
+    $self->_attributes;
 }
 
 ## @method copy_world_to(Geo::Raster to)
@@ -383,9 +383,8 @@ sub point_in {
 
 ## @method @g2w(@cell)
 #
-# @brief The method converts the given grid cell to the cells 
-# center points world coordinates (x, y). 
-# @param[in] cell The raster cell (i, j).
+# @brief Convert cell coordinates to world coordinates.
+# @param[in] cell The cell coordinates (row, column).
 # @return The center point of the cell in world coordinates (x,y).
 sub g2w {
     my($self, @cell) = @_;
@@ -401,10 +400,9 @@ sub g2w {
 
 ## @method @w2g(@point)
 #
-# @brief The method converts the world coordinates (x, y) into
-# grid coordinates (i, j).
-# @param[in] point The x- and y-coordinates of a point in world coordinate system.
-# @return The cell (i, j), which contains the point.
+# @brief Convert world coordinates to cell coordinates.
+# @param[in] point World coordinates (x, y)
+# @return The cell (row, column), which contains the point.
 sub w2g {
     my($self, @point) = @_;
     if ($self->{GDAL}) {
@@ -421,12 +419,11 @@ sub w2g {
 
 ## @method @ga2wa(@ga)
 #
-# @brief The subroutine converts the boundary of an grid area into a rectangle 
-# defined by world coordinates.
-# @param[in] ga The boundary coordinates of an raster as an array (i_min, 
-# i_max, j_min, j_max).
-# @return The rectangles upper left and lower right corners (center points of 
-# the corner grid cells) in world coordinates (x, y).
+# @brief Convert a region in this raster to a rectangle in world
+# coordinates.
+# @param[in] ga Region in this raster as an array (upper_row,
+# left_column, lower_row, right_column).
+# @return rectangle in world coordinates (x_min, y_min, x_max, y_max)
 sub ga2wa {
     my($self, @ga) = @_;
     if ($self->{GDAL}) {
@@ -441,12 +438,12 @@ sub ga2wa {
 
 ## @method @wa2ga(@wa)
 #
-# @brief The subroutine converts the boundary of an area defined by world 
-# coordinates into the areas rectangle in grid coordinates (i, j).
-# @param[in] wa The boundary coordinates of an raster as an array (x_min, 
-# x_max, y_min, y_max).
-# @return A rectangles upper left and lower right corners cells. Cells are given 
-# in grid coordinates (i, j).
+# @brief Convert a rectangle in world coordinates to a region in this
+# raster.
+# @param[in] wa The boundary coordinates of an raster as an array
+# (x_min, y_min, x_max, y_max).
+# @return region coordinates (upper_row, left_column, lower_row,
+# right_column)
 sub wa2ga {
     my($self, @wa) = @_;
     if ($self->{GDAL}) {
@@ -473,31 +470,20 @@ sub mask {
 
 ## @method void set(@cell, $value)
 #
-# @brief Sets a value to a single grid cell or to all cells.
-#
-# If cell coordinates row and column are not given then the method
-# sets the given value to all cells in the raster.
+# @brief Set the value of a cell.
 #
 # Example of setting to single cell a new value:
 # @code
-# $grid->set($i, $j, $value);
-# @endcode
-# Example of setting all cell values to 2:
-# @code
-# $grid->set(2);
+# $a->set($i, $j, $value);
 # @endcode
 # Example of setting to single cell a <I>nodata</I> value:
 # @code
-# $grid->set($i, $j);
-# @endcode
-# Example of setting to all cells a <I>nodata</I> value:
-# @code
-# $grid->set();
+# $a->set($i, $j);
 # @endcode
 #
 # @param[in] cell (optional) the cell coordinates
-# @param[in] value (optional) The value to set, which can be a number, 
-# "nodata" or a reference to Geo::Raster. Default is "nodata".
+# @param[in] value (optional) The value to set, which can be a number,
+# "nodata" or a raster. Default is "nodata".
 sub set {
     my($self, $i, $j, $value) = @_;
     croak "set: GRID is undefined" unless $self->{GRID};
@@ -611,20 +597,17 @@ sub point {
 
 ## @method Geo::Raster data()
 # 
-# @brief Turn the raster into a raster, which has 0 where there were
-# nodata values exist and 1 where there was data.
+# @brief Return a raster indicating data and nodata cells.
 #
-# If an object is returned, then the methos does not change the current raster.
-# @return Geo::Raster, which has zeros (0) in those cells as value that did not 
-# have data and ones (1) in those cells that had data. 
-# @note If the the grid already has only zeros and ones, and the <I>nodata</I> 
-# value is defined as zeros then the method does nothing to the grid.
+# @return a raster, which has 1 in the cells that have values and 0 in
+# nodata cells. In void context changes this raster.
 sub data {
     my $self = shift;
     $self = Geo::Raster::new($self) if defined wantarray;
-    my $g = ral_grid_data($self->{GRID});
+    ral_grid_data($self->{GRID});
     $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
-    return $self if defined wantarray and $g;
+    $self->{NODATA} = ral_grid_get_nodata_value($self->{GRID});
+    return $self if defined wantarray;
 }
 
 ## @method $schema(hashref schema)
@@ -759,12 +742,8 @@ sub value_range {
     return @$range;
 }
 
-## @method @attributes()
-#
-# @brief If the object has a grid defined, then the method sets the objects
-# properties according to the grid.
-# @deprecated.
-sub attributes {
+## @ignore
+sub _attributes {
     my $self = shift;
     return unless $self->{GRID};
     my $datatype = $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID});
@@ -1215,7 +1194,7 @@ sub clip {
     } else {
 	my $gd = shift;
 	return unless isa($gd, 'Geo::Raster');
-	my @a = $gd->attributes;
+	my @a = $gd->_attributes;
 	my($i1,$j1) = $self->w2g($a[4],$a[7]);
 	my($i2,$j2) = ($i1+$a[1]-1,$j1+$a[2]-1);
 	if (defined wantarray) {
@@ -1428,7 +1407,7 @@ sub contents {
 # parameter will be run even if it is harmful!
 sub function {
     my($self, $fct) = @_;
-    my(undef, $M, $N, $cell_size, $minX, $minY, $maxX, $maxY) = $self->attributes();
+    my(undef, $M, $N, $cell_size, $minX, $minY, $maxX, $maxY) = $self->_attributes();
     my $y = $minY+$cell_size/2;
     for my $i (0..$M-1) {
 	my $x = $minX+$cell_size/2;

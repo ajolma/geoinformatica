@@ -76,10 +76,11 @@ sub dataset {
 #
 sub band {
     my $self = shift;
-    if ($self->{GDAL}->{dataset}) {
+    if ($self->{GDAL}) {
+	return unless $self->{GDAL}->{dataset};
 	return $self->{GDAL}->{dataset}->GetRasterBand($self->{GDAL}->{band});
     }
-    my $ds = $self->dataset;
+    my $ds = $self->dataset();
     return $ds->Band(1);
 }
 
@@ -175,7 +176,7 @@ sub cache {
 	ral_grid_destroy($self->{GRID}) if $self->{GRID};
 	delete $self->{GRID};
 	$self->{GRID} = $gd;
-	attributes($self);
+	_attributes($self);
     }
 }
 
@@ -227,7 +228,7 @@ sub save {
     croak "Can't write to $filename.hdr: $!\n" unless $fh->open(">$filename.hdr");
 
     my($datatype, $M, $N, $cell_size, $minX, $maxX, $minY, $maxY, $nodata_value) = 
-	$self->attributes();
+	$self->_attributes();
 
     # these depend on how libral is configured! lookup needed
     my $nbits = $datatype == $REAL_GRID ? 32 : 16;

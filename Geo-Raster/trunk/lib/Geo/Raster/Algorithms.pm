@@ -45,9 +45,9 @@ sub interpolate {
     } else {
 	my $tmp = $new->{GRID};
 	$new->{GRID} = $self->{GRID};
-	attributes($new);
+	_attributes($new);
 	$self->{GRID} = $tmp;
-	attributes($self);
+	_attributes($self);
     }
 }
 

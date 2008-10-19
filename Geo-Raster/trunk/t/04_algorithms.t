@@ -89,7 +89,7 @@ for my $e ('dbf','prj','shp','shx') {
 		    $lvalue = '$lvalue=' if $_;
 		    my $eval = "$lvalue\$gd->$method($arg_list);";
 		    eval $eval;
-		    ok(!$@,$method);
+		    ok(!$@, "$method, $@");
 		}
 	    }
 	}
