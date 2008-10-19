@@ -1,80 +1,57 @@
 ## @class Geo::Raster::Algorithms
-# @brief Adds various algorithm methods into Geo::Raster
+# @brief Adds various algorithmic methods to Geo::Raster
 package Geo::Raster;
 
 ## @method Geo::Raster interpolate(%params)
 #
-# @brief Interpolation of the raster grid.
+# @brief Interpolate values for nodata cells.
 #
-# Example of applying interpolation directly to this grid:
-# @code
-# $grid->interpolate(method=>"nn");
-# @endcode
-# Example of creating a new grid with the interpolation results:
-# @code
-# $new_grid = $grid->interpolate(method=>"nn");
-# @endcode
-#
-# @param[in] params A hash having a named parameter:
-# - method => string. At moment are supported: nearest neighbour interpolation, 
-# which is named as 'nn'.
-# @return Returns a new raster grid, if a return value is wanted, else the 
-# interpolation will be done to this grid.
-# @exception A unsupported method is given in the hash.
-# @todo Add more interpolation methods. For example Bilinear, Cubic and
-# Inverse Distance Weighted interpolation.
+# @param[in] params Named parameters:
+# - <i>method</i> => string. At moment only 'nearest neighbor' is
+# supported.
+# @return a new raster. In void context changes this raster.
+# @exception A unsupported method is specified.
+# @todo Add more interpolation methods.
 sub interpolate {
     my($self, %param) = @_;
-    if (!$param{method}) {
-	print STDERR "WARNING: interpolation method not set, using nearest data cell\n" unless $param{quiet};
-	$param{method} = 'nn';
-    }
+    $param{method} = 'nearest neighbor' unless defined $param{method};
+    $param{method} = 'nearest neighbor' if $param{method} eq 'nn';
     my $new;
-    if ($param{method} eq 'nn') {
+    if ($param{method} eq 'nearest neighbor') {
 	$new = ral_grid_nn($self->{GRID});
-	if ($new) {
-	    $new = new Geo::Raster $new;
-	} else {
-	    return;
-	}
     } else {
 	croak "interpolation method '$param{method}' not implemented\n";
     }
     if (defined wantarray) {
-	return $new;
+	return Geo::Raster->new($new);
     } else {
-	my $tmp = $new->{GRID};
-	$new->{GRID} = $self->{GRID};
-	_attributes($new);
-	$self->{GRID} = $tmp;
-	_attributes($self);
+	ral_grid_destroy($self->{GRID});
+	$self->{GRID} = $new;
+	$self->_attributes;
     }
 }
 
 ## @method Geo::Raster dijkstra(@cell)
 #
-# @brief Calculates the distance from each cell to the destination cell given as 
-# parameter.
+# @brief Computes a cost-to-go raster for a given cost raster and a
+# target cell.
 #
-# This raster grid gives the weights to travel from a cell a to neighboring cell.
-# The actual cost will be to 4-neighbours (horizontal and vertical):
-#
-# cost = cell1 x 0.5 + weight x 0.5 x cell2 
-#
-# else
-#
-# cost = cell1 x sqrt(2)/2 + weight x sqrt(2)/2 x cell2 
-#
-# If the value at weight is < 1 the cell cannot be entered.
-# @param[in] cell An array having the destination cells grid coordinates (i, j).
-# @return Returns a new raster grid, if a return value is wanted, else the 
-# costs are put to this grid.
+# When this method is applied to a cost raster, the method computes
+# the cost to travel to the target cell from each cell in the
+# raster. If the cost at a cell is less than one, the cell cannot be
+# a part of the optimal route to the target.
+# @param[in] cell The target cell.
+# @return a new raster. In void context changes this raster.
 sub dijkstra {
     my($self, $i, $j) = @_;
-    my $cost = ral_grid_dijkstra($self->{GRID}, $i, $j);
-    return unless $cost;
-    $cost = new Geo::Raster $cost;
-    return $cost;
+    my $new = ral_grid_dijkstra($self->{GRID}, $i, $j);
+    if (defined wantarray) {
+	return Geo::Raster->new($new);
+    } else {
+	ral_grid_destroy($self->{GRID});
+	$self->{GRID} = $new;
+	$self->_attributes;
+    }
 }
 
 ## @method Geo::Raster colored_map()
@@ -340,7 +317,7 @@ sub the_border_of_a_polygon {
     return \@path;
 }
 
-## @fn ignore
+## @ignore
 sub the_border_of_a_polygon_as_faces {
     my ($p) = @_;
     my @path = ();
