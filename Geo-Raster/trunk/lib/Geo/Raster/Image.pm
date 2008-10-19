@@ -30,8 +30,8 @@ sub frame {
 ## @method Geo::Raster convolve(listref kernel)
 # 
 # @brief Compute a convolution.
-# @param[in] kernel The convolution kernel is [[],[],...[]], i.e., a
-# 2D table that determines the focal area over which convolution is
+# @param[in] kernel The convolution kernel is a list of lists, i.e., a
+# 2D array that determines the focal area over which convolution is
 # calculated. The table is read from left to right, top to down, and
 # its center element is the cell for which the value is computed.
 # @return a new raster. In void context changes this raster.
