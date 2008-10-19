@@ -4,7 +4,7 @@ package Geo::Raster;
 
 ## @method array variogram($max_lag, $lags)
 #
-# @brief Computes the variogram from the grid
+# @brief Compute a variogram from the raster
 # @param[in] max_lag maximum distance to which the variogram is computed
 # @param[in] lags the number of ranges of h used in computing the variogram
 # @return a list of lists (h, y(h))
