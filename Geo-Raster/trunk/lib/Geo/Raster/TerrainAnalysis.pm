@@ -85,9 +85,12 @@ sub slope {
 # selects the neighbor with steepest descent. Rho8 selects randomly,
 # using the descent as a weight, a lower cell. In the 'many' method
 # all lower cells are coded with the 8 bits of a byte. The directions
-# are from 1 (up) to 8 (up left). Flat cells (no lower neighbors) are
-# marked -1. Pit cells (all neighbor cells are higher) are marked with
-# 0. The default is D8.
+# are from 1 (up) to 8 (up left)<br>:
+# 8 1 2<br>
+# 7 X 3<br>
+# 6 5 4<br
+# Flat cells (no lower neighbors) are marked -1. Pit cells (all
+# neighbor cells are higher) are marked with 0. The default is D8.
 # - <I>drain_all</I>=>boolean (optional). Whether to use iteration to
 # produce a FDG with drainage resolved for all cell. The iteration
 # algorithm first applies the drain_flat_areas method using the option
@@ -140,6 +143,63 @@ sub fdg {
     } else {
 	$dem->_new_grid($fdg);
     }
+}
+
+## @ignore
+# maps from ESRI style FDG to libral style FDG
+sub many2ds {
+    my($fdg) = @_;
+    my %map;
+    for my $i (1..255) {
+	my $c = 0;
+	for my $j (0..7) {
+	    $c++ if $i & 1 << $j;
+	}
+	$map{$i} = $c;
+    }
+    $fdg->map(\%map);
+}
+
+## @method @movecell(@cell, $dir)
+#
+# @brief Return the cell in the given direction.
+# @param[in] cell The current cell
+# @param[in] dir (optional) Direction of the movement. If not given,
+# the direction is taken from the cell, thus assuming this raster is a
+# FDG.
+# @return the cell in the given direction or undef if the cell is not
+# within the raster.
+sub movecell {
+    my($fdg, $i, $j, $dir) = @_;
+    $dir = $fdg->get($i, $j) unless $dir;
+  SWITCH: {
+      if ($dir == 1) { $i--; last SWITCH; }
+      if ($dir == 2) { $i--; $j++; last SWITCH; }
+      if ($dir == 3) { $j++; last SWITCH; }
+      if ($dir == 4) { $i++; $j++; last SWITCH; }
+      if ($dir == 5) { $i++; last SWITCH; }
+      if ($dir == 6) { $i++; $j--; last SWITCH; }
+      if ($dir == 7) { $j--; last SWITCH; }
+      if ($dir == 8) { $i--; $j--; last SWITCH; }
+      croak "movecell: $dir: bad direction";
+  }
+    if ($fdg) {
+	return if ($i < 0 or $j < 0 or $i >= $fdg->{M} or $j >= $fdg->{N});
+    }
+    return ($i, $j);
+}
+
+## @fn $dirsum($dir, $add)
+#
+# @brief Increases the given direction with <i>add</i> steps clockwise.
+# @param[in] dir Direction
+# @param[in] add Steps to increase dir. 
+# @return the new direction.
+sub dirsum {
+    my($dir, $add) = @_;
+    $dir += $add;
+    $dir -= 8 if $dir > 8;
+    return $dir;
 }
 
 ## @method Geo::Raster drain_flat_areas(Geo::Raster dem, hash params)

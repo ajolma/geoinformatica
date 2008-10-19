@@ -1039,7 +1039,7 @@ sub if {
     my $b = shift;    
     my $c = shift;
     my $d = shift;
-    $a = new Geo::Raster ($a) if defined wantarray;
+    $a = Geo::Raster->new($a) if defined wantarray;
     croak "usage $a->if($b, $c)" unless defined $c;
     if (ref($c)) {
 	if (isa($c, 'Geo::Raster')) {
@@ -1342,14 +1342,10 @@ sub histogram {
 
 ## @method hashref contents()
 #
-# @brief Returns a hash having all the amounts of each grid value.
+# @brief Returns the histogram of an integer raster in a hash.
 #
-# Example of calculating the the amounts of grid values
-# @code
-# $contents = $gd->contents();
-# @endcode
-# @return Returns a reference to a hash which has, values as keys and counts as 
-# values.
+# @return a reference to a hash with cell values as keys and
+# cellcounts as values.
 sub contents {
     my $self = shift;
     if ($self->{DATATYPE} == $INTEGER_GRID) {
@@ -1366,98 +1362,73 @@ sub contents {
 
 ## @method Geo::Raster function($fct)
 #
-# @brief Calculates the grid values according to the given function.
+# @brief Evaluates a function and assigns the result to cell.
 #
-# Example of filling a grid using an arbitrary function of x and y
+# An example, which fills a raster using an arbitrary function of x and y:
 # @code
-# $grid->function("<function of x and y>");
+# $a->function('2*$x+3*$y');
 # @endcode
-# fills the grid by calculating the z value for each grid cell separately using 
-# the world coordinates. An example of a function string is '2*$x+3*$y', 
-# which creates a plane.
+# The function 2x+3y is evaluated at each cell and the result is
+# assigned to the cell.
 #
-# @param[in] fct A string having a function.
-# @return Returns a new raster, if a return value is wanted, else the 
-# values gotten by the function will be added to this grid.
-# @note This method should be used only with care, because the command given as 
-# parameter will be run even if it is harmful!
+# @param[in] fct A string, which defines function of x, y, z, i, j,
+# etc. z is the current value in the cell and x, y, i, and j are
+# coordinates.
+# @return a new raster. In a void context changes this raster.
 sub function {
     my($self, $fct) = @_;
     my(undef, $M, $N, $cell_size, $minX, $minY, $maxX, $maxY) = $self->_attributes();
+    $self = Geo::Raster->new($self) if defined wantarray;
     my $y = $minY+$cell_size/2;
     for my $i (0..$M-1) {
 	my $x = $minX+$cell_size/2;
 	$y += $cell_size;
 	for my $j (0..$N-1) {
 	    $x += $cell_size;
-	    my $z = eval $fct;
-	    $self->set($i, $j, $z);
+	    my $z = $self->get($i, $j);
+	    my $a = eval $fct;
+	    $self->set($i, $j, $a);
 	}
     }
+    return $self if defined wantarray;
 }
 
 ## @method Geo::Raster map(hashref map)
 #
-# @brief The method maps (reclassifies) the values in the raster or returns
-# a reclassified raster. 
+# @brief Reclassify an integer raster.
 #
 # Example of mapping values
 # @code
-# $img2 = $img1->map(\%map);
+# $b = $a->map(\%map);
 # @endcode
 # or
 # @code
-# $img->map(\%map);
+# $a->map(\%map);
 # @endcode
-# or, for example, using an anonymous hash created on the fly
+# or, using an anonymous hash created on the fly,
 # @code
-# $img->map({1=>5,2=>3});
+# $a->map({1=>5,2=>3});
 # @endcode
-# Maps cell values (keys in map) in img1 to respective values in map in
-# img2 or within img.  Works only for integer grids.
+# Maps cell values (keys in the map) in raster <i>a</i> to respective
+# values in map.  Works only for integer rasters.
 #
-# Hint: Take the contents of a grid, manipulate it and then feed it to
-# the map.
-#
-# @param[in] map This is a reference to a hash of pairs of mappings.
-# The key may be '*' (denoting a default value) or an integer. The
-# value is a new value for the value the key specifies. If the value
-# is a real number (i.e., contains '.') the result is a real valued
+# @param[in] map This is a reference to a hash of (key=>value)
+# mappings.  The key may be '*' (denoting a default value) or an
+# integer. The value is a new value for the cell. If the value is a
+# real number (i.e., contains '.') the result will be a real valued
 # raster.
-# @return eturns a new raster, if a return value is wanted, else the 
-# reclassifications are done to this grid.
-# @note Use this method this way only for integer valued rasters.
-
-## @method Geo::Raster map(listref map)
-#
-# @brief The method maps (reclassifies) the values in the raster or returns
-# a reclassified raster.
-#
-# @param[in] map This is a reference to a list of of pairs of mappings. 
-# The key may be '*' (denoting a default value), integer, or a reference to a 
-# list denoting a value range: [min_value, max_value]. 
-# The value is a new value for the
-# value or value range the key specifies. If the value is a real
-# number (i.e., contains '.') the result is a real valued raster.
-# @return Returns a new raster, if a return value is wanted, else the 
-# reclassifications are done to this grid.
-# @note This method can be used for real valued rasters if value
-# ranges are used.
+# @return a new raster. In void context changes this raster.
 
 ## @method Geo::Raster map(@map)
 #
-# @brief The method maps (reclassifies) the values in the raster or returns
-# a reclassified raster. 
+# @brief Reclassify a raster.
 #
-# @param[in] map This is a list of pairs of mappings. 
-# The key may be '*' (denoting a default value), integer, or a reference to a 
-# list denoting a value range: [min_value, max_value]. The value is a new value 
-# for the value or value range the key specifies. If the value is a real
-# number (i.e., contains '.') the result is a real valued raster.
-# @return Returns a new raster, if a return value is wanted, else the 
-# reclassifications are done to this grid.
-# @note This method can be used for real valued rasters if value
-# ranges are used.
+# @param[in] map This is a reference to a list of of pairs of
+# mappings.  The key may be '*' (denoting a default value), number, or
+# a reference to a list denoting a value range: [min_value,
+# max_value]. The value is a new value for the cell. If the value is a
+# real number (i.e., contains '.') the result is a real valued raster.
+# @return a new raster. In void context changes this raster.
 sub map {
     my $self = shift;
     my @map;
@@ -1540,84 +1511,15 @@ sub map {
 
 ## @method hashref neighbors()
 #
-# @brief Creates a hash having all values as keys and their neighbor values stored.
+# @brief Compute a neighborhood hash for an integer raster.
 #
-# @return A reference to a hash having all cell values as keys. 
-# As values of the hash are references to arrays having the 8-connected neighbor 
-# values of the value being as key.
-# @note Works only for integer grid.
+# @return A reference to a hash of pairs (a=>b), where a is each cell
+# value and <i>b</i> is a reference to a list of values that are found
+# within the neighborhood of cells having the value <i>a</i>.
 sub neighbors {
     my $self = shift;
     $a = ral_grid_neighbors($self->{GRID});
     return $a;
-}
-
-## @ignore
-# maps from ESRI style FDG to libral style FDG
-sub many2ds {
-    my($fdg) = @_;
-    my %map;
-    for my $i (1..255) {
-	my $c = 0;
-	for my $j (0..7) {
-	    $c++ if $i & 1 << $j;
-	}
-	$map{$i} = $c;
-    }
-    $fdg->map(\%map);
-}
-
-## @method @movecell($i, $j, $dir)
-#
-# @brief Returns the coordinates of the new position if possible to move there.
-# @param[in] i The i-coordinate of a cell from where to move.
-# @param[in] j The i-coordinate of a cell from where to move.
-# @param[in] dir (optional) Direction into where to move. If the direction is 
-# not given, then the direction is gotten from the cells value. Directions are 
-# numbered (where X indicates the cells position):<BR>
-# 8 1 2<BR>
-# 7 X 3<BR>
-# 6 5 4
-# @return The coordinates of the new position as an array [i, j] or undef if the 
-# cell moves outside of the grid.
-sub movecell {
-    my($fdg, $i, $j, $dir) = @_;
-    $dir = $fdg->get($i, $j) unless $dir;
-  SWITCH: {
-      if ($dir == 1) { $i--; last SWITCH; }
-      if ($dir == 2) { $i--; $j++; last SWITCH; }
-      if ($dir == 3) { $j++; last SWITCH; }
-      if ($dir == 4) { $i++; $j++; last SWITCH; }
-      if ($dir == 5) { $i++; last SWITCH; }
-      if ($dir == 6) { $i++; $j--; last SWITCH; }
-      if ($dir == 7) { $j--; last SWITCH; }
-      if ($dir == 8) { $i--; $j--; last SWITCH; }
-      croak "movecell: $dir: bad direction";
-  }
-    if ($fdg) {
-	return if ($i < 0 or $j < 0 or $i >= $fdg->{M} or $j >= $fdg->{N});
-    }
-    return ($i, $j);
-}
-
-## @fn $dirsum($dir, $add)
-#
-# @brief Adds to the given direction number the other given number and returns 
-# the new direction. 
-# @param[in] dir Number indicating a direction. Directions are numbered 
-# (where X indicates a cells position):
-#
-# 8 1 2<BR>
-# 7 X 3<BR>
-# 6 5 4
-#
-# @param[in] add Number to add to the direction as an integer in the interval [1, 8]. 
-# @return The new direction (an integer in the interval [1, 8]).
-sub dirsum {
-    my($dir, $add) = @_;
-    $dir += $add;
-    $dir -= 8 if $dir > 8;
-    return $dir;
 }
 
 call_g_type_init();
