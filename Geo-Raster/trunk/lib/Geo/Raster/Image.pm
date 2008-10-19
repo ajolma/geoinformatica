@@ -6,27 +6,15 @@ use UNIVERSAL qw(isa);
 
 ## @method Geo::Raster frame($with)
 #
-# @brief Changing the border grid cell values to the given value.
+# @brief Change the borders to the given value.
 # 
-# Example of framing a grid
-# @code
-# $framed_grid = $grid->frame($with);
-# @endcode
-# where $with is a scalar and the border cells of $grid is set to that value.
 # @param[in] with A value that is given to the border cells.
-# @return If a return value is wanted, then the method returns a new grid based 
-# on this objects type and grid size with the border values changed to the given 
-# parameter value, but values inside the borders are not copied to the new 
-# raster grid.
+# @return a new raster. In void context changes this raster.
 sub frame {
     my $self = shift;
     my $with = shift;
-    my($datatype, $M, $N) = ($self->attributes())[0..2];
-    if (defined wantarray) {
-	my $g = new Geo::Raster($datatype, $M, $N);
-	ral_grid_copy_bounds($self->{GRID}, $g->{GRID});
-	$self = $g;
-    }
+    my($datatype, $M, $N) = ($self->_attributes())[0..2];
+    $self = Geo::Raster::new($self) if defined wantarray;
     my($i, $j);
     for $i (0..$M-1) {
 	$self->set($i, 0, $with);
@@ -39,25 +27,14 @@ sub frame {
     return $self if defined wantarray;
 }
 
-## @method Geo::Raster convolve(listref mask)
+## @method Geo::Raster convolve(listref kernel)
 # 
-# @brief Compute the convolution for the whole raster grid.
-# @param[in] mask The mask is [[],[],...[]], i.e., a 2D table that determines the
-# focal area over which convolution is calculated. The table is read from left 
-# to right, top to down, and its center element is the cell for which the value 
-# is computed.
-# @return The convolutions for the entire raster grid. If no return 
-# value is needed then the convolution results are given to this grids cells.
-
-## @method $convolve(listref mask, array cell)
-# 
-# @brief Compute the convolution for the cell.
-# @param[in] mask The mask is [[],[],...[]], i.e., a 2D table that determines the
-# focal area over which convolution is calculated. The table is read from left 
-# to right, top to down, and its center element is the cell for which the value 
-# is computed.
-# @param[in] cell An array having the grid coordinates (i, j) of the cell.
-# @return The convolution result.
+# @brief Compute a convolution.
+# @param[in] kernel The convolution kernel is [[],[],...[]], i.e., a
+# 2D table that determines the focal area over which convolution is
+# calculated. The table is read from left to right, top to down, and
+# its center element is the cell for which the value is computed.
+# @return a new raster. In void context changes this raster.
 sub convolve {
     my $self = shift;
     my $mask = shift;
@@ -73,48 +50,25 @@ sub convolve {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    attributes($self);
+	    $self->_attributes;
 	}
     }
 }
 
-## @method listref line($i1, $j1, $i2, $j2)
+## @method listref line(@p, @q, $value)
 #
-# @brief Returns the cell coordinates and values as an array belonging to the 
-# line.
+# @brief Get or set the cell values along a line.
 # 
-# Example of getting cells belonging to the line:
-# @code
-# \@line = $grid->line($i1, $j1, $i2, $j2);
-# @endcode
-# 
-# @param[in] i1 The i-coordinate of the lines starting point.
-# @param[in] j1 The j-coordinate of the lines starting point.
-# @param[in] i2 The i-coordinate of the lines ending point.
-# @param[in] j2 The j-coordinate of the lines ending point.
-# @return Returns a reference to an array having the the coordinates and values 
-# of the cells belonging to the line in format: (i1, j1, val1, i2, j2, val2, i3, ...).
-# @note This method works for both integer and real valued rasters.
-
-## @method void line($i1, $j1, $i2, $j2, $pen)
-#
-# @brief Drawing a line to a grid with the given value.
-# 
-# Example of drawing a line to a grid:
-# @code
-# $grid->line($i1, $j1, $i2, $j2, $pen);
-# @endcode
-# 
-# @param[in] i1 The i-coordinate of the lines starting point.
-# @param[in] j1 The j-coordinate of the lines starting point.
-# @param[in] i2 The i-coordinate of the lines ending point.
-# @param[in] j2 The j-coordinate of the lines ending point.
-# @param[in] pen Value to give to the cells of the line.
-# @note This method works for both integer and real valued rasters.
+# @param[in] p The first cell of the line.
+# @param[in] q The last cell of the line.
+# @param[in] value (optional) The value for the cells along the line.
+# @return the values of the cells along the line if value is not
+# given. The returned value is a reference to an anonymous array of
+# the form: (@cell, value, @cell, value, ...).
 sub line {
     my($self, $i1, $j1, $i2, $j2, $pen) = @_;
     unless (defined $pen) {
-	return ($self->{GRID}, $i1, $j1, $i2, $j2);
+	return ral_grid_get_line($self->{GRID}, $i1, $j1, $i2, $j2);
     } else {
 	ral_grid_line($self->{GRID}, $i1, $j1, $i2, $j2, $pen);
     }
@@ -171,40 +125,15 @@ sub transect {
     return \@transect;
 }
 
-## @method listref rect($i1, $j1, $i2, $j2)
+## @method listref rect(@p, @q, $value)
 #
-# @brief Returns the cell coordinates and values as an array belonging inside 
-# the given rectangle.
-# 
-# Example of getting cells belonging inside the rectangle:
-# @code
-# \@rectangle = $grid->rect($i1, $j1, $i2, $j2);
-# @endcode
-# 
-# @param[in] i1 The i-coordinate of the rectangles upper left corner cell.
-# @param[in] j1 The j-coordinate of the rectangles upper left corner cell.
-# @param[in] i2 The i-coordinate of the rectangles lower right corner cell.
-# @param[in] j2 The j-coordinate of the rectangles lower right corner cell.
-# @return Returns a reference to an array having the the coordinates and values 
-# of the cells belonging inside the rectangle in format: (i1, j1, val1, i2, j2, 
-# val2, i3, ...).
-# @note This method works for both integer and real valued rasters.
-
-## @method void rect($i1, $j1, $i2, $j2, $pen)
-#
-# @brief Drawing a filled rectangle to a grid with the given value.
-# 
-# Example of drawing a filled rectangle to a grid:
-# @code
-# $grid->rect($i1, $j1, $i2, $j2, $pen);
-# @endcode
-# 
-# @param[in] i1 The i-coordinate of the rectangles upper left corner cell.
-# @param[in] j1 The j-coordinate of the rectangles upper left corner cell.
-# @param[in] i2 The i-coordinate of the rectangles lower right corner cell.
-# @param[in] j2 The j-coordinate of the rectangles lower right corner cell.
-# @param[in] pen Value to give to the cells of the rectangle.
-# @note This method works for both integer and real valued rasters.
+# @brief Get or set the cells of a rectangle.
+# @param[in] p The upper left corner cell.
+# @param[in] q The lower right corner cell.
+# @param[in] value (optional) The value for the cells within the rectangle.
+# @return the values of the cells within the rectangle if value is not
+# given. The returned value is a reference to an anonymous array of
+# the form: (@cell, value, @cell, value, ...).
 sub rect {
     my($self, $i1, $j1, $i2, $j2, $pen) = @_;
     unless (defined $pen) {
@@ -214,38 +143,16 @@ sub rect {
     }
 }
 
-## @method listref circle($i, $j, $r)
+## @method listref circle(@center, $r, $value)
 #
-# @brief Returns the cell coordinates and values as an array belonging inside 
-# the given circle.
+# @brief Get or set the cells within a circle.
 # 
-# Example of getting cells belonging inside the circle:
-# @code
-# \@circle = $grid->circle($i, $j, $r);
-# @endcode
-# 
-# @param[in] i The i-coordinate of the circles center point.
-# @param[in] j The j-coordinate of the circles center point.
+# @param[in] center The center cell of the circle.
 # @param[in] r The radius of the circle.
-# @return Returns a reference to an array having the the coordinates and values 
-# of the cells belonging inside the circle in format: (i1, j1, val1, i2, j2, 
-# val2, i3, ...).
-# @note This method works for both integer and real valued rasters.
-
-## @method void circle($i, $j, $r, $pen)
-#
-# @brief Drawing a filled rectangle to a grid with the given value.
-# 
-# Example of drawing a filled circle to a grid:
-# @code
-# $grid->circle($i, $j, $r, $pen);
-# @endcode
-# 
-# @param[in] i The i-coordinate of the circles center point.
-# @param[in] j The j-coordinate of the circles center point.
-# @param[in] r The radius of the circle.
-# @param[in] pen Value to give to the cells of the circle.
-# @note This method works for both integer and real valued rasters.
+# @param[in] value (optional) The value for the cells within the circle.
+# @return the values of the cells within the circle if value is not
+# given. The returned value is a reference to an anonymous array of
+# the form: (@cell, value, @cell, value, ...).
 sub circle {
     my($self, $i, $j, $r, $pen) = @_;
     unless (defined $pen) {
@@ -255,21 +162,14 @@ sub circle {
     }
 }
 
-## @method void floodfill($i, $j, $pen, $connectivity)
+## @method void floodfill(@cell, $value, $connectivity)
 #
-# @brief Changes the values for all cells that have the same value as the 
-# given cell and are connected to the given cell trough cells having the 
-# same value as the given cell.
+# @brief Floodfill a zone.
 #
-# @param[in] i The i-coordinate of the cell from where to begin to change the values.
-# @param[in] j The j-coordinate of the cell from where to begin to change the values.
-# @param[in] pen Value to give to those cells that have the same value as the 
-# given cell and also are connected to the given cell trough cells having the 
-# same value as the given cell.
-# @param[in] connectivity (optional). Connectivity between cells as a number:4 
-# or 8. If connectivity is not given then 8-connectivity is used.
-# @note This method works for both integer and real valued rasters.
-# @todo Test for this method
+# @param[in] cell A cell identifying the zone.
+# @param[in] value New value for the zone.
+# @param[in] connectivity (optional). Connectivity between cells,
+# either 4 or 8. Default is 8.
 sub floodfill {
     my($self, $i, $j, $pen, $connectivity) = @_;
     $connectivity = 8 unless $connectivity;
@@ -278,7 +178,7 @@ sub floodfill {
 
 ## @method Geo::Raster thin(%opt)
 #
-# @brief 
+# @brief Thin lines in the raster.
 #
 # This is an implementation of the algorithm in Jang, B-K., Chin,
 # R.T. 1990. Analysis of Thinning Algorithms Using Mathematical
@@ -290,7 +190,7 @@ sub floodfill {
 # applies them in several passes until there are no matches or until the
 # maxiterations is reached. Trimming means certain structuring templates
 # are applied to kill emerging short limbs which appear because of the
-# noise in the grid.
+# noise in the raster.
 # 
 # Exple of thinning:
 # @code
@@ -312,9 +212,8 @@ sub floodfill {
 # - <I>width</I> => double (optional). Used to define the maximum iterations 
 # count. In case the width is given then the maxiterations is set to 
 # int(width/2).
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the thinning done.
-# @note The thinned grid must be a binary grid.
+# @return a new raster. In void context changes this raster.
+# @note The thinned raster must be a binary raster.
 sub thin {
     my($self, %opt) = @_;
     $self = Geo::Raster::new($self) if defined wantarray;
@@ -412,46 +311,28 @@ sub thin {
     return $self if defined wantarray;
 }
 
-## @method Geo::Raster bordering(%opt)
+## @method Geo::Raster borders(%params)
 #
-# @brief Finding the zone borders.
+# @brief Borders between zones.
 # 
-# The method leaves to the border cells the values of
-# the zones and nullifies all cell values except the border values.
+# This method returns a binary raster, where the borders have the
+# value of 1.
 # 
-# Example of borderizing with simple method into a new array:
-# @code
-# $borders_img = $img->borders(method=>simple);
-# @endcode
-# Example of applying borderizing with recursive method into this grid:
-# @code
-# $img->borders(method=>recursive);
-# @endcode
-#
-# @param[in] opt A named parameter:
-# - <I>method</I> => string (optional). By default the method will be 
-# 'recursive', as an alernative would be 'simple'. The recursive method will
-# find all areas (8-connected cells with non-zero values) and marks their 
-# borders with respective values and leaves the rest of the area zero.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the bordering done.
-# @note The grid has to have as datatype integer.
-# @note The grids mask can be used to define the cells which are gone 
+# @param[in] params Named parameters:
+# - <I>method</I> => string (optional). Either simple or
+# recursive. Default is recursive.
+# @return a new raster. In void context changes this raster.
 sub borders {
     my($self, %opt) = @_;
-    my $method = $opt{method};
-    if (!$method) {
-	$method = 'recursive';
-	print STDERR "border: Warning: method not set, using '$method'\n" unless $opt{quiet};
-    }    
-    if ($method eq 'simple') {
+    $opt{method} = 'recursive' unless $opt{method};
+    if ($opt{method} eq 'simple') {
 	if (defined wantarray) {
 	    my $g = new Geo::Raster(ral_grid_borders($self->{GRID}));
 	    return $g;
 	} else {
 	    $self->_new_grid(ral_grid_borders($self->{GRID}));
 	}
-    } elsif ($method eq 'recursive') {
+    } elsif ($opt{method} eq 'recursive') {
 	if (defined wantarray) {
 	    my $g = new Geo::Raster(ral_grid_borders_recursive($self->{GRID}));
 	    return $g;
@@ -459,7 +340,7 @@ sub borders {
 	    $self->_new_grid(ral_grid_borders_recursive($self->{GRID}));
 	}
     } else {
-	croak "border: $method: unknown method";
+	croak "borders: $opt{method}: unknown method";
     }
 }
 
@@ -470,8 +351,7 @@ sub borders {
 # @param[in] k (optional). A cell is part of an area if there are at least k 
 # consecutive nonzero cells as neighbors and the cell has also a nonzero value. 
 # By default the value is 3, in which case the smallest area is 2*2 cells.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the areas marked.
+# @return a new raster. In void context changes this raster.
 # @note The grid has to have as datatype integer.
 sub areas {
     my $self = shift;
@@ -507,8 +387,7 @@ sub areas {
 # <tr><td>0 0 1</td><td>    </td><td>0 0 1</td></tr>
 # </table>
 #
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the areas marked.
+# @return a new raster. In void context changes this raster.
 # @note The grid has to have as datatype integer.
 sub connect {
     my $self = shift;
@@ -526,8 +405,7 @@ sub connect {
 # the same values.
 # @param[in] connectivity (optional). Connectivity between cells as a number:4 
 # or 8. If connectivity is not given then 8-connectivity is used.
-# @return In void context (no return grid is wanted) the method changes this 
-# grid, otherwise the method returns a new grid with the unique areas.
+# @return a new raster. In void context changes this raster.
 # @note The grid has to have as datatype integer.
 sub number_areas {
     my($self, $connectivity) = @_;
@@ -590,8 +468,7 @@ sub number_areas {
 # @param[in] pick (optional) May be "mean", "variance", "min", "max", or "count". 
 # @param[in] value (optional) Should be given if pick method "count" is used, in 
 # which case the cells will include the amount of values.
-# @return If a return value is wanted, then the method returns a new grid with
-# the transformation complited.
+# @return a new raster. In void context changes this raster.
 sub transform {
     my($self, $tr, $M, $N, $pick, $value) = @_;
     $pick = $pick || 0;
