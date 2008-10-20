@@ -16,6 +16,40 @@ sub diff {
 # not tested: route, killoutlets, prune, number_streams, subcatchments
 
 {
+    $dem = Geo::Raster->new(filename=>'data/dem.bil', load=>1);
+    @fit = $dem->fit_surface;
+    ok(@fit == 9, "fit_surface");
+    $aspect = $dem->aspect;
+    ok($aspect, "aspect");
+    $slope = $dem->slope;
+    ok($slope, "slope");
+    for $method (qw/D8 Rho8 many/) {
+	for $drain_all (0,1) {
+	    $fdg = $dem->fdg(method=>$method, drain_all=>$drain_all, quiet=>1);
+	    ok($fdg, "fdg $method drain_all is $drain_all");
+	}
+    }
+    for $method (qw/one multiple/) {
+	$fdg = $dem->fdg;
+	$fdg->drain_flat_areas($dem, method=>$method, quiet=>1);
+	ok($fdg, "drain_flat_areas $method");
+    }
+    $fdg = $dem->fdg;
+    $fdg->drain_depressions($dem);
+    ok($fdg, "drain_depressions");
+    $fdg = $dem->fdg;
+    @o = $fdg->outlet(10,10);
+    ok(@o == 2, "outlet");
+    $fdg = $dem->fdg;
+    $ucg = $fdg->ucg;
+    ok($ucg, "ucg");
+    $dem2 = $dem+0;
+    $fdg = $dem2->fill_depressions(iterative=>1, quiet=>1);
+    ok($fdg, "fill_depressions");
+    $dem2 = $dem+0;
+    $fdg = $dem2->breach(iterative=>1, quiet=>1);
+    ok($fdg, "breach_depressions");
+    
     $fdg = Geo::Raster->new(4,1);
     $fdg->set(5);
     $op = Geo::Raster->new(4,1);
@@ -108,91 +142,4 @@ sub diff {
     for $i (0..3) {
 	ok($test[$i] == $c->get($i,0),"upslope sum including self at index $i");
     }
-}
-
-{
-    my @args; 
-    $args[0] = {
-	aspect=>[],
-	slope=>[],
-	fdg=>['method=>"D8"'],
-	raise_pits=>['quiet=>1'],
-	lower_peaks=>['quiet=>1'],ucg=>[],
-	fill_depressions=>['fdg=>$fdg'],
-	breach=>['fdg=>$fdg']
-    };
-    $args[1] = {};
-    
-    my $dem = new Geo::Raster filename=>'data/dem.bil',load=>1;
-    @s =  $dem->fit_surface(0.1);
-    ok(@s == 9, 'fit_surface');
-
-    my $fdg = $dem->fdg(method=>'D8');
-    my $d = $fdg->depressions;
-
-    for my $method (keys %{$args[0]}) {
-
-	#print STDERR "$method\n";
-	#next if $method eq 'dag';
-	
-	for my $cv (0..$#args) {
-	    
-	    next unless $args[$cv]->{$method};
-
-	    my @as;
-	    for my $a (@{$args[$cv]{$method}}) {
-		push @as,$a;
-	    }
-	    my $arg_list = join(',',@as);
-	    
-	    for (1,0) {
-		my $lvalue = '';
-		$lvalue = '$lvalue=' if $_;
-		my $eval = "$lvalue\$dem->$method($arg_list);";
-		#print STDERR "eval: $eval\n";
-		eval $eval;
-		#print STDERR $@;
-		ok(!$@,$method);
-	    }
-	}
-    }
-    
-    my $streams = new Geo::Raster like=>$fdg;
-    $streams->line(10,10,50,50,1);
-
-    $args[0] = {
-	drain_flat_areas=>['$dem','method=>"one pour point",quiet=>1'],
-	catchment=>[50,50,1],
-    };
-    $args[1] = {};
-
-    for my $method (keys %{$args[0]}) {
-	
-	for my $cv (0..$#args) {
-
-	    $fdg = $dem->fdg(method=>'D8');
-	    
-	    next unless $args[$cv]->{$method};
-
-	    my @as;
-	    for my $a (@{$args[$cv]{$method}}) {
-		push @as,$a;
-	    }
-	    my $arg_list = join(',',@as);
-	    
-	    for (1,0) {
-		my $lvalue = '';
-		$lvalue = '$lvalue=' if $_;
-		my $eval = "$lvalue\$fdg->$method($arg_list);";
-		#print STDERR "eval: $eval\n";
-		eval $eval;
-		if ($@) {
-		    print STDERR "eval: $eval\n";
-		    print STDERR $@;
-		}
-		ok(!$@,$method);
-	    }
-	}
-    }
-
 }
