@@ -14,7 +14,7 @@ sub frame {
     my $self = shift;
     my $with = shift;
     my($datatype, $M, $N) = ($self->_attributes())[0..2];
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     my($i, $j);
     for $i (0..$M-1) {
 	$self->set($i, 0, $with);
@@ -216,7 +216,7 @@ sub floodfill {
 # @note The thinned raster must be a binary raster.
 sub thin {
     my($self, %opt) = @_;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     my @D1 = (+0,+0,-1,
 	      +0,+1,+1,
 	      -1,+1,-1);
