@@ -102,40 +102,32 @@ sub _interpret_datatype {
     return $INTEGER_GRID;
 }
 
-## @cmethod Geo::Raster new($file_name)
+## @cmethod Geo::Raster new($filename)
 #
 # @brief Create a new raster from a file.
 #
-# Example of loading a previously saved raster
+# @note
+# The new raster is only an interface to a raster accessed by GDAL. To
+# load data from GDAL to memory use the method Geo::Raster::IO::cache.
+#
+# Example:
 # @code
-# $raster = new Geo::Raster->new("data/dem");
+# $raster = Geo::Raster->new("data/dem.bil");
 # @endcode
-# @param[in] file_name Name of file, from where the raster is loaded. 
-# @return New raster.
-
-## @cmethod Geo::Raster new(Geo::Raster param)
-#
-# @brief Create a new raster as a copy of an existing raster.
-#
-# Example of acting as an copy constructor:
-# @code
-# $copy = new Geo::Raster($raster);
-# @endcode
-#
-# @param[in] param A reference to an another Geo::Raster object, which is copied.
-# @return a new raster
+# @param[in] filename Name of a raster file that is recognized by GDAL.
+# @return a new raster.
 
 ## @cmethod Geo::Raster new($datatype, $rows, $columns)
 #
 # @brief Create a new raster.
 #
-# Example of creating a new raster with real type:
+# Example of creating a new floating point raster:
 # @code
-# $raster = new Geo::Raster('real', 100, 100);
+# $raster = Geo::Raster->new('real', 100, 100);
 # @endcode
-# Example of creating a new raster with integer type:
+# Example of creating a new integer raster:
 # @code
-# $raster = new Geo::Raster(100, 100);
+# $raster = Geo::Raster->new(100, 100);
 # @endcode
 #
 # @param[in] datatype (optional) The datatype for the new raster,
@@ -146,34 +138,13 @@ sub _interpret_datatype {
 
 ## @cmethod Geo::Raster new(%params)
 #
-# @brief The constructor can be used to load a previously saved raster, 
-# create a new or to act as an copy constructor.
-#
-# Example of starting with a new fresh raster:
-# @code
-# $raster = new Geo::Raster(datatype=>datatype_string, rows=>100, columns=>100);
-# @endcode
-#
-# Example of opening a raster from a file into a libral raster:
-# @code
-# $raster = new Geo::Raster(filename=>"data/dem", load=>1);
-# @endcode
-#
-# Example of using the copy constructor:
-# @code
-# $copy = new Geo::Raster(copy=>$raster);
-# @endcode
-#
-# Example of creating a raster with same size:
-# @code
-# $new = new Geo::Raster(like=>$old);
-# @endcode
+# @brief Create a new raster using named parameters.
 #
 # @param[in] params Named parameters:
 # - <I>datatype</I> The data type for the new raster. Either "real" or
-# - "integer". Default is integer.
+# "integer". Default is integer.
 # - <I>copy</I> A raster to be copied into the new raster.
-# - <I>like</I> A raster to be used as a model for the new raster.
+# - <I>like</I> A raster to be used as a model for the new raster (no data is copied).
 # - <I>filename</I> A raster file. GDAL is used for opening the file.
 # - <I>band</I> integer (optional) Which band to read from the file. Default is 1.
 # - <I>load</I> boolean (optional) Whether to convert the GDAL raster
@@ -181,27 +152,24 @@ sub _interpret_datatype {
 # - <I>rows</I> Height of the new raster.
 # - <I>columns</I> Width of the new raster.
 # - <I>world</I> Named parameters suitable to define the real world boundaries. 
-# Used only if <I>M</I> and <I>N</I> are also given. Possible parameters 
+# Used only if <I>rows</I> and <I>columns</I> are also given. Possible parameters 
 # include:
 #   - cell_size
 #   - minx
 #   - miny
 #   - maxx
 #   - maxy
-# @return New instance of Geo::Raster.
+# @return a new raster.
+# @todo Take GDAL into account in copying.
 sub new {
     my $package = shift;
     my %params;
 
-    if (@_ == 0 and isa($package, 'Geo::Raster')) { # Geo::Raster::new($geo_raster_object)
-
-	$params{copy} = $package;
-
-    } elsif (@_ == 1 and ref($_[0]) eq 'ral_gridPtr') {
+    if (@_ == 1 and ref($_[0]) eq 'ral_gridPtr') {
 	
 	$params{use} = shift;
 	
-    } elsif (@_ == 1 and isa($_[0], 'Geo::Raster')) {
+    } elsif (@_ == 1 and isa($_[0], 'Geo::Raster')) { # Geo::Raster->new($raster)
 	
 	$params{copy} = shift;
 	
@@ -261,12 +229,6 @@ sub new {
 	}
     }
     $self->_attributes() if $self->{GRID};
-    return $self;
-}
-
-## @ignore
-sub shallow_copy {
-    my $self = shift;
     return $self;
 }
 
@@ -603,7 +565,7 @@ sub point {
 # nodata cells. In void context changes this raster.
 sub data {
     my $self = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_data($self->{GRID});
     $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     $self->{NODATA} = ral_grid_get_nodata_value($self->{GRID});
@@ -866,7 +828,7 @@ sub nodata_value {
 sub min {
     my $self = shift;
     my $second = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_min_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -903,7 +865,7 @@ sub min {
 sub max {
     my $self = shift;
     my $second = shift;   
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_max_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -926,7 +888,7 @@ sub max {
 # @return a new raster. In void context changes the values of this raster.
 sub random {
     my $self = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_random($self->{GRID});
     return $self if defined wantarray;
 }
