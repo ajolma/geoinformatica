@@ -6,7 +6,7 @@ use overload (
 	      'fallback' => undef,
 	      '""'       => 'as_string',
 	      'bool'     => 'bool',
-#	      '='        => 'shallow_copy',
+              '='        => 'shallow_copy',
 	      'neg'      => 'neg',
 	      '+'        => 'plus',
 	      '-'        => 'minus',	      
@@ -44,6 +44,12 @@ sub as_string {
 ## @ignore
 sub bool {
     return 1;
+}
+
+## @ignore
+sub shallow_copy {
+    my $self = shift;
+    return $self;
 }
 
 ## @method Geo::Raster neg()
