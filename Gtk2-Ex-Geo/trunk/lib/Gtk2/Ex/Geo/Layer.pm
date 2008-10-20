@@ -119,11 +119,12 @@ sub label_placements {
 
 ## @cmethod $upgrade($object) 
 #
-# @brief Upgrade object from substance class to the respective layer
-# class
+# @brief Upgrade known data object to a layer object.
+#
+# @return true if object is known and false otherwise.
 sub upgrade {
     my($object) = @_;
-    return $object;
+    return 0;
 }
 
 ## @cmethod new(%params)

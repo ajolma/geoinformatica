@@ -828,21 +828,25 @@ sub set_layer {
 }
 
 ## @method Gtk2::Ex::Geo::Layer add_layer($layer, $name, $do_not_zoom_to)
-# @brief adds $layer with $name to overlay and model
-# The default behavior is to zoom to the new layer.
-# Geo::Raster is upgraded to Geo::Raster::Layer
-# Geo::Vector is upgraded to Geo::Vector::Layer
-# @param layer a Gtk2::Ex::Geo::Layer object
-# @param name [optional] a name for the layer
-# @param do_not_zoom_to [optional] the overlay is zoomed to the added
-# layer unless this is defined
+# @brief Add a layer to the overlay and the tree store
+#
+# The default behavior is to zoom to the new layer. The layer is
+# upgraded using the upgrade method of the registered layer classes.
+#
+# @param layer The geospatial data object. Must be either an object of
+# a subclass of Gtk2::Ex::Geo::Layer or a data object that is
+# recognized by such. It is the responsibility of the upgrade method
+# of the layer class to upgrade the data object to a layer object.
+# @param name (optional) Name for the new layer.
+# @param do_not_zoom_to (optional) Whether to not to zoom the overlay
+# to this layer. Forwarded to Gtk2::Ex::Geo::Overlay::add_layer.
 # @return
 sub add_layer {
     my($self, $layer, $name, $do_not_zoom_to) = @_;
     return unless $layer;
 
     for $upgrade (@{$self->{upgrades}}) {
-	$layer = $upgrade->($layer);
+	last if $upgrade->($layer);
     }
 
     croak "can add only Gtk2::Ex::Geo::Layer objects" unless isa($layer, 'Gtk2::Ex::Geo::Layer');
@@ -854,7 +858,7 @@ sub add_layer {
     $layer->{_tree_index} = $self->{model}->insert (undef, 0);
  
     $self->set_layer($layer);
-    $self->{overlay}->add_layer($layer,$do_not_zoom_to);
+    $self->{overlay}->add_layer($layer, $do_not_zoom_to);
     return $layer;
 }
 
