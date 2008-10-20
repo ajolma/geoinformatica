@@ -76,8 +76,9 @@ sub upgrade {
     if (ref($object) eq 'Geo::Vector') {
 	bless($object, 'Geo::Vector::Layer');
 	$object->defaults();
+	return 1;
     }
-    return $object;
+    return 0;
 }
 
 sub new {
