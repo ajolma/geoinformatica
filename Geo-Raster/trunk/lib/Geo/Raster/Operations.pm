@@ -6,8 +6,7 @@ use overload (
 	      'fallback' => undef,
 	      '""'       => 'as_string',
 	      'bool'     => 'bool',
-#	      '='        => 'clone',
-	      '='        => 'shallow_copy',
+#	      '='        => 'shallow_copy',
 	      'neg'      => 'neg',
 	      '+'        => 'plus',
 	      '-'        => 'minus',	      
@@ -45,15 +44,6 @@ sub as_string {
 ## @ignore
 sub bool {
     return 1;
-}
-
-## @method Geo::Raster clone()
-#
-# @brief Clone a raster.
-# @return A clone of this object.
-sub clone {
-    my $self = shift;
-    Geo::Raster::new($self);
 }
 
 ## @method Geo::Raster neg()
@@ -145,8 +135,7 @@ sub _typeconversion {
 sub plus {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
-    return unless defined($datatype);
-    my $copy = Geo::Raster::new($self, datatype=>$datatype, copy=>$self);
+    my $copy = Geo::Raster->new(datatype=>$datatype, copy=>$self);
     if (ref($second)) {
 	ral_grid_add_grid($copy->{GRID}, $second->{GRID});
     } else {
@@ -218,9 +207,7 @@ sub plus {
 sub minus {
     my($self, $second, $reversed) = @_;
     my $datatype = $self->_typeconversion($second);
-    return unless defined($datatype);
-    
-    my $copy = Geo::Raster::new($self, datatype=>$datatype, copy=>$self);
+    my $copy = Geo::Raster->new(datatype=>$datatype, copy=>$self);
     if (ref($second)) {
 	($copy, $second) = ($second, $copy) if $reversed;
 	ral_grid_sub_grid($copy->{GRID}, $second->{GRID});
@@ -292,8 +279,7 @@ sub minus {
 sub times {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
-    return unless defined($datatype);
-    my $copy = Geo::Raster::new($self, datatype=>$datatype, copy=>$self);
+    my $copy = Geo::Raster->new(datatype=>$datatype, copy=>$self);
     if (ref($second)) {
 	ral_grid_mult_grid($copy->{GRID}, $second->{GRID});
     } else {
@@ -537,7 +523,7 @@ sub power {
     my($self, $second, $reversed) = @_;
     my $datatype = $self->_typeconversion($second);
     return unless defined($datatype);
-    my $copy = Geo::Raster::new($self, datatype=>$datatype, copy=>$self);
+    my $copy = Geo::Raster->new(datatype=>$datatype, copy=>$self);
     if (ref($second)) {
 	($copy, $second) = ($second, $copy) if $reversed;
 	ral_grid_power_grid($copy->{GRID}, $second->{GRID});
@@ -1329,7 +1315,7 @@ sub tanh {
 # resulting value will also be undef.
 sub lt {
     my($self, $second, $reversed) = @_;    
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_lt_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1397,7 +1383,7 @@ sub lt {
 # (1).
 sub gt {
     my($self, $second, $reversed) = @_;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_gt_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1457,7 +1443,7 @@ sub gt {
 # resulting value will also be undef.
 sub le {
     my($self, $second, $reversed) = @_;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_le_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1517,7 +1503,7 @@ sub le {
 # resulting value will also be undef.
 sub ge {
     my($self, $second, $reversed) = @_;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_ge_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1574,7 +1560,7 @@ sub ge {
 sub eq {
     my $self = shift;
     my $second = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_eq_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1608,7 +1594,7 @@ sub eq {
 sub ne {
     my $self = shift;
     my $second = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_ne_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1647,7 +1633,7 @@ sub ne {
 # values.
 sub cmp {
     my($self, $second, $reversed) = @_;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     if (ref($second)) {
 	ral_grid_cmp_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -1682,7 +1668,7 @@ sub cmp {
 # @exception The rasters datatype is not integer.
 sub not {
     my $self = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_not($self->{GRID});
     return $self if defined wantarray;
 }
@@ -1718,7 +1704,7 @@ sub not {
 sub and {
     my $self = shift;
     my $second = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_and_grid($self->{GRID}, $second->{GRID});
     return $self if defined wantarray;
 }
@@ -1754,7 +1740,7 @@ sub and {
 sub or {
     my $self = shift;
     my $second = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_or_grid($self->{GRID}, $second->{GRID});
     return $self if defined wantarray;
 }
@@ -1790,7 +1776,7 @@ sub or {
 sub nor {
     my $self = shift;
     my $second = shift;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_or_grid($self->{GRID}, $second->{GRID});
     $self->not();
     return $self if defined wantarray;
