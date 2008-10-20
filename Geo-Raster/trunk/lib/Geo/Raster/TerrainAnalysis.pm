@@ -115,20 +115,20 @@ sub fdg {
     } else {
 	croak "fdg: $opt{method}: unsupported method";
     }
-    my $fdg = ral_dem_fdg($dem->{GRID}, $method);
+    my $fdg = Geo::Raster->new(ral_dem_fdg($dem->{GRID}, $method));
     
     if ($opt{drain_all}) {
 	my $step = 1;
 	my $pits_last_time = -1;
 	my $flats_last_time = -1;
 	while (1) {
-	    $fdg->drain_flat_areas($dem, method=>'m');
-	    $fdg->drain_flat_areas($dem, method=>'o');
+	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>1);
+	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>1);
 	    my $c = $fdg->contents();
 	    my $pits = $$c{0} || 0;
 	    my $flats = $$c{-1} || 0;
 	    print STDERR "drain_all: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
-	    return if ($pits == 0 and $flats == 0);
+	    last if ($pits == 0 and $flats == 0);
 	    my $n = ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
 	    print STDERR "drain_all: iteration step $step: $n depressions fixed\n" unless $opt{quiet};
 	    croak "there is no progress" if ($pits_last_time == $pits and $flats_last_time == $flats);
@@ -139,9 +139,10 @@ sub fdg {
     }
     
     if (defined wantarray) {
-	return Geo::Raster->new($fdg);
+	return $fdg;
     } else {
-	$dem->_new_grid($fdg);
+	$dem->_new_grid($fdg->{GRID});
+	delete $fdg->{GRID};
     }
 }
 
@@ -262,7 +263,7 @@ sub drain_flat_areas {
 # method returns a new FDG.
 sub drain_depressions {
     my($fdg, $dem) = @_;
-    $fdg = new Geo::Raster $fdg if defined wantarray;
+    $fdg = Geo::Raster->new($fdg) if defined wantarray;
     ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
     return $fdg if defined wantarray;
 }
@@ -275,7 +276,7 @@ sub drain_depressions {
 # @return the outlet cell of the catchment.
 sub outlet {
     my($fdg, @cell) = @_;
-    my $cell = _find_outlet($fdg->{GRID}, @cell);
+    my $cell = ral_fdg_outlet($fdg->{GRID}, @cell);
     return @{$cell};
 }
 
@@ -432,15 +433,18 @@ sub fill_depressions {
 	return;
     }
     if ($opt{fdg}) {
-	return ral_dem_fill_depressions($dem->{GRID}, $opt{fdg}->{GRID});
+	$dem = Geo::Raster->new($dem) if defined wantarray;
+	ral_dem_fill_depressions($dem->{GRID}, $opt{fdg}->{GRID});
+	return $dem if defined wantarray;
+	return;
     } else {
 	my $step = 1;
 	my $pits_last_time = -1;
 	my $flats_last_time = -1;
 	while (1) {
-	    my $fdg = $dem->fdg(method=>'D8', quiet=>0);
-	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>0);
-	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>0);
+	    my $fdg = $dem->fdg(method=>'D8', quiet=>1);
+	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>1);
+	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>1);
 	    my $c = $fdg->contents();
 	    my $pits = $$c{0} || 0;
 	    my $flats = $$c{-1} || 0;
@@ -488,8 +492,9 @@ sub fill_depressions {
 # - <i>FDG</i>=>raster (optional unless iterative is false) The FDG
 # for the breaching algorithm. If FDG is given it must not contain
 # flat areas. The algorithm is run only once, i.e., one scan of the
-# FDG is performed. Default is undefined.  - <i>quiet</i>=>boolean
-# (optional) Whether to report the progressing of the iteration.
+# FDG is performed. Default is undefined.
+# - <i>quiet</i>=>boolean (optional) Whether to not to report the
+# progressing of the iteration.
 # @return a DEM from which some depressions are removed (if the
 # context is non-void and iterative is false), nothing (if FDG is
 # given), or a pitless and flatless FDG.
@@ -510,15 +515,16 @@ sub breach {
 	return;
     }
     if ($opt{fdg}) {
+	$dem = Geo::Raster->new($dem) if defined wantarray;
 	return ral_dem_breach($dem->{GRID}, $opt{fdg}->{GRID}, $opt{limit});
     } else {
 	my $step = 1;
 	my $pits_last_time = -1;
 	my $flats_last_time = -1;
 	while (1) {
-	    my $fdg = $dem->fdg(method=>'D8', quiet=>0);
-	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>0);
-	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>0);
+	    my $fdg = $dem->fdg(method=>'D8', quiet=>1);
+	    $fdg->drain_flat_areas($dem, method=>'m', quiet=>1);
+	    $fdg->drain_flat_areas($dem, method=>'o', quiet=>1);
 	    my $c = $fdg->contents();
 	    my $pits = $$c{0} || 0;
 	    my $flats = $$c{-1} || 0;
