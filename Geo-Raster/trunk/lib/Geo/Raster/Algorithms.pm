@@ -131,7 +131,7 @@ sub applytempl {
     my($self, $templ, $new_val) = @_;
     croak "applytempl: too few values in the template" if $#$templ < 8;
     $new_val = 1 unless $new_val;
-    $self = Geo::Raster::new($self) if defined wantarray;
+    $self = Geo::Raster->new($self) if defined wantarray;
     ral_grid_apply_templ($self->{GRID}, $templ, $new_val);
     return $self if defined wantarray;
 }
