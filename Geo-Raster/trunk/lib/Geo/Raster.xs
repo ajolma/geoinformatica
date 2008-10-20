@@ -2588,7 +2588,7 @@ ral_dem_fdg(dem, method)
 			croak(ral_get_msg());
 
 AV *
-outlet(fdg, i, j)
+ral_fdg_outlet(fdg, i, j)
 	ral_grid *fdg
 	int i
 	int j
