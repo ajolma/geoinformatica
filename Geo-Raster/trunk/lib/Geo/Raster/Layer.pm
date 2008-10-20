@@ -151,8 +151,9 @@ sub upgrade {
     if (ref($object) eq 'Geo::Raster') {
 	bless($object, 'Geo::Raster::Layer');
 	$object->defaults();
+	return 1;
     }
-    return $object;
+    return 0;
 }
 
 sub new {
