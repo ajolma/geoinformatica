@@ -158,10 +158,7 @@ sub cache {
 	}
     }
 
-    my $gd = ral_grid_create_using_GDAL($gdal->{dataset},
-	    $gdal->{band}, @$clip, $cell_size);
-
-    return unless $gd;
+    my $gd = ral_grid_create_using_GDAL($gdal->{dataset}, $gdal->{band}, @$clip, $cell_size);
 
     my $band = $gdal->{dataset}->GetRasterBand($gdal->{band});
     my $nodata_value = $band->GetNoDataValue;
@@ -169,15 +166,11 @@ sub cache {
 	ral_grid_set_nodata_value($gd, $nodata_value);
     }
     
-    if (defined wantarray) {
-	$gd = Geo::Raster::new($self, $gd);
-	return $gd;
-    } else {
-	ral_grid_destroy($self->{GRID}) if $self->{GRID};
-	delete $self->{GRID};
-	$self->{GRID} = $gd;
-	_attributes($self);
-    }
+    return Geo::Raster->new($gd) if defined wantarray; # return strictly Geo::Rasters
+
+    ral_grid_destroy($self->{GRID}) if $self->{GRID};
+    $self->{GRID} = $gd;
+    _attributes($self);
 }
 
 ## @fn boolean exists($filename)
