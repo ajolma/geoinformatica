@@ -170,7 +170,6 @@ sub cache {
 
     ral_grid_destroy($self->{GRID}) if $self->{GRID};
     $self->{GRID} = $gd;
-    _attributes($self);
 }
 
 ## @fn boolean exists($filename)
