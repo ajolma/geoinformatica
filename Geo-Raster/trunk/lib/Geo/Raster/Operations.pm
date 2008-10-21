@@ -60,7 +60,7 @@ sub shallow_copy {
 
 ## @method Geo::Raster neg()
 #
-# @brief Unary minus.
+# @brief Unary minus. Multiplies this raster with -1.
 #
 # @return A negated (multiplied by -1) raster.
 sub neg {
@@ -99,7 +99,7 @@ sub _typeconversion {
 
 ## @method Geo::Raster plus($value)
 #
-# @brief Add a value globally to the raster.
+# @brief Adds a number globally to the raster.
 #
 # Example:
 # @code
@@ -148,7 +148,7 @@ sub plus {
 
 ## @method Geo::Raster minus($value, $reversed)
 #
-# @brief Subtracts a value from this raster.
+# @brief Subtracts a value globally from this raster.
 #
 # Example:
 # @code
@@ -210,51 +210,40 @@ sub minus {
 
 ## @method Geo::Raster times($value)
 #
-# @brief Multiplies the rasters values with the given number 
-# and returns a new grid with the resulting values.
+# @brief Multiplies the cells of this raster with a value.
 #
-# If this raster and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster will have as datatype real.
-#
-# Example of multiplication
+# Example:
 # @code
-# $new_grid = $grid * $value;
+# $b = $a * 3.14159;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->times($value);
+# $b = $a->times(3.14159);
 # @endcode
 #
-# @param[in] value A number with which to multiply this objects cell values.
-# @return A copy of this Geo::Raster with the multiplication made.
-# @note In the case that this raster and the given value differ in datatype, the 
-# datatype conversion of the returned grid into real type makes it possible not 
-# to use rounding.
+# @param[in] value The multiplier.
+# @return a new raster.
 
 ## @method Geo::Raster times(Geo::Raster second)
 #
-# @brief Multiplies the rasters values with the given grids
-# values and returns a new grid with the resulting values.
+# @brief Multiplies the cell values of this raster with the cell values of another raster.
 #
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If rasters differ in datatypes (other is integer and the other real) 
-# then the returned raster will have as datatype real.
-#
-# Example of multiplication
+# Example:
 # @code
-# $new_grid = $grid * $second_grid;
+# $c = $a * $b;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->times($second_grid); 
+# $c = $a->times($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
-# @return A copy of this Geo::Raster with the multiplication made.
-# @note In the case of the two rasters differ in datatype, the datatype 
-# conversion of the returned grid into real type makes it possible not to use 
-# rounding.
+# The effect of raster multiplication is
+# @code
+# for all cells: c[cell] = a[cell]*b[cell]
+# @endcode
+#
+# @param[in] second The multiplier raster.
+# @return a new raster.
 sub times {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -273,52 +262,45 @@ sub times {
 
 ## @method Geo::Raster over($value, $reversed)
 #
-# @brief Divides the grids values with the number (or vice versa if reversed is 
-# true) and returns the resulting values as a new raster.
+# @brief Divides the cell values of this raster with a value.
 #
-# Example of division
+# Example:
 # @code
-# $new_grid = $grid / $value;
+# $b = $a / 3.14159;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->over($value); 
+# $b = 1/(3.14159 / $a);
 # @endcode
 #
-# @param[in] value A number to use for dividing.
-# @param[in] reversed (optional) A boolean which tells which one (the raster set 
-# or the number) is the denominator. 
-# If true then the this grids values are used as denominators, if
-# false then the given number is used as denominator (the same thing as if 
-# parameter would not be given at all).
-# @return A copy of this Geo::Raster with the division made.
-# @note The returned raster will always have as datatype real.
+# @param[in] value The divisor.
+# @param[in] reversed (optional) Whether to perform value / raster
+# computation instead of raster / value. When operator '/' is used,
+# this value is automatically set by Perl when appropriate.
+# @return the resulting raster.
 
 ## @method Geo::Raster over(Geo::Raster second, $reversed)
 #
-# @brief Divides the grids values with the other grids values(or 
-# vice versa if reversed is true) and returns the resulting values as a new 
-# raster.
+# @brief Divides this raster with another raster.
 #
-# The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-#
-# Example of division
+# Example:
 # @code
-# $new_grid = $grid / $second_grid;
+# $c = $a / $b;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->over($second_grid); 
+# $c = $a->over($b); 
+# @endcode
+# The effect of raster division is
+# @code
+# for all cells: c[cell] = a[cell]/b[cell]
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
-# @param[in] reversed (optional) A boolean which tells which raster set is the 
-# denominator. If true then the this grids values are used as denominators, if
-# false then given grid values are denominators (the same thing as if parameter
-# would not be given at all).
-# @return A copy of this Geo::Raster with the division made.
-# @note The returned raster will always have as datatype real.
+# @param[in] second A raster
+# @param[in] reversed (optional) Whether to perform value / raster
+# computation instead of raster / value. When operator '/' is used,
+# this value is automatically set by Perl when appropriate.
+# @return the resulting raster.
 sub over {
     my($self, $second, $reversed) = @_;
     my $copy = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
@@ -343,8 +325,7 @@ sub over {
     return $copy;
 }
 
-
-
+## @ignore
 sub over2 {
     my($self, $second, $reversed) = @_;
     my $copy;
@@ -381,55 +362,45 @@ sub over2 {
 
 ## @method Geo::Raster modulo($value, $reversed)
 #
-# @brief Calculates the modulus gotten by dividing the grids values with 
-# the given number (or vice versa if reversed is true) and 
-# returns a new grid with result values.
+# @brief Computes the modulus (remainder of division, Perl operator %)
+# of this raster and an integer number.
 #
-# Example of modulus
+# Example:
 # @code
-# $new_grid = $grid % $value;
+# $b = $a % 3;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->modulo($value); 
+# $b = $a->modulo(3);
 # @endcode
 #
-# @param[in] value A integer number used for dividing.
-# @param[in] reversed (optional) A boolean which tells which one (the raster set 
-# or the number) is the denominator. 
-# If true then the this grids values are used as denominators, if
-# false then the given number is used as denominator (the same thing as if 
-# parameter would not be given at all).
-# @return A copy of this Geo::Raster with the division remainders.
-# @note This raster has to have integer as datatype and
-# the returned raster will always have integer as datatype.
+# @param[in] value An integer number.
+# @param[in] reversed (optional) Whether to perform value % raster
+# computation instead of raster % value. When operator '%' is used,
+# this value is automatically set by Perl when appropriate.
+# @note This raster must be an integer raster.
+# @return the resulting raster.
 
 ## @method Geo::Raster modulo(Geo::Raster second, $reversed)
 #
-# @brief Calculates the modulus gotten by dividing the grids values with 
-# the given grids values (or vice versa if reversed is true) and 
-# returns a new grid with result values.
+# @brief Computes the modulus (remainder of division, Perl operator %)
+# of this raster and an integer raster.
 #
-# The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-#
-# Example of modulus
+# Example:
 # @code
-# $new_grid = $grid % $second_grid;
+# $c = $a % $b;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->modulo($second_grid); 
+# $c = $a->modulo($b);
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster having integer as datatype.
-# @param[in] reversed (optional) A boolean which tells which raster set is the 
-# divisor and dividend. If true then the this grids values are used as 
-# denominators, if false then given grid values or the number are denominators 
-# (the same thing as if parameter would not be given at all).
-# @return A copy of this Geo::Raster with the division remainders.
-# @note This raster has to have integer as datatype and
-# the returned raster will always have integer as datatype.
+# @param[in] second An integer raster.
+# @param[in] reversed (optional) Whether to perform second % raster
+# computation instead of raster % second. When operator '%' is used,
+# this value is automatically set by Perl when appropriate.
+# @note This raster must be an integer raster.
+# @return the resulting raster.
 sub modulo {
     my($self, $second, $reversed) = @_;
     my $copy = new Geo::Raster($self);
@@ -446,58 +417,45 @@ sub modulo {
     return $copy;
 }
 
-## @method Geo::Raster power($value, $reversed)
+## @method Geo::Raster power($exponent, $reversed)
 #
-# @brief Calculates the exponential values gotten by using the grids values 
-# as bases the given number as exponents (or vice versa if 
-# reversed is true) and returns a new grid with the calculated values.
+# @brief Computes the power (Perl operator **) of this raster and an
+# exponent.
 #
-# If this raster and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster will have as datatype real.
-#
-# Example of rising to the power defined by the parameter
+# Example:
 # @code
-# $new_grid = $grid ** $exponent;
+# $b = $a ** 3.14159;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->power($exponent); 
+# $b = $a->power(3.14159);
 # @endcode
 #
-# @param[in] value A number used as exponent (or base, if reversed is true).
-# @param[in] reversed (optional) A boolean which tells which one (the raster set 
-# or the number) is the exponent, and which as base. 
-# If true then the this grids values are used as exponents, if false then the 
-# given number is used as exponent (the same thing as if parameter would not be 
-# given at all).
-# @return A copy of this Geo::Raster with the exponentation done.
+# @param[in] exponent A number.
+# @param[in] reversed (optional) Whether to perform exponent ** raster
+# computation instead of raster ** exponent. When operator '**' is used,
+# this value is automatically set by Perl when appropriate.
+# @return the resulting raster.
 
-## @method Geo::Raster power(Geo::Raster second, $reversed)
+## @method Geo::Raster power(Geo::Raster exponent, $reversed)
 #
-# @brief Calculates the exponential values gotten by using the grids values 
-# as bases the given grids values as exponents (or vice versa if 
-# reversed is true) and returns a new grid with the calculated values.
+# @brief Computes the power (Perl operator **) of this raster an
+# exponent raster.
 #
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If the rasters differ in datatypes (other is integer and the other real) 
-# then the returned raster will have as datatype real.
-#
-# Example of rising to the powers defined the given grid
+# Example:
 # @code
-# $new_grid = $grid ** $exponent_grid;
+# $c = $a ** $b;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->power($exponent_grid); 
+# $c = $a->power($b);
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
-# @param[in] reversed (optional) A boolean which tells which raster set is the 
-# base and which the exponent. If true then the this grids values are used as 
-# exponents, if false then given grid values or the number are exponents 
-# (the same thing as if parameter would not be given at all).
-# @return A copy of this Geo::Raster with the exponentation done.
+# @param[in] exponent A raster.
+# @param[in] reversed (optional) Whether to perform exponent ** raster
+# computation instead of raster ** exponent. When operator '**' is used,
+# this value is automatically set by Perl when appropriate.
+# @return the resulting raster.
 sub power {
     my($self, $second, $reversed) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -518,46 +476,33 @@ sub power {
 
 ## @method add($value)
 #
-# @brief Adds the given number to the cell values.
+# @brief Adds a number in-place to the cell values of this raster.
 #
-# - The method is almost the same as Geo::Raster::plus(), except that in this 
-# method the addition is done directly to this grid, not a new one.
-# - If this raster and the number differ in datatypes (other is integer and 
-# the other real) then this raster will have as datatype real after the 
-# operation.
-#
-# Example of addition
+# Example:
 # @code
-# $grid += $value;
+# $a += 3.14159;
 # @endcode
 # is the same as
 # @code
-# $grid->add($value); 
+# $a->add(3.14159); 
 # @endcode
 #
 # @param[in] value The number to add.
 
 ## @method Geo::Raster add(Geo::Raster second)
 #
-# @brief Adds to the cells the respective cell values of the given raster 
-#
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If rasters differ in datatypes (other is integer and the other real) 
-# then the this raster will have as datatype real.
-# - The method is almost the same as Geo::Raster::plus(), except that in this 
-# method the addition is done directly to this grid, not a new one.
+# @brief Adds another raster to this raster.
 # 
 # Example of addition
 # @code
-# $grid += $second_grid;
+# $a += $b;
 # @endcode
 # is the same as
 # @code
-# $grid->add($second_grid); 
+# $a->add($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster or a number.
+# @param[in] second A raster to add.
 sub add {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -578,48 +523,34 @@ sub add {
 
 ## @method Geo::Raster subtract($value)
 #
-# @brief Subtracts the given number from the cell values.
-#
-# - The method is almost the same as Geo::Raster::minus(), except that in this 
-# method the subtraction is done directly to this grid, not a new one. And there
-# is also no reversed possibility.
-# - If this raster and the number differ in datatypes (other is integer and 
-# the other real) then this raster will have as datatype real after the 
-# operation.
+# @brief Subtracts a number from the cell values.
 #
 # Example of subtraction
 # @code
-# $grid -= $value;
+# $a -= 3.14159;
 # @endcode
 # is the same as
 # @code
-# $grid->subtract($value); 
+# $a->subtract(3.14159); 
 # @endcode
 #
-# @param[in] value A number that is subtracted from all cells of this grid.
+# @param[in] value A number that is subtracted from all cells of this raster.
 
 ## @method Geo::Raster subtract(Geo::Raster second)
 #
 # @brief Subtracts from the cell value the respective cell values of the given raster.
 #
-# - The method is almost the same as Geo::Raster::minus(), except that in this 
-# method the subtraction is done directly to this grid, not a new one. And there
-# is also no reversed possibility.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If rasters differ in datatypes (other is integer and the other real) 
-# then this raster will have as datatype real after the method.
-#
 # Example of subtraction
 # @code
-# $grid -= $second_grid;
+# $a -= $b;
 # @endcode
 # is the same as
 # @code
-# $grid->subtract($second_grid); 
+# $a->subtract($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
+# @param[in] second A raster, whose cell values are to be subtracted
+# from the cell values of this raster.
 sub subtract {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -639,46 +570,34 @@ sub subtract {
 
 ## @method Geo::Raster multiply_by($value)
 #
-# @brief Multiplies the cell values with the given number.
+# @brief Multiplies the cell values of this raster with the given number.
 #
-# - The method is almost the same as Geo::Raster::times(), except that in this 
-# method the multiplication is done directly to this grid, not a new one!
-# - If this raster and the number differ in datatypes (other is integer and 
-# the other real) then this raster will have as datatype real after the 
-# operation.
-#
-# Example of multiplication
+# Example:
 # @code
-# $grid *= $multiplier;
+# $a *= 3.14159;
 # @endcode
 # is the same as
 # @code
-# $grid->multiply_by($multiplier); 
+# $a->multiply_by(3.14159); 
 # @endcode
 #
-# @param[in] value Number used as multiplier.
+# @param[in] value The multiplier.
 
 ## @method Geo::Raster multiply_by(Geo::Raster second)
 #
-# @brief Multiplies the cell values with the respective cell values of the given raster.
-#
-# - The method is almost the same as Geo::Raster::times(), except that in this 
-# method the multiplication is done directly to this grid, not a new one!
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If rasters differ in datatypes (other is integer and the other real) 
-# then this rasters datatype will be real after the calculation.
+# @brief Multiplies the cell values of this raster with the respective
+# cell values of the given raster.
 #
 # Example of multiplication
 # @code
-# $grid *= $multiplier_grid;
+# $a *= $b;
 # @endcode
 # is the same as
 # @code
-# $grid->multiply_by($multiplier_grid); 
+# $a->multiply_by($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
+# @param[in] second A raster.
 sub multiply_by {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -698,46 +617,34 @@ sub multiply_by {
 
 ## @method Geo::Raster divide_by($value)
 #
-# @brief Divides the cell values with the given number.
+# @brief Divides the cell values of this raster with the given number.
 #
-# - The method is almost the same as Geo::Raster::over(), except that in this 
-# method the division is done directly to this grid, not a new one. And there
-# is also no reversed possibility.
-#
-# Example of division
+# Example:
 # @code
-# $grid /= $denominator;
+# $a /= 3.14159;
 # @endcode
 # is the same as
 # @code
-# $grid->divide_by($denominator); 
+# $a->divide_by(3.14159); 
 # @endcode
 #
-# @param[in] value Number used as denominator.
-# @note The returned raster will always have as datatype real.
+# @param[in] value A number.
 
 ## @method Geo::Raster divide_by(Geo::Raster second)
 #
-# @brief Divides the cell values with the respective cell values of the other raster.
+# @brief Divides the cell values of this raster with the respective
+# cell values of the other raster.
 #
-# - The method is almost the same as Geo::Raster::over(), except that in this 
-# method the division is done directly to this grid, not a new one. And there
-# is also no reversed possibility.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-#
-# Example of division
+# Example:
 # @code
-# $grid /= $denominator_grid;
+# $a /= $b;
 # @endcode
 # is the same as
 # @code
-# $grid->divide_by($denominator_grid); 
+# $a->divide_by($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster, which cells values are 
-# used as denominators.
-# @note The returned raster will always have as datatype real.
+# @param[in] second A raster.
 sub divide_by {
     my($self, $second) = @_;
     $self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
@@ -755,48 +662,37 @@ sub divide_by {
 
 ## @method Geo::Raster modulus_with($value)
 #
-# @brief Calculates the modulus gotten by dividing the cell values with 
-# the given integer value.
+# @brief Computes the modulus of each cell value and the given number
+# and assigns that to the cell.
 #
-# The method is almost the same as Geo::Raster::modulo(), except that in this 
-# method the modulus is done directly to this grid, not a new one. And there
-# is also no reversed possibility.
-#
-# Example of calculating the modulus
+# Example:
 # @code
-# $grid %= $denominator;
+# $a %= 3;
 # @endcode
 # is the same as
 # @code
-# $grid->modulus_with($denominator); 
+# $a->modulus_with(3); 
 # @endcode
 #
-# @param[in] value Number to use as denominator.
-# @note The operation does not affect the datatype.
+# @param[in] value An integer number.
+# @note Defined only for integer rasters.
 
 ## @method Geo::Raster modulus_with(Geo::Raster second)
 #
-# @brief Calculates the modulus gotten by dividing the cell values with 
-# the respective cell values of the given integer raster.
+# @brief Computes the modulus of each cell value of this raster and
+# the respective cell value of the given integer raster.
 #
-# - The method is almost the same as Geo::Raster::modulo(), except that in this 
-# method the modulus is done directly to this grid, not a new one. And there
-# is also no reversed possibility.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-#
-# Example of calculating the modulus
+# Example:
 # @code
-# $grid %= $denominator_grid;
+# $a %= $b;
 # @endcode
 # is the same as
 # @code
-# $grid->modulus_with($denominator_grid); 
+# $a->modulus_with($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster, which values are used
-# as denominators.
-# @note The operation does not affect the datatype.
+# @param[in] second An integer raster.
+# @note Defined only for integer rasters.
 sub modulus_with {
     my($self, $second) = @_;
     if (ref($second)) {
@@ -809,49 +705,34 @@ sub modulus_with {
 
 ## @method Geo::Raster to_power_of($power)
 #
-# @brief Raises the cell values to the given power.
+# @brief Raises the cell values of this raster to the given power.
 # 
-# - The method is almost the same as Geo::Raster::power(), except that in this 
-# method the power is calculated directly to this grid, not a new one. And there
-# is also no reversed possibility.
-# - If this raster and the parameter differ in datatypes (other is integer 
-# and the other real) then this raster will have as datatype real after the 
-# operation.
-#
-# Example of calculating the power
+# Example:
 # @code
-# $grid **= $exponent;
+# $a **= 3.14159;
 # @endcode
 # is the same as
 # @code
-# $grid->to_power_of($exponent); 
+# $a->to_power_of(3.14159); 
 # @endcode
 #
-# @param[in] power Number used as exponent.
+# @param[in] power The exponent.
 
 ## @method Geo::Raster to_power_of(Geo::Raster second)
 #
-# @brief Raises the cell values to the power of the respective cell values of the given raster.
+# @brief Raises the cell values to the power of the respective cell
+# values of the given raster.
 #
-# - The method is almost the same as Geo::Raster::power(), except that in this 
-# method the power is calculated directly to this grid, not a new one. And there
-# is also no reversed possibility.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If the rasters differ in datatypes (other is integer and the other real) 
-# then this rasters datatype will have after the operation as datatype real.
-#
-# Example of calculating the power
+# Example:
 # @code
-# $grid **= $exponent_grid;
+# $a **= $b;
 # @endcode
 # is the same as
 # @code
-# $grid->to_power_of($exponent_grid); 
+# $a->to_power_of($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster defining the exponents 
-# for each cell.
+# @param[in] second A raster, whose cell values are used as exponents.
 sub to_power_of {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -867,8 +748,8 @@ sub to_power_of {
 
 ## @method Geo::Raster atan2(Geo::Raster second)
 #
-# @brief Calculates the arctangent between each cells value of the grid and 
-# given grids values.
+# @brief Calculates the arc-tangent between each cell value of this
+# raster and those of the given raster.
 #
 # - With the arctangent we get the direction between the two cell values in
 # 2-dimemsional Euclidean space.
@@ -877,8 +758,7 @@ sub to_power_of {
 # rasters. The cell sizes and amounts in both directions must also be equal.
 #
 # @param[in] second Reference to an another Geo::Raster.
-# @return A new Geo::Raster having the calculated directions.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub atan2 {
     my($self, $second) = @_;
     if (ref($self) and ref($second)) {
@@ -890,16 +770,13 @@ sub atan2 {
 	ral_grid_atan2($self->{GRID}, $second->{GRID});
 	return $self;
     } else {
-	croak "don't mix scalars and grids in atan2, please";
+	croak "don't mix scalars and rasters in atan2, please";
     }
 }
 
 ## @method Geo::Raster cos()
 #
-# @brief Calculates the cosine of the grids each value.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the cosine of the cell values of this raster.
 #
 # @return A new Geo::Raster having the calculated cosine values.
 # @note The resulting raster will always have as datatype real.
@@ -916,13 +793,9 @@ sub cos {
 
 ## @method Geo::Raster sin()
 #
-# @brief Calculates the sine of the grids each value.
+# @brief Calculates the sine of the cell values of this raster.
 #
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
-#
-# @return A new Geo::Raster having the sine values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub sin {
     my $self = shift;
     if (defined wantarray) {
@@ -936,14 +809,10 @@ sub sin {
 
 ## @method Geo::Raster exp()
 #
-# @brief Calculates the exponential function with Euler's number as base of the 
-# grids each value.
+# @brief Calculates the exponential function with Euler's number as
+# base of the cell values of this raster.
 #
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
-#
-# @return A new Geo::Raster having the calculation results.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub exp {
     my $self = shift;
     if (defined wantarray) {
@@ -957,12 +826,9 @@ sub exp {
 
 ## @method Geo::Raster abs()
 #
-# @brief Calculates the absolute value of the grids each value.
+# @brief Calculates the absolute value of the cell values of this raster.
 #
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
-#
-# @return A new Geo::Raster having non-negative values.
+# @return a new raster. In void context changes this raster.
 sub abs {
     my $self = shift;
     if (defined wantarray) {
@@ -976,13 +842,12 @@ sub abs {
 
 ## @method Geo::Raster sqrt()
 #
-# @brief Calculates the square root of the grids each value.
+# @brief Calculates the square root of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub sqrt {
     my $self = shift;
     if (defined wantarray) {
@@ -996,15 +861,14 @@ sub sqrt {
 
 ## @method Geo::Raster round()
 #
-# @brief Rounds grids each value to the nearest integer value.
+# @brief Rounds the cell values of this raster to the nearest integer value.
 #
 # - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 # - If the raster has already a as datatype integer, the operation does 
 # nothing.
 #
-# @return A new Geo::Raster having the integer values.
-# @note The resulting raster will always have as datatype integer.
+# @return a new raster. In void context changes this raster.
 sub round {
     my $self = shift;
     if (ref($self)) {
@@ -1026,13 +890,12 @@ sub round {
 
 ## @method Geo::Raster acos()
 #
-# @brief Calculates the arccosine of the grids each value.
+# @brief Calculates the arccosine of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub acos {
     my $self = shift;
     if (defined wantarray) {
@@ -1046,13 +909,12 @@ sub acos {
 
 ## @method Geo::Raster atan()
 #
-# @brief Calculates the arctangent of the grids each value.
+# @brief Calculates the arctangent of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub atan {
     my $self = shift;
     if (defined wantarray) {
@@ -1066,14 +928,14 @@ sub atan {
 
 ## @method Geo::Raster ceil()
 #
-# @brief Calculates the ceiling of the grids each value.
+# @brief Calculates the ceiling of the cell values of this raster.
 #
 # Ceiling is the smallest integer value not less than the grids original value.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values.
+# @return a new raster. In void context changes this raster.
 sub ceil {
     my $self = shift;
     if (ref($self)) {
@@ -1087,13 +949,12 @@ sub ceil {
 
 ## @method Geo::Raster cosh()
 #
-# @brief Calculates the hyperbolic cosine of the grids each value.
+# @brief Calculates the hyperbolic cosine of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated cosine values.
-# @note The resulting raster will always have as datatype real
+# @return a new raster. In void context changes this raster.
 sub cosh {
     my $self = shift;
     if (defined wantarray) {
@@ -1107,14 +968,14 @@ sub cosh {
 
 ## @method Geo::Raster floor()
 #
-# @brief Calculates the ceiling of the grids each value.
+# @brief Calculates the ceiling of the cell values of this raster.
 #
 # Floor is the largest integer value not higher than the grids original value.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values
+# @return a new raster. In void context changes this raster.
 sub floor {
     my $self = shift;
     if (ref($self)) {
@@ -1128,13 +989,12 @@ sub floor {
 
 ## @method Geo::Raster log()
 #
-# @brief Calculates the logarithm of the grids each value.
+# @brief Calculates the logarithm of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the logarithmic values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub log {
     my $self = shift;
     if (defined wantarray) {
@@ -1148,13 +1008,12 @@ sub log {
 
 ## @method Geo::Raster log10()
 #
-# @brief Calculates the base-10 logarithm of the grids each value.
+# @brief Calculates the base-10 logarithm of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the logarithmic values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub log10 {
     my $self = shift;
     if (defined wantarray) {
@@ -1179,13 +1038,12 @@ sub log_base {
 
 ## @method Geo::Raster sinh()
 #
-# @brief Calculates the hyperbolic sine of the grids each value.
+# @brief Calculates the hyperbolic sine of the cell values of this raster.
 #
 # The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated hyperbolic sine values.
-# @note The resulting raster will always have as datatype real
+# @return a new raster. In void context changes this raster.
 sub sinh {
     my $self = shift;
     if (defined wantarray) {
@@ -1199,13 +1057,12 @@ sub sinh {
 
 ## @method Geo::Raster tan()
 #
-# @brief Calculates the tangent of the grids each value.
+# @brief Calculates the tangent of the cell values of this raster.
 #
 # - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub tan {
     my $self = shift;
     if (defined wantarray) {
@@ -1219,13 +1076,12 @@ sub tan {
 
 ## @method Geo::Raster tanh()
 #
-# @brief Calculates the hyperbolic tangent of the grids each value.
+# @brief Calculates the hyperbolic tangent of the cell values of this raster.
 #
 # - The operation is performed to this raster, if no resulting new raster 
 # grid is needed, else a new grid with the calculation results is returned.
 #
-# @return A new Geo::Raster having the calculated values.
-# @note The resulting raster will always have as datatype real.
+# @return a new raster. In void context changes this raster.
 sub tanh {
     my $self = shift;
     if (defined wantarray) {
@@ -1719,30 +1575,25 @@ sub or {
 
 ## @method Geo::Raster nor($second)
 #
-# @brief The operator returns the inverse of disjunction of this raster 
-# grid and given grids cells values.
+# @brief Computes the logical nor of the cell values of this raster
+# with those of another raster.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The rasters must have the same amount of cells in both directions.
 # - The rasters datatypes must be integer.
 # - The resulting cell value will be 1 if both rasters have in the same 
 # cell 0, else the resulting value is 1.
-# - If the other or both raster cells have an <I>no data</I> value, then 
-# also the resulting cell will have that value.
 #
-# The (truth) table here shows all possible value combinations (not incl. no 
-# data):
+# The truth table of logical nor:
 #<table>
-#<tr><th>Resulting value</th><th>Own value</th><th>Parameter value</th></tr>
-#<tr><td>0</td><td>not 0</td><td>not 0</td></tr>
-#<tr><td>1</td><td>0</td><td>0</td></tr>
-#<tr><td>0</td><td>0</td><td>not 0</td></tr>
-#<tr><td>0</td><td>not 0</td><td>0</td></tr>
+#<tr><th>this</th><th>second</th><th>result</th></tr>
+#<tr><td>false</td><td>false</td><td>true</td></tr>
+#<tr><td>false</td><td>true</td><td>false</td></tr>
+#<tr><td>true</td><td>false</td><td>false</td></tr>
+#<tr><td>true</td><td>true</td><td>false</td></tr>
 #</table>
+# If either cell has nodata (undefined) value, the result is undefined.
 #
-# @param[in] second A Geo::Raster, which cell values are used to calculate the 
-# logical inverse of disjunction.
+# @param[in] second A raster, whose cell values are used to calculate
+# the logical inverse of disjunction.
 # @return Geo::Raster with results from using the NOR operator.
 # @exception The rasters datatype is not integer.
 sub nor {
