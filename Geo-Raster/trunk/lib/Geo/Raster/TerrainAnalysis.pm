@@ -185,7 +185,7 @@ sub movecell {
       croak "movecell: $dir: bad direction";
   }
     if ($fdg) {
-	return if ($i < 0 or $j < 0 or $i >= $fdg->{M} or $j >= $fdg->{N});
+	return if ($i < 0 or $j < 0 or $i >= ral_grid_get_height($fdg->{GRID}) or $j >= ral_grid_get_width($fdg->{GRID}));
     }
     return ($i, $j);
 }
@@ -738,7 +738,7 @@ sub prune {
     }
     my $i = shift;
     my $j = shift;
-    $min_length = 1.5*$streams->{CELL_SIZE} unless defined($min_length);
+    $min_length = 1.5*$streams->cell_size unless defined($min_length);
     $streams = Geo::Raster->new($streams) if defined wantarray;
     $i = -1 unless defined $i;
     if ($lakes) {
