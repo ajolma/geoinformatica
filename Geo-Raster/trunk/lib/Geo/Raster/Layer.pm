@@ -248,8 +248,8 @@ sub type {
 # @note Overrides Geo::Layer::supported_palette_types().
 sub supported_palette_types {
     my($self) = @_;
-    return ('Single color') unless $self->{DATATYPE}; # may happen if not cached
-    if ($self->{DATATYPE} == $Geo::Raster::INTEGER_GRID) {
+    return ('Single color') unless $self->{GRID}; # may happen if not cached
+    if ($self->datatype eq 'Integer') {
 	return ('Single color','Grayscale','Rainbow','Color table','Color bins','Red channel','Green channel','Blue channel');
     } else {
 	return ('Single color','Grayscale','Rainbow','Color bins','Red channel','Green channel','Blue channel');
@@ -264,8 +264,8 @@ sub supported_palette_types {
 # @note Overrides Geo::Layer::supported_symbol_types().
 sub supported_symbol_types {
     my($self) = @_;
-    return ('No symbol') unless $self->{DATATYPE}; # may happen if not cached
-    if ($self->{DATATYPE} == $Geo::Raster::INTEGER_GRID) {
+    return ('No symbol') unless $self->{GRID}; # may happen if not cached
+    if ($self->datatype eq 'Integer') {
 		return ('No symbol', 'Flow_direction', 'Square', 'Dot', 'Cross');
     } else {
 		return ('No symbol', 'Flow_direction', 'Square', 'Dot', 'Cross');
@@ -388,7 +388,7 @@ sub render {
 	return unless $self->{GRID} and Geo::Raster::ral_grid_get_height($self->{GRID});
     }
 
-    if ($self->{DATATYPE} == $Geo::Raster::INTEGER_GRID) {	    
+    if ($self->datatype eq 'Integer') {	    
 
 	my $layer = Geo::Raster::ral_make_integer_grid_layer($self);
 	if ($layer) {
@@ -396,7 +396,7 @@ sub render {
 	    Geo::Raster::ral_destroy_integer_grid_layer($layer);
 	}
 
-    } elsif ($self->{DATATYPE} == $Geo::Raster::REAL_GRID) {
+    } elsif ($self->datatype eq 'Real') {
 	
 	my $layer = Geo::Raster::ral_make_real_grid_layer($self);
 	if ($layer) {
