@@ -50,7 +50,6 @@ sub convolve {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    $self->_attributes;
 	}
     }
 }
