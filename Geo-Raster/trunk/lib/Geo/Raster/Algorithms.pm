@@ -27,7 +27,6 @@ sub interpolate {
     } else {
 	ral_grid_destroy($self->{GRID});
 	$self->{GRID} = $new;
-	$self->_attributes;
     }
 }
 
@@ -50,7 +49,6 @@ sub dijkstra {
     } else {
 	ral_grid_destroy($self->{GRID});
 	$self->{GRID} = $new;
-	$self->_attributes;
     }
 }
 
@@ -159,14 +157,15 @@ sub polygonize {
     my %polygons;
     my $key = 1;
 
-	# Going trough each row.
-    for my $i (0..$self->{M}-1) {
+    # Going trough each row.
+    my $N = ral_grid_get_width($self->{GRID});
+    for my $i (0..ral_grid_get_height($self->{GRID})-1) {
 	
 	my $left = 0;
 	my $value = ral_grid_get($grid, $i, $left);
 	
 	# Going trough each cell in the row.
-	for my $j (1..$self->{N}-1) {
+	for my $j (1..$N-1) {
 	    
 	    my $d = ral_grid_get($grid, $i, $j);
 	    
@@ -182,7 +181,7 @@ sub polygonize {
 	    }
 	    
 	}
-	$key = add_piece(\%polygons, $key, $value, $i, $left, $self->{N}-1, $connectivity) if defined $value;
+	$key = add_piece(\%polygons, $key, $value, $i, $left, $N-1, $connectivity) if defined $value;
     }
     return \%polygons;
 }
