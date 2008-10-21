@@ -23,7 +23,7 @@ package Geo::Raster;
 
 ## @method Geo::Raster focal_sum(listref mask, @cell)
 #
-# @brief Focal sum.
+# @brief A focal sum.
 #
 # @param[in] mask The focal area defined as a 2D anonymous integer
 # array. The width and height of the array must be 2d+1, where d is
@@ -49,14 +49,13 @@ sub focal_sum {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    _attributes($self);
 	}
     }
 }
 
 ## @method Geo::Raster focal_mean(listref mask, @cell)
 #
-# @brief Focal mean.
+# @brief A focal mean.
 #
 # @param[in] mask The focal area defined as a 2D anonymous integer
 # array. The width and height of the array must be 2d+1, where d is
@@ -82,14 +81,13 @@ sub focal_mean {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    _attributes($self);
 	}
     }
 }
 
 ## @method Geo::Raster focal_variance(listref mask, @cell)
 #
-# @brief Focal variance.
+# @brief A focal variance.
 #
 # @param[in] mask The focal area defined as a 2D anonymous integer
 # array. The width and height of the array must be 2d+1, where d is
@@ -115,14 +113,13 @@ sub focal_variance {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    _attributes($self);
 	}
     }
 }
 
 ## @method Geo::Raster focal_count(listref mask, @cell)
 #
-# @brief Focal count of data cells.
+# @brief A focal count of data cells.
 #
 # @param[in] mask The focal area defined as a 2D anonymous integer
 # array. The width and height of the array must be 2d+1, where d is
@@ -148,18 +145,19 @@ sub focal_count {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    _attributes($self);
 	}
     }
 }
 
 ## @method Geo::Raster focal_count_of(listref mask, $value, @cell)
 #
-# @brief Focal count of values.
+# @brief A focal count of values.
 #
 # @param[in] mask The focal area defined as a 2D anonymous integer
 # array. The width and height of the array must be 2d+1, where d is
 # the max horizontal and vertical distance from the central cell.
+# @param[in] value The value whose count in the focal area is to be
+# computed.
 # @param[in] cell (optional) The cell for which the focal count of
 # values is computed. If not given, the focal count_of is computed for
 # the whole raster.
@@ -182,7 +180,6 @@ sub focal_count_of {
 	} else {
 	    ral_grid_destroy($self->{GRID});
 	    $self->{GRID} = $grid;
-	    _attributes($self);
 	}
     }
 }
@@ -210,7 +207,6 @@ sub spread {
     } else {
 	ral_grid_destroy($self->{GRID});
 	$self->{GRID} = $grid;
-	_attributes($self);
     }
 }
 
@@ -223,7 +219,6 @@ sub spread_random {
     } else {
 	ral_grid_destroy($self->{GRID});
 	$self->{GRID} = $grid;
-	_attributes($self);
     }
 }
 
