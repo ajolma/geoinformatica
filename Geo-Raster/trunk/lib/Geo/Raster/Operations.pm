@@ -1,10 +1,15 @@
 ## @class Geo::Raster::Operations
-# @brief Adds operations into Geo::Raster and overloads them
+# @brief Adds operations into Geo::Raster and overloads them to operators.
+# @note Many methods may convert an integer raster into a floating
+# point raster if the operation requires.
+# @note All operations, which involve more than one raster, require
+# that the rasters are overlayable.
 package Geo::Raster;
 
 use overload (
 	      'fallback' => undef,
-	      '""'       => 'as_string',
+              # not having "" overloaded makes print "$raster" to print "1"
+	      '""'       => 'as_string', 
 	      'bool'     => 'bool',
               '='        => 'shallow_copy',
 	      'neg'      => 'neg',
@@ -36,6 +41,7 @@ use overload (
 	      'sqrt'     => 'sqrt',
 	      );
 
+## @ignore
 sub as_string {
     my $self = shift;
     return $self;
@@ -67,23 +73,24 @@ sub neg {
 ## @ignore
 sub _typeconversion {
     my($self,$other) = @_;
+    my $type = ral_grid_get_datatype($self->{GRID});
     if (ref($other)) {
 	if (isa($other, 'Geo::Raster')) {
 	    return $REAL_GRID if 
-		$other->{DATATYPE} == $REAL_GRID or 
-		$self->{DATATYPE} == $REAL_GRID;
+		ral_grid_get_datatype($other->{GRID}) == $REAL_GRID or 
+		$type == $REAL_GRID;
 	    return $INTEGER_GRID;
 	} else {
 	    croak "$other is not a grid\n";
 	}
     } else {
 	# perlfaq4: is scalar an integer ?
-	return $self->{DATATYPE} if $other =~ /^-?\d+$/;
+	return $type if $other =~ /^-?\d+$/;
 	
 	# perlfaq4: is scalar a C float ?
 	if ($other =~ /^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$/) {
-	    return $REAL_GRID if $self->{DATATYPE} == $INTEGER_GRID;
-	    return $self->{DATATYPE};
+	    return $REAL_GRID if $type == $INTEGER_GRID;
+	    return $type;
 	}
 	croak "$other is not numeric\n";
     }
@@ -92,52 +99,36 @@ sub _typeconversion {
 
 ## @method Geo::Raster plus($value)
 #
-# @brief Adds to returned rasters cells this grids values plus the 
-# given number.
+# @brief Add a value globally to the raster.
 #
-# If this raster and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster will have as datatype real.
-# 
-# Example of summing
+# Example:
 # @code
-# $new_grid = $grid + $value;
+# $b = $a + 3.14159;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->plus($value); 
+# $b = $a->plus(3.14159); 
 # @endcode
 #
-# @param[in] value A number to add to this objects cell values.
-# @return A copy of this raster with the additions from the other grid.
-# @note In the case that this raster and the value differ in datatype, the 
-# datatype conversion of the returned grid into real type makes it possible not 
-# to use rounding.
+# @param[in] value An integer or a floating point number to add to
+# the cell values of this raster.
+# @return the resulting raster.
 
 ## @method Geo::Raster plus(Geo::Raster second)
 #
-# @brief Adds to returned rasters cells this grids values plus the 
-# given grids values.
+# @brief Adds a raster to this raster.
 #
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If rasters differ in datatypes (other is integer and the other real) 
-# then the returned raster will have as datatype real.
-# 
-# Example of summing
+# Example:
 # @code
-# $new_grid = $grid + $second_grid;
+# $c = $a + $b;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->plus($second_grid); 
+# $c = $a->plus($b); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
-# @return A copy of this raster with the additions from the other grid.
-# @note In the case of the two rasters differ in datatype, the datatype 
-# conversion of the returned grid into real type makes it possible not to use 
-# rounding (Also note that without the conversion the libral functions will 
-# round that grids values that has real datatype).
+# @param[in] second A raster.
+# @return the resulting raster.
 sub plus {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -157,59 +148,41 @@ sub plus {
 
 ## @method Geo::Raster minus($value, $reversed)
 #
-# @brief Subtracts the given number from this grids values (or 
-# vice versa if reversed is true) and gives those values to the returned grid.
+# @brief Subtracts a value from this raster.
 #
-# If this raster and the number differ in datatypes (other is integer and 
-# the other real) then the returned raster will have as datatype real.
-#
-# Example of subtraction
+# Example:
 # @code
-# $new_grid = $grid - $value;
+# $b = $a - 3.14159;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->minus($value);
+# $b = -1*(3.14159 - $a);
 # @endcode
 #
-# @param[in] value A number to subtract from this objects cell values.
-# @param[in] reversed (optional) A boolean which tells in which order the 
-# subtraction is done. If true, then the this objects grid cell values are 
-# subtracted from the given value, else the the value is subtracted from this 
-# grids values.
-# @return A copy of this Geo::Raster with the subtractions made.
-# @note In the case that this raster and the value differ in datatype, the 
-# datatype conversion of the returned grid into real type makes it possible not 
-# to use rounding.
+# @param[in] value A value to subtract 
+# @param[in] reversed (optional) Whether to perform value - raster
+# computation instead of raster - value. When operator '-' is used,
+# this value is automatically set by Perl when appropriate.
+# @return the resulting raster.
 
 ## @method Geo::Raster minus(Geo::Raster second, $reversed)
 #
-# @brief Subtracts the given grids values from this grids values (or 
-# vice versa if reversed is true) and gives those values to the returned grid.
+# @brief Subtracts a raster from this raster.
 #
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If rasters differ in datatypes (other is integer and the other real) 
-# then the returned raster will have as datatype real.
-#
-# Example of subtraction
+# Example:
 # @code
-# $new_grid = $grid - $second_grid;
+# $c = $b - $a;
 # @endcode
 # is the same as
 # @code
-# $new_grid = $grid->minus($second_grid); 
+# $c = $a->minus($b, 1); 
 # @endcode
 #
-# @param[in] second Reference to an another Geo::Raster.
-# @param[in] reversed (optional) A boolean which tells in which order the 
-# subtraction is done. If true, then the this objects grid cell values are 
-# subtracted from the second grids cells values, else the second grids values 
-# are subtracted from this grids values.
-# @return A copy of this Geo::Raster with the subtractions made.
-# @note In the case of the two rasters differ in datatype, the datatype 
-# conversion of the returned grid into real type makes it possible not to use 
-# rounding.
+# @param[in] second A raster to be subtracted.
+# @param[in] reversed (optional) Whether to perform value - raster
+# computation instead of raster - value. When operator '-' is used,
+# this value is automatically set by Perl when appropriate.
+# @return the resulting raster.
 sub minus {
     my($self, $second, $reversed) = @_;
     my $datatype = $self->_typeconversion($second);
@@ -590,7 +563,7 @@ sub add {
     my $datatype = $self->_typeconversion($second);
     return unless defined($datatype);
     $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) 
-    	if $datatype != $self->{DATATYPE};
+    	if $datatype != ral_grid_get_datatype($self->{GRID});
     if (ref($second)) {
 	ral_grid_add_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -651,7 +624,7 @@ sub subtract {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
     return unless defined($datatype);
-    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) if $datatype != $self->{DATATYPE};
+    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) if $datatype != ral_grid_get_datatype($self->{GRID});
     if (ref($second)) {
 	ral_grid_sub_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -710,7 +683,7 @@ sub multiply_by {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
     return unless defined($datatype);
-    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) if $datatype != $self->{DATATYPE};
+    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) if $datatype != ral_grid_get_datatype($self->{GRID});
     if (ref($second)) {
 	ral_grid_mult_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -883,7 +856,7 @@ sub to_power_of {
     my($self, $second) = @_;
     my $datatype = $self->_typeconversion($second);
     return unless defined($datatype);
-    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) if $datatype != $self->{DATATYPE};
+    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $datatype)) if $datatype != ral_grid_get_datatype($self->{GRID});
     if (ref($second)) {
 	ral_grid_power_grid($self->{GRID}, $second->{GRID});
     } else {
@@ -911,7 +884,7 @@ sub atan2 {
     if (ref($self) and ref($second)) {
 	if (defined wantarray) {
 	    $self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-	} elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+	} elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
 	}
 	ral_grid_atan2($self->{GRID}, $second->{GRID});
@@ -934,7 +907,7 @@ sub cos {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_cos($self->{GRID});
@@ -954,7 +927,7 @@ sub sin {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_sin($self->{GRID});
@@ -975,7 +948,7 @@ sub exp {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_exp($self->{GRID});
@@ -1014,7 +987,7 @@ sub sqrt {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_sqrt($self->{GRID});
@@ -1064,7 +1037,7 @@ sub acos {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_acos($self->{GRID});
@@ -1084,7 +1057,7 @@ sub atan {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_atan($self->{GRID});
@@ -1125,7 +1098,7 @@ sub cosh {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_cosh($self->{GRID});
@@ -1166,7 +1139,7 @@ sub log {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_log($self->{GRID});
@@ -1186,7 +1159,7 @@ sub log10 {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_log10($self->{GRID});
@@ -1217,7 +1190,7 @@ sub sinh {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_sinh($self->{GRID});
@@ -1237,7 +1210,7 @@ sub tan {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_tan($self->{GRID});
@@ -1257,7 +1230,7 @@ sub tanh {
     my $self = shift;
     if (defined wantarray) {
 	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif ($self->{DATATYPE} == $INTEGER_GRID) {
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
 	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
     }
     ral_grid_tanh($self->{GRID});
@@ -1339,7 +1312,6 @@ sub lt {
 	    }
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
@@ -1407,7 +1379,6 @@ sub gt {
 	    }
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
@@ -1467,7 +1438,6 @@ sub le {
 	    }
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
@@ -1527,7 +1497,6 @@ sub ge {
 	    }
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
@@ -1576,7 +1545,6 @@ sub eq {
 	    ral_grid_eq_real($self->{GRID}, $second);
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
@@ -1610,7 +1578,6 @@ sub ne {
 	    ral_grid_ne_real($self->{GRID}, $second);
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
@@ -1656,7 +1623,6 @@ sub cmp {
 	    }
 	}
     }
-    $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID}); # may have been changed
     return $self if defined wantarray;
 }
 
