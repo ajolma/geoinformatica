@@ -1,5 +1,5 @@
 ## @class Geo::Raster::Image
-# @brief Adds graphics, image analysis etc. methods into Geo::Raster
+# @brief Adds graphics, image analysis etc. methods to Geo::Raster.
 package Geo::Raster;
 
 use UNIVERSAL qw(isa);
@@ -73,7 +73,7 @@ sub line {
     }
 }
 
-
+## @method listref transect(Geo::GDAL::Geometry geom, $delta) 
 sub transect {
     my($self, $geom, $delta) = @_;
     croak "usage: \$raster->transect(\$geometry, \$delta)" 

@@ -805,6 +805,8 @@ ral_hash_handle RAL_CALL ral_grid_zonal_variance(ral_grid *gd, ral_grid *zones);
 int RAL_CALL ral_grid_zonal_contents(ral_grid *gd, ral_grid *zones, ral_hash ***table, ral_hash *index);
 
 /**
+   \b deprecated
+
    each zone in the zones grid is iteratively "grown" to areas
    designated by the (binary) grid grow 
 */

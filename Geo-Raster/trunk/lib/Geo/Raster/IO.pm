@@ -2,18 +2,8 @@
 # @brief Adds input/output methods into Geo::Raster
 package Geo::Raster;
 
-## @method void gdal_open(%params)
-#
-# @brief The subroutine opens a saved raster dataset from a file.
-#
-# @param[in] params is a list of named parameters:
-# - <I>filename</I>.
-# - <I>band</I> (optional). Default is 1.
-# - <I>load</I> (optional). Default is false, calls cache without parameters if 
-# true.
-# @exception The file has a raster grid, whose cells are not squares.
-# @exception The file has a raster grid, which is not a strict north up grid.
-# @note This subroutine is usually called internally from the constructor.
+## @ignore
+# internal
 sub gdal_open {
     my($self, %params) = @_;
     my $dataset = Geo::GDAL::Open($params{filename});
@@ -45,9 +35,10 @@ sub gdal_open {
 
 ## @method Geo::GDAL::Dataset dataset()
 #
-# @brief Return the underlying GDAL dataset or, in the case of pure
-# libral raster, create a GDAL memory dataset and return it.
+# @brief Return a dataset object associated with the raster.
 #
+# @return the underlying GDAL dataset or, in the case of pure libral
+# raster, create a GDAL memory dataset and return it.
 sub dataset {
     my $self = shift;
     return $self->{GDAL}->{dataset} if $self->{GDAL};
@@ -70,10 +61,11 @@ sub dataset {
 
 ## @method Geo::GDAL::Band band()
 #
-# @brief Return the used band from the underlying GDAL dataset or, in
-# the case of pure libral raster, create a GDAL memory dataset and
-# return the (only) band of it.
+# @brief Return a band object associated with the raster.
 #
+# @return the band from the underlying GDAL dataset that is used, or,
+# in the case of pure libral raster, create a GDAL memory dataset and
+# return the (only) band of it.
 sub band {
     my $self = shift;
     if ($self->{GDAL}) {

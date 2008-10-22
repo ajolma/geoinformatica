@@ -151,6 +151,8 @@ sub _interpret_datatype {
 #   - maxx
 #   - maxy
 # @return a new raster.
+# @exception The cells of the raster in a file are not squares.
+# @exception The orientation of the raster in a file is not strictly north up.
 # @todo Take GDAL into account in copying.
 sub new {
     my $package = shift;

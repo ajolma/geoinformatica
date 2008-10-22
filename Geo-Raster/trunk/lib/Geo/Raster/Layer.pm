@@ -1,5 +1,8 @@
 package Geo::Raster::Layer;
 # @brief A subclass of Gtk2::Ex::Geo::Layer and Geo::Raster
+#
+# These methods are not documented. For documentation, look at
+# Gtk2::Ex::Geo::Layer.
 
 =pod
 
@@ -143,9 +146,6 @@ sub registration {
     return { dialogs => $dialogs, commands => $commands };
 }
 
-## @cmethod $upgrade($object) 
-#
-# @brief Upgrade (strictly) Geo::Raster objects to Geo::Raster::Layers
 sub upgrade {
     my($object) = @_;
     if (ref($object) eq 'Geo::Raster') {
@@ -218,16 +218,12 @@ sub save {
     }
 }
 
-## @method $type()
-#
-# @brief Returns the layers type.
-# @return Return as type 'int', 'real' or ' ' if no datatype has been set. If 
-# the layer is an GDAL-layer then the method returns 'G int' or 'G real'.
 sub type {
     my($self, $format) = @_;
     my $type = $self->data_type;
+    my $tooltip = ($format and $format eq 'long' or $format eq 'tooltip');
     if ($type) {
-	if ($format and $format eq 'long') {
+	if ($tooltip) {
 	    $type = $type eq 'Integer' ? 'integer-valued raster' : 'real-valued raster';
 	} else {
 	    $type = $type eq 'Integer' ? 'int' : 'real';
@@ -236,16 +232,11 @@ sub type {
 	$type = '';
     }
     if ($self->{GDAL}) {
-	$type = ($format and $format eq 'long') ? "GDAL $type" : "G $type";
+	$type = $tooltip ? "GDAL $type" : "G $type";
     }
     return $type;
 }
 
-## @method @supported_palette_types()
-# 
-# @brief Returns supported color palettes according to the raster grids datatype.
-# @return Array of supported palette types names.
-# @note Overrides Geo::Layer::supported_palette_types().
 sub supported_palette_types {
     my($self) = @_;
     return ('Single color') unless $self->{GRID}; # may happen if not cached
@@ -257,25 +248,16 @@ sub supported_palette_types {
     }
 }
 
-## @method @supported_symbol_types()
-#
-# @brief Returns supported symbol types according to the raster grids datatype.
-# @return Array of supported symbol types names.
-# @note Overrides Geo::Layer::supported_symbol_types().
 sub supported_symbol_types {
     my($self) = @_;
     return ('No symbol') unless $self->{GRID}; # may happen if not cached
     if ($self->datatype eq 'Integer') {
-		return ('No symbol', 'Flow_direction', 'Square', 'Dot', 'Cross');
+	return ('No symbol', 'Flow_direction', 'Square', 'Dot', 'Cross');
     } else {
-		return ('No symbol', 'Flow_direction', 'Square', 'Dot', 'Cross');
+	return ('No symbol', 'Flow_direction', 'Square', 'Dot', 'Cross');
     }
 }
 
-## @method void properties_dialog(Gtk2::Ex::Glue gui)
-# 
-# @brief A request to invoke the properties dialog for this layer object.
-# @param[in] gui A Gtk2::Ex::Glue object (contains predefined dialogs).
 sub properties_dialog {
     my($self, $gui) = @_;
     if ($self->{GDAL}) {
@@ -285,10 +267,6 @@ sub properties_dialog {
     }
 }
 
-## @method hashref menu_items()
-#
-# @brief Reports the class menu items (name and sub) for the GUI.
-# @return A reference to an anonymous hash.
 sub menu_items {
     my($self, $items) = @_;
     $items = $self->SUPER::menu_items($items);
@@ -351,14 +329,6 @@ sub menu_items {
     return $items;
 }
 
-## @method void render($pb)
-#
-# @brief Renders the raster layer into a Gdk-Pixbuf structure, which will be
-# shown to the user by the gui.
-#
-# @param[in,out] pb Pixel buffer into which the vector layer is rendered.
-# @note The layer has to be visible or the method will do nothing.
-# @note The grid can have as datatype integer or real.
 sub render {
     my($self, $pb) = @_;
 

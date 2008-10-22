@@ -1,19 +1,22 @@
 ## @class Geo::Raster::Zonal
-# @brief Adds zonal operations into Geo::Raster
+# @brief Adds zonal operations into Geo::Raster.
 package Geo::Raster;
 
 use Statistics::Descriptive;
 
 ## @method hashref zones(Geo::Raster zones)
 #
-# @brief Return a hash defining the rasters values for each zone.
+# @brief Returns the values from the raster in a hash indexed by the
+# zones.
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return A reference to a hash, which has the values of the zones
-# raster as keys and respective values from this raster as values. The
-# values are in anonymous arrays.
-# @exception The zones raster is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return A reference to a hash, which has the zone integers as keys
+# and the zonal values in an anonymous array referenced by the hash
+# values.
+# @exception The zone raster is not an integer raster.
+# @note The returned hash contains \b all values from the raster and thus
+# may be very large.
 sub zones {
     my($self, $zones) = @_;
     return ral_grid_zones($self->{GRID}, $zones->{GRID});
@@ -21,21 +24,21 @@ sub zones {
 
 ## @method $size(@cell)
 #
-# @brief Returns the number of cells in a zone.
+# @brief Returns the number of cells in a zone identified by a cell.
 #
 # @param[in] cell Zone cell. Identifies the zone.
 # @return The number of cells in the zone.
 
 ## @method hashref zonal_fct(Geo::Raster zones, $fct)
 #
-# @brief Calculates the mean of this rasters values for each zone.
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @param fct (string) a method supported by Statistics::Descrptive ('mean' by default)
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the means of this rasters cells belonging to the zones.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @brief Calculates a statistic of zonal values.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @param fct (string) a method supported by
+# Statistics::Descriptive. Default is mean.
+# @return a reference to a hash, which has the zone integers as keys
+# and the statistics as values.
+# @note Uses internally the zones method and may thus be slow and memory intensive.
 sub zonal_fct {
     my($self, $zones, $fct) = @_;
     my $z = ral_grid_zones($self->{GRID}, $zones->{GRID});
@@ -52,20 +55,18 @@ sub zonal_fct {
 
 ## @method hashref zonal_count(Geo::Raster zones)
 #
-# @brief Calculates the amount of this rasters cells for each zone.
+# @brief Calculates the amount of cells in each zone.
 #
-# Example of getting count of cells having values for each zone:
+# Example:
 # @code
-# $zonalcount = $grid->zonal_count($zones);
+# $zonalcount = $a->zonal_count($zones);
+# $count_at_zone_1 = $zonalcount->{1};
 # @endcode
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the amount of this rasters cells having some value and belonging 
-# to zone.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return a reference to a hash that has as keys the zones and as
+# values the number of cells, which have a defined value, within that zone.
 sub zonal_count {
     my($self, $zones) = @_;
     return ral_grid_zonal_count($self->{GRID}, $zones->{GRID});
@@ -77,15 +78,13 @@ sub zonal_count {
 #
 # Example of getting sum of values for each zone:
 # @code
-# $zonalsum = $grid->zonal_sum($zones);
+# $zonalsum = $a->zonal_sum($zones);
 # @endcode
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the sum of this rasters cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return a reference to a hash that has as keys the zones and as
+# values the sum of cells within that zone.
 sub zonal_sum {
     my($self, $zones) = @_;
     return ral_grid_zonal_sum($self->{GRID}, $zones->{GRID});
@@ -97,15 +96,13 @@ sub zonal_sum {
 #
 # Example of getting smallest value for each zone:
 # @code
-# $zonalmin = $grid->zonal_min($zones);
+# $zonalmin = $a->zonal_min($zones);
 # @endcode
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the minimum of this rasters cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return a reference to a hash that has as keys the zones and as
+# values the minimum value within that zone.
 sub zonal_min {
     my($self, $zones) = @_;
     return ral_grid_zonal_min($self->{GRID}, $zones->{GRID});
@@ -117,15 +114,13 @@ sub zonal_min {
 #
 # Example of getting highest value for each zone:
 # @code
-# $zonalmax = $grid->zonal_max($zones);
+# $zonalmax = $a->zonal_max($zones);
 # @endcode
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the maximum of this rasters cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return a reference to a hash that has as keys the zones and as
+# values the maximum value within that zone.
 sub zonal_max {
     my($self, $zones) = @_;
     return ral_grid_zonal_max($self->{GRID}, $zones->{GRID});
@@ -137,15 +132,13 @@ sub zonal_max {
 #
 # Example of getting mean of all values for each zone:
 # @code
-# $zonalmean = $grid->zonal_mean($zones);
+# $zonalmean = $a->zonal_mean($zones);
 # @endcode
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the mean of this rasters cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return a reference to a hash that has as keys the zones and as
+# values the average value within that zone.
 sub zonal_mean {
     my($self, $zones) = @_;
     return ral_grid_zonal_mean($self->{GRID}, $zones->{GRID});
@@ -157,45 +150,20 @@ sub zonal_mean {
 #
 # Example of getting variance of all values for each zone:
 # @code
-# $zonalvar = $grid->zonal_variance($zones);
+# $zonalvar = $a->zonal_variance($zones);
 # @endcode
 #
-# @param[in] zones An integer raster, which defines the zones. All 
-# different integers point to a different zone.
-# @return Returns a reference to an hash having as keys the zones and as 
-# values the variance of this rasters cells belonging to the zone.
-# @exception The zones grid is not overlayable with the raster.
-# @exception The zones grid is not of type integer.
+# @param[in] zones An integer raster. Each zone is defined by a unique
+# integer.
+# @return a reference to a hash that has as keys the zones and as
+# values the variance of the values within that zone.
 sub zonal_variance {
     my($self, $zones) = @_;
     return ral_grid_zonal_variance($self->{GRID}, $zones->{GRID});
 }
 
-## @method Geo::Raster grow_zones(Geo::Raster grow, $connectivity)
-#
-# @brief Grows this zones grid recursively using the given growing grid and
-# 4- or 8-connectivity.
-#
-# The calling grid has to be an integer grid, which defines the zones. All 
-# different integers point to a different zone.
-#
-# Example of growing the zones defining raster:
-# @code
-# $zones->growzones($grow);
-# @endcode
-# Example of creating a new zones defining raster, which has a :
-# @code
-# $new_zones = $zones->growzones($grow);
-# @endcode
-#
-# @param[in] grow A binary grid defining to where the zones raster
-# can grow. Has to have the same size as this grid. 
-# @param[in] connectivity (optional). Connectivity between cells as a number:4 
-# or 8. If connectivity is not given then 8-connectivity is used.
-# @return Returns a new zones grid, if a return value is wanted, else the 
-# growing will be done to this zones grid.
-# @exception The zones grid is not overlayable with the grid used for growing.
-# @exception The zones grid or the grid used for growing is not of type integer.
+## @ignore
+# I'm not sure I understand what happens here
 sub grow_zones {
     my($zones, $grow, $connectivity) = @_;
     $connectivity = 8 unless defined($connectivity);

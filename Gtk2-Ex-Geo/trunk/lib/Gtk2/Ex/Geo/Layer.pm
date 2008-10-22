@@ -75,7 +75,20 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 		     );
 
 ## @cmethod registration()
-# @brief Returns in an anonymous hash the generic dialogs and commands.
+# @brief Returns the dialogs and commands implemented by this layer
+# class.
+#
+# The dialogs is an object of a subclass of
+# Gtk2::Ex::Geo::DialogMaster. The commands is a reference to a
+# command hash. The keys of the command hash are top-level commands
+# for the GUI. The value of the command is a reference to a hash,
+# which has keys: nr, text, tip, pos, and sub. The 'sub' is a
+# reference to a subroutine, which is executed when the user executes
+# the command. The commands are currently implemented as buttons in
+# Gtk2::Ex::Geo::Glue.
+#
+# @return an anonymous hash containing the dialogs (key: 'dialogs')
+# and commands (key: 'commands')
 sub registration {
     my $dialogs = Gtk2::Ex::Geo::Dialogs->new();
     my $commands = {
@@ -119,9 +132,13 @@ sub label_placements {
 
 ## @cmethod $upgrade($object) 
 #
-# @brief Upgrade known data object to a layer object.
+# @brief Upgrade a known data object to a layer object.
 #
-# @return true if object is known and false otherwise.
+# It is usually a good idea to test the data objects class strictly,
+# i.e. using ref($object) eq '' instead of isa().
+#
+# @return true if object is known (no need to look further) and false
+# otherwise.
 sub upgrade {
     my($object) = @_;
     return 0;
@@ -239,10 +256,11 @@ sub destroy_dialogs {
     }
 }
 
-## @method $type()
+## @method $type($format)
 #
-# @brief Reports the type of the layer class for the GUI (human readable code).
-# @return Type of the layer class for the GUI (human readable code).
+# @brief Reports the type of the layer class for the GUI (short but human readable code).
+# @param format (optional) If 'tooltip' returns a string suitable for tooltip.
+# @return a string.
 sub type {
     my $self = shift;
     return '?';
@@ -318,9 +336,18 @@ sub open_features_dialog {
 
 ## @cmethod hashref menu_items($items)
 #
-# @brief Reports the class menu items (name and sub) for the GUI.
-# @param items pre-defined menu items 
-# @return A reference to an anonymous hash.
+# The items hash that the object gets may contain items added by super
+# classes. The key of an item is a string, which becomes the menu
+# entry, or a string which is not used (but it needs to be unique) if
+# the item is a separator. A '_' in front of a letter makes that
+# letter a shortcut key. The value is a reference to an anonymous hash
+# with keys 'nr' and 'sub'. The nr points to a number, which is used
+# for sorting the menu. The sub points to a subroutine, which is
+# called when the menu item is selected by the user.
+#
+# @brief Return the menu items of this layer class for the GUI.
+# @param items Menu items hash into which add more items. 
+# @return a reference to the items hash.
 sub menu_items {
     my($self, $items) = @_;
     $items->{x90} =
@@ -397,6 +424,9 @@ sub palette_type {
 }
 
 ## @method @supported_palette_types()
+#
+# The palette type is set by the user and the layer class is expected
+# to understand its own types in its render method.
 # 
 # @brief Return a list of all by this class supported palette types.
 # @return A list of all by this class supported palette types.
@@ -404,7 +434,7 @@ sub supported_palette_types {
     my($class) = @_;
     my @ret;
     for my $t (sort {$PALETTE_TYPE{$a} <=> $PALETTE_TYPE{$b}} keys %PALETTE_TYPE) {
-		push @ret, $t;
+	push @ret, $t;
     }
     return @ret;
 }
@@ -426,13 +456,13 @@ sub symbol_type {
 
 ## @method @supported_symbol_types()
 # 
-# @brief Return a list of all by this class supported symbol types.
+# @brief Return a list of all symbol types that this class supports.
 # @return A list of all by this class supported symbol types.
 sub supported_symbol_types {
     my($self) = @_;
     my @ret;
     for my $t (sort {$SYMBOL_TYPE{$a} <=> $SYMBOL_TYPE{$b}} keys %SYMBOL_TYPE) {
-		push @ret, $t;
+	push @ret, $t;
     }
     return @ret;
 }
@@ -804,6 +834,19 @@ sub value_range {
 # @brief Render the selection using the given graphics context
 # @param $gc Gtk2::Gdk::GC
 sub render_selection {
+}
+
+## @method void render($pb, $cr, $overlay, $viewport)
+#
+# @brief A request to render the data of the layer onto a surface.
+#
+# @param[in,out] pb A (XS wrapped) pointer to agtk2_ex_geo_pixbuf.
+# @param[in,out] cr A Cairo::Context object for the surface to draw on.
+# @param[in] overlay A Gtk2::Ex::Geo::Overlay object which manages the surface.
+# @param[in] viewport A reference to the bounding box [min_x, min_y,
+# max_x, max_y] of the surface in world coordinates.
+sub render {
+    my($self, $pb, $cr, $overlay, $viewport) = @_;
 }
 
 ## @method $bootstrap_dialog($gui, $dialog, $title, $bootstrap)
