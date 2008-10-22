@@ -1047,60 +1047,49 @@ sub tanh {
 }
 }
 
-## @method Geo::Raster lt($number, $reversed)
+## @method Geo::Raster lt($second, $reversed)
 #
-# @brief The method tells if the rasters cells have smaller values than the 
-# given given number. Comparison result is returned if needed.
+# @brief Performs at each cell the "less than" comparison
+# on this raster and a number.
 #
-# There are four cases of the use of comparison operations between this grid and a number:
-# <center><table border="1">
-# <tr><th>Case</th><th>Example</th>     <th>a unchanged</th>  <th>self</th> <th>number</th> <th>reversed</th><th>wantarray defined</th></tr>
-# <tr><td>1.</td><td>b = a->lt(n);</td>   <td>yes</td>        <td>a</td>    <td>n</td>       <td>no</td>         <td>yes</td></tr>
-# <tr><td>2.</td><td>a->lt(n);</td>       <td>no</td>         <td>a</td>    <td>n</td>       <td>no</td>         <td>no</td></tr>
-# <tr><td>3.</td><td>b = a < n;</td>      <td>yes</td>        <td>a</td>    <td>n</td>       <td>no</td>         <td>yes</td></tr>
-# <tr><td>4.</td><td>b = n < a;</td>      <td>yes</td>        <td>a</td>    <td>n</td>       <td>yes</td>        <td>yes</td></tr>
-# </table></center>
+# Example:
+# @code
+# $b = $a < 3.14159;
+# @endcode
+# is the same as
+# @code
+# $b = $a->lt(3); 
+# @endcode
 #
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed (look at case 2), else a new grid with the comparison results 
-# is returned.
-# 
-# @param[in] number Number used for comparison.
-# @param[in] reversed (optional) Tells the comparison order. If true then the 
-# method checks if the given parameters value(s) are less than the rasters 
-# cells values. If false, then the method acts as no reverse parameter would 
-# have given.
-# @return Geo::Raster, which has zeros (0) in those cells that are greater or 
-# equal and therefor don't fulfil the comparison condition. If the rasters 
-# value is less than the comparison value, then the cell gets a value true (1).
-# @note If this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# @param[in] second A number to compare against.
+# @param[in] reversed (optional) Whether to perform this < second
+# computation instead of second < this. When operator '<' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is greater
+# than or equal to the second, and 1 where it is less than the
+# second. In void context changes this raster.
 
-## @method Geo::Raster lt(Geo::Raster second)
+## @method Geo::Raster lt(Geo::Raster second, $reversed)
 #
-# @brief The method tells if the rasters cells have smaller values than the 
-# given rasters cells. Comparison result is returned if needed.
+# @brief Performs at each cell the "less than" comparison
+# on this and the second raster.
 #
-# There are three cases of the use of comparison operations between two grids:
-# <table border="1">
-# <tr><th>Case</th><th>Example</th>     <th>a unchanged</th>  <th>self</th> <th>second</th> <th>wantarray defined</th></tr>
-# <tr><td>1.</td><td>c = a->lt(b);</td>   <td>yes</td>        <td>a</td>    <td>b</td>       <td>yes</td></tr>
-# <tr><td>2.</td><td>a->lt(b);</td>       <td>no</td>         <td>a</td>    <td>b</td>       <td>no</td></tr>
-# <tr><td>3.</td><td>c = a < b;</td>      <td>yes</td>        <td>a</td>    <td>b</td>       <td>yes</td></tr>
-# </table>
+# Example:
+# @code
+# $c = $a < $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->lt($b); 
+# @endcode
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed (look at case 2), else a new grid with the comparison results 
-# is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# 
-# @param[in] second Reference to an another Geo::Raster.
-# @return Geo::Raster, which has zeros (0) in those cells that are greater or 
-# equal and therefor don't fulfil the comparison condition. If the rasters 
-# value is less than the comparison value, then the cell gets a value true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# @param[in] second A raster to compare against.
+# @param[in] reversed (optional) Whether to perform this < second
+# computation instead of second < this. When operator '<' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is greater
+# than or equal to the second, and 1 where it is less than the
+# second. In void context changes this raster.
 sub lt {
     my($self, $second, $reversed) = @_;    
     $self = Geo::Raster->new($self) if defined wantarray;
@@ -1124,50 +1113,49 @@ sub lt {
     return $self if defined wantarray;
 }
 
-## @method Geo::Raster gt($number, $reversed)
+## @method Geo::Raster gt($second, $reversed)
 #
-# @brief The method tells if the rasters cells have greater values than the 
-# given number. Comparison result is returned if  needed.
+# @brief Performs at each cell the "greater than" comparison
+# on this raster and a number.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# 
-# @param[in] number Number used for comparison.
-# @param[in] reversed (optional) Tells the comparison order. If true then the 
-# method checks if the given parameters value(s) are greater than the raster 
-# grids cells values. If false, then the method acts as no reverse parameter 
-# would have been given.
-# @return Geo::Raster, which has zeros (0) in those cells that are less or 
-# equal and therefor don't fulfil the comparison condition. If the rasters 
-# value is greater than the comparison value, then the cell gets a value true 
-# (1).
-# @note If this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $b = $a > 3.14159;
+# @endcode
+# is the same as
+# @code
+# $b = $a->gt(3); 
+# @endcode
+#
+# @param[in] second A number to compare against.
+# @param[in] reversed (optional) Whether to perform this > second
+# computation instead of second > this. When operator '>' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is less
+# than or equal to the second, and 1 where it is greater than the
+# second. In void context changes this raster.
 
-## @method Geo::Raster gt(Geo::Raster second)
+## @method Geo::Raster gt(Geo::Raster second, $reversed)
 #
-# @brief The method tells if the rasters cells have greater values than the 
-# given rasters cells. Comparison result is returned if needed.
+# @brief Performs at each cell the "greater than" comparison
+# on this and the second raster.
 #
-# There are three cases of the use of comparison operations between two grids:
-# <table border="1">
-# <tr><th>Case</th><th>Example</th>     <th>a unchanged</th>  <th>self</th> <th>second</th> <th>wantarray defined</th></tr>
-# <tr><td>1.</td><td>c = a->gt(b);</td>   <td>yes</td>        <td>a</td>    <td>b</td>       <td>yes</td></tr>
-# <tr><td>2.</td><td>a->gt(b);</td>       <td>no</td>         <td>a</td>    <td>b</td>       <td>no</td></tr>
-# <tr><td>3.</td><td>c = a > b;</td>      <td>yes</td>        <td>a</td>    <td>b</td>       <td>yes</td></tr>
-# </table>
+# Example:
+# @code
+# $c = $a > $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->gt($b); 
+# @endcode
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed (look at case 2), else a new grid with the comparison results 
-# is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# 
-# @param[in] second Reference to an another Geo::Raster.
-# @return Geo::Raster, which has zeros (0) in those cells that are less or 
-# equal and therefor don't fulfil the comparison condition. If the rasters 
-# value is greater than the comparison value, then the cell gets a value true 
-# (1).
+# @param[in] second A raster to compare against.
+# @param[in] reversed (optional) Whether to perform this > second
+# computation instead of second > this. When operator '>' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is less
+# than or equal to the second, and 1 where it is greater than the
+# second. In void context changes this raster.
 sub gt {
     my($self, $second, $reversed) = @_;
     $self = Geo::Raster->new($self) if defined wantarray;
@@ -1191,42 +1179,49 @@ sub gt {
     return $self if defined wantarray;
 }
 
-## @method Geo::Raster le($number, $reversed)
+## @method Geo::Raster le($second, $reversed)
 #
-# @brief The method tells if the rasters cells have smaller or equal values 
-# compared to the given number. Comparison result is returned if needed.
+# @brief Performs at each cell the "less than or equal to" comparison
+# on this raster and a number.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# 
-# @param[in] number Number used for comparison.
-# @param[in] reversed (optional) Tells the comparison order. If true then the 
-# method checks if the given parameters value(s) are less or equal than the 
-# rasters cells values. If false, then the method acts as no reverse 
-# parameter would have given.
-# @return Geo::Raster, which has zeros (0) in those cells that are greater 
-# and therefor don't fulfil the comparison condition. Else the cell gets a value 
-# true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $b = $a <= 3.14159;
+# @endcode
+# is the same as
+# @code
+# $b = $a->le(3); 
+# @endcode
+#
+# @param[in] second A number to compare against.
+# @param[in] reversed (optional) Whether to perform this <= second
+# computation instead of second <= this. When operator '<=' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is greater
+# than the second, and 1 where it is less than or equal to the second. In void
+# context changes this raster.
 
-## @method Geo::Raster le(Geo::Raster second)
+## @method Geo::Raster le(Geo::Raster second, $reversed)
 #
-# @brief The method tells if the rasters cells have smaller or equal values 
-# compared to the given rasters cells. Comparison result is returned if 
-# needed.
+# @brief Performs at each cell the "greater than or equal to" comparison
+# on this and the second raster.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# 
-# @param[in] second Reference to an another Geo::Raster.
-# @return Geo::Raster, which has zeros (0) in those cells that are greater 
-# and therefor don't fulfil the comparison condition. Else the cell gets a value 
-# true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $c = $a <= $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->le($b); 
+# @endcode
+#
+# @param[in] second A raster to compare against.
+# @param[in] reversed (optional) Whether to perform this <= second
+# computation instead of second <= this. When operator '<=' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is greater
+# than the second, and 1 where it is less than or equal to the second. In void
+# context changes this raster.
 sub le {
     my($self, $second, $reversed) = @_;
     $self = Geo::Raster->new($self) if defined wantarray;
@@ -1250,42 +1245,49 @@ sub le {
     return $self if defined wantarray;
 }
 
-## @method Geo::Raster ge($number, $reversed)
+## @method Geo::Raster ge($second, $reversed)
 #
-# @brief The method tells if the rasters cells have greater or equal values 
-# compared to the given number. Comparison result is returned if needed.
+# @brief Performs at each cell the "greater than or equal to" comparison
+# on this raster and a number.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# 
-# @param[in] number Number used for comparison.
-# @param[in] reversed (optional) Tells the comparison order. If true then the 
-# method checks if the given parameters value(s) are greater or equal than the 
-# rasters cells values. If false, then the method acts as no reverse 
-# parameter would have given.
-# @return Geo::Raster, which has zeros (0) in those cells that are less 
-# and therefor don't fulfil the comparison condition. Else the cell gets a value 
-# true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $b = $a >= 3.14159;
+# @endcode
+# is the same as
+# @code
+# $b = $a->ge(3); 
+# @endcode
+#
+# @param[in] second A number to compare against.
+# @param[in] reversed (optional) Whether to perform this >= second
+# computation instead of second >= this. When operator '>=' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is less
+# than the second, and 1 where it is greater than the second. In void
+# context changes this raster.
 
-## @method Geo::Raster ge(Geo::Raster second)
+## @method Geo::Raster ge(Geo::Raster second, $reversed)
 #
-# @brief The method tells if the rasters cells have greater or equal values 
-# compared to the given rasters cells. Comparison result is returned if 
-# needed.
+# @brief Performs at each cell the "greater than or equal to" comparison
+# on this and the second raster.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# 
-# @param[in] second Reference to an another Geo::Raster.
-# @return Geo::Raster, which has zeros (0) in those cells that are less 
-# and therefor don't fulfil the comparison condition. Else the cell gets a value 
-# true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $c = $a >= $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->ge($b); 
+# @endcode
+#
+# @param[in] second A raster to compare against.
+# @param[in] reversed (optional) Whether to perform this >= second
+# computation instead of second >= this. When operator '>=' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is 0 where this raster is less
+# than the second, and 1 where it is greater than the second. In void
+# context changes this raster.
 sub ge {
     my($self, $second, $reversed) = @_;
     $self = Geo::Raster->new($self) if defined wantarray;
@@ -1309,38 +1311,43 @@ sub ge {
     return $self if defined wantarray;
 }
 
-## @method Geo::Raster eq($number)
+## @method Geo::Raster eq($second)
 #
-# @brief The method tells if the rasters cells have equal values 
-# compared to the given number. Comparison result is returned if needed.
+# @brief Performs at each cell the "equal to" comparison on this raster
+# and a number.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# 
-# @param[in] number Number used for comparison.
-# @return Geo::Raster, which has zeros (0) in those cells that are not equal 
-# and therefor don't fulfil the comparison condition. Else the cell gets a value 
-# true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $b = $a == 3;
+# @endcode
+# is the same as
+# @code
+# $b = $a->eq(3); 
+# @endcode
+#
+# @param[in] second A number to compare against.
+# @return a new integer raster, which is 0 where this raster is not equal
+# to the second, and 1 where they are equal. In void context
+# changes this raster.
 
-## @method Geo::Raster ge(Geo::Raster second)
+## @method Geo::Raster eq(Geo::Raster second)
 #
-# @brief The method tells if the rasters cells have equal values 
-# compared to the given rasters cells. Comparison result is returned if 
-# needed.
+# @brief Performs at each cell the "equal to" comparison on this and the second
+# raster.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# 
-# @param[in] second Reference to an another Geo::Raster.
-# @return Geo::Raster, which has zeros (0) in those cells that are not equal 
-# and therefor don't fulfil the comparison condition. Else the cell gets a value 
-# true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $c = $a == $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->eq($b); 
+# @endcode
+#
+# @param[in] second A raster to compare against.
+# @return a new integer raster, which is 0 where this raster is not equal
+# ot the second, and 1 where they are equal. In void context
+# changes this raster.
 sub eq {
     my $self = shift;
     my $second = shift;
@@ -1359,21 +1366,41 @@ sub eq {
 
 ## @method Geo::Raster ne($second)
 #
-# @brief The method tells if the rasters cells have not equal values 
-# compared to the given rasters cells or given number. Comparison result is 
-# returned if needed.
+# @brief Performs at each cell the "not equal to" comparison on this raster
+# and a number.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# 
-# @param[in] second Reference to an another Geo::Raster or a number.
-# @return Geo::Raster, which has zeros (0) in those cells that are equal 
-# and therefor don't fulfil the comparison condition. An equally valued cell 
-# gets a value true (1).
-# @note If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $b = $a != 3;
+# @endcode
+# is the same as
+# @code
+# $b = $a->ne(3); 
+# @endcode
+#
+# @param[in] second A number to compare against.
+# @return a new integer raster, which is 0 where this raster is equal
+# to the second, and 1 where they are not equal. In void context
+# changes this raster.
+
+## @method Geo::Raster ne(Geo::Raster second)
+#
+# @brief Performs at each cell the "not equal to" comparison on this and the second
+# raster.
+#
+# Example:
+# @code
+# $c = $a != $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->ne($b); 
+# @endcode
+#
+# @param[in] second A raster to compare against.
+# @return a new integer raster, which is 0 where this raster is equal
+# to the second, and 1 where they are not equal. In void context
+# changes this raster.
 sub ne {
     my $self = shift;
     my $second = shift;
@@ -1392,27 +1419,47 @@ sub ne {
 
 ## @method Geo::Raster cmp($second, $reversed)
 #
-# @brief The method tells if the rasters cells have not equal values 
-# compared to the given rasters cells or given number. Comparison result is 
-# returned if needed.
+# @brief Performs at each cell the numeric comparison on this raster
+# and a number.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - The comparison rasters can differ in datatype.
-# - If the given or this grids some cells do not have any value, those cells 
-# resulting value will also be undef.
+# Example:
+# @code
+# $b = $a <=> 3.14159;
+# @endcode
+# is the same as
+# @code
+# $b = $a->cmp(3.14159); 
+# @endcode
 #
-# @param[in] second Reference to an another Geo::Raster or a number.
-# @param[in] reversed Tells the comparison order. If true then the method does  
-# the comparison in reversed order. The returned method then returns as values 
-# -1 in those cells that are greater in this raster, 1 in those that are less 
-# and 0 in those cells that have equal values (equal case is same and not equal 
-# cases just have a reversed sign compared to direct comparison results).
-# @return a new raster, which has as values 1 in those cells that are greater in
-# this raster, -1 in those that are less and 0 in those cells that have equal 
-# values.
+# @param[in] second A number to compare against.
+# @param[in] reversed (optional) Whether to perform this <=> second
+# computation instead of second <=> this. When operator '<=>' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is -1 where this raster is
+# smaller than the second, 0 where they are equal, and 1 where the
+# second is larger. In void context changes this raster.
+
+## @method Geo::Raster cmp(Geo::Raster second, $reversed)
+#
+# @brief Performs at each cell the numeric comparison on this and the second
+# raster.
+#
+# Example:
+# @code
+# $c = $a <=> $b;
+# @endcode
+# is the same as
+# @code
+# $c = $a->cmp($b); 
+# @endcode
+#
+# @param[in] second A raster to compare against.
+# @param[in] reversed (optional) Whether to perform this <=> second
+# computation instead of second <=> this. When operator '<=>' is used,
+# this value is automatically set by Perl when appropriate.
+# @return a new integer raster, which is -1 where this raster is
+# smaller than the second, 0 where they are equal, and 1 where the
+# second is larger. In void context changes this raster.
 sub cmp {
     my($self, $second, $reversed) = @_;
     $self = Geo::Raster->new($self) if defined wantarray;
@@ -1437,16 +1484,10 @@ sub cmp {
 
 ## @method Geo::Raster not()
 #
-# @brief The operator returns the logical negation of each raster cell value.
+# @brief Evaluate at each cell the logical not.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The rasters datatype must be integer.
-# - The resulting value is 1 if the original raster cell has a value 0, else the
-# resulting value is 0.
-#
-# @return Geo::Raster with results from using the not operator.
-# @exception The rasters datatype is not integer.
+# @return a new raster. In void context changes this raster.
+# @note Defined only for integer rasters.
 sub not {
     my $self = shift;
     $self = Geo::Raster->new($self) if defined wantarray;
@@ -1456,32 +1497,22 @@ sub not {
 
 ## @method Geo::Raster and(Geo::Raster second)
 #
-# @brief The operator returns the logical conjuction of this raster and
-# given grids cells values.
+# @brief Evaluate at each cell the logical and on this and the second
+# raster.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The rasters must have the same amount of cells in both directions.
-# - The rasters datatypes must be integer.
-# - The resulting cell value will be 1 if both rasters have in the same 
-# cell nonzero values, else the resulting value is 0.
-# - If the other or both raster cells have an <I>no data</I> value, then 
-# also the resulting cell will have that value.
-#
-# The (truth) table here shows all possible value combinations (not incl. no 
-# data):
+# The truth table of logical and:
 #<table>
-#<tr><th>Resulting value</th><th>Own value</th><th>Parameter value</th></tr>
-#<tr><td>1</td><td>not 0</td><td>not 0</td></tr>
-#<tr><td>0</td><td>0</td><td>0</td></tr>
-#<tr><td>0</td><td>0</td><td>not 0</td></tr>
-#<tr><td>0</td><td>not 0</td><td>0</td></tr>
+#<tr><th>this</th><th>second</th><th>result</th></tr>
+#<tr><td>false</td><td>false</td><td>false</td></tr>
+#<tr><td>false</td><td>true</td><td>false</td></tr>
+#<tr><td>true</td><td>false</td><td>false</td></tr>
+#<tr><td>true</td><td>true</td><td>true</td></tr>
 #</table>
+# If either cell has nodata (undefined) value, the result is undefined.
 #
-# @param[in] second A Geo::Raster, which cell values are used to calculate the 
-# logical conjunction.
-# @return Geo::Raster with results from using the AND operator.
-# @exception The rasters datatype is not integer.
+# @param[in] second A raster.
+# @return a new raster. In void context changes this raster.
+# @note Defined only for integer rasters.
 sub and {
     my $self = shift;
     my $second = shift;
@@ -1492,32 +1523,22 @@ sub and {
 
 ## @method Geo::Raster or(Geo::Raster second)
 #
-# @brief The operator returns the logical disjuction of this raster and
-# given grids cells values.
+# @brief Evaluate at each cell the logical or on this and the second
+# raster.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the comparison results is returned.
-# - The rasters must have the same amount of cells in both directions.
-# - The rasters datatypes must be integer.
-# - The resulting cell value will be 1 if both rasters don't have in the 
-# same cell 0, else the resulting value is 1.
-# - If the other or both raster cells have an <I>no data</I> value, then 
-# also the resulting cell will have that value.
-#
-# The (truth) table here shows all possible value combinations (not incl. no 
-# data):
+# The truth table of logical or:
 #<table>
-#<tr><th>Resulting value</th><th>Own value</th><th>Parameter value</th></tr>
-#<tr><td>1</td><td>not 0</td><td>not 0</td></tr>
-#<tr><td>0</td><td>0</td><td>0</td></tr>
-#<tr><td>1</td><td>0</td><td>not 0</td></tr>
-#<tr><td>1</td><td>not 0</td><td>0</td></tr>
+#<tr><th>this</th><th>second</th><th>result</th></tr>
+#<tr><td>false</td><td>false</td><td>false</td></tr>
+#<tr><td>false</td><td>true</td><td>true</td></tr>
+#<tr><td>true</td><td>false</td><td>true</td></tr>
+#<tr><td>true</td><td>true</td><td>true</td></tr>
 #</table>
+# If either cell has nodata (undefined) value, the result is undefined.
 #
-# @param[in] second A Geo::Raster, which cell values are used to calculate the 
-# logical disjunction.
-# @return Geo::Raster with results from using the OR operator.
-# @exception The rasters datatype is not integer.
+# @param[in] second A raster.
+# @return a new raster. In void context changes this raster.
+# @note Defined only for integer rasters.
 sub or {
     my $self = shift;
     my $second = shift;
@@ -1528,12 +1549,8 @@ sub or {
 
 ## @method Geo::Raster nor($second)
 #
-# @brief Computes the logical nor of the cell values of this raster
-# with those of another raster.
-#
-# - The rasters datatypes must be integer.
-# - The resulting cell value will be 1 if both rasters have in the same 
-# cell 0, else the resulting value is 1.
+# @brief Evaluates at each cell the logical nor on this and the second
+# raster.
 #
 # The truth table of logical nor:
 #<table>
@@ -1547,8 +1564,8 @@ sub or {
 #
 # @param[in] second A raster, whose cell values are used to calculate
 # the logical inverse of disjunction.
-# @return Geo::Raster with results from using the NOR operator.
-# @exception The rasters datatype is not integer.
+# @return a new raster. In void context changes this raster.
+# @note Defined only for integer rasters.
 sub nor {
     my $self = shift;
     my $second = shift;
