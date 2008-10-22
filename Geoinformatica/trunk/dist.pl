@@ -6,7 +6,7 @@ use File::Spec;
 
 my $DIST = getcwd() . "/Geoinformatica";
 my $PERL = "c:/Geoinformatica"; # Perl with needed modules
-my $GTK_RT = "c:/GTK-rt"; # GTK runtime
+my $GTK_RUNTIME = "c:/GTK-runtime"; # GTK runtime
 my $GTK = "c:/GTK";
 my $MINGW = "c:/MinGW";
 my $EXPAT = "c:/Program Files/Expat 2.0.1";
@@ -43,12 +43,12 @@ copy("$PERL/lib", "$DIST/lib");
 copy("$PERL/share", "$DIST/share");
 copy("$PERL/site", "$DIST/site");
 
-copy($GTK_RT, $DIST);
-delete $copy{"$GTK_RT/uninst.exe"};
+copy($GTK_RUNTIME, $DIST);
+delete $copy{"$GTK_RUNTIME/uninst.exe"};
 delete $to{"$DIST/uninst.exe"};
-delete $copy{"$GTK_RT/license.txt"};
+delete $copy{"$GTK_RUNTIME/license.txt"};
 delete $to{"$DIST/license.txt"};
-copy("$GTK_RT/license.txt", "$DIST/share/doc/GTK_RT/license.txt") if -f "$GTK_RT/license.txt";
+copy("$GTK_RUNTIME/license.txt", "$DIST/share/doc/GTK_RUNTIME/license.txt") if -f "$GTK_RUNTIME/license.txt";
 
 for (glob("'$GNUPLOT/bin/?gnuplot.*'")) {
     my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
