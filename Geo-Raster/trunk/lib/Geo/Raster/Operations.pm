@@ -110,8 +110,8 @@ sub _typeconversion {
 # $b = $a->plus(3.14159); 
 # @endcode
 #
-# @param[in] value An integer or a floating point number to add to
-# the cell values of this raster.
+# @param[in] value An integer or a floating point number to add to the
+# cell values of this raster.
 # @return the resulting raster.
 
 ## @method Geo::Raster plus(Geo::Raster second)
@@ -748,16 +748,10 @@ sub to_power_of {
 
 ## @method Geo::Raster atan2(Geo::Raster second)
 #
-# @brief Calculates the arc-tangent between each cell value of this
-# raster and those of the given raster.
+# @brief Calculates at each cell the arc-tangent of this and the
+# second raster.
 #
-# - With the arctangent we get the direction between the two cell values in
-# 2-dimemsional Euclidean space.
-# - The operation is performed in-place in void context
-# - The second rasters real world boundaries must be the same as this
-# rasters. The cell sizes and amounts in both directions must also be equal.
-#
-# @param[in] second Reference to an another Geo::Raster.
+# @param[in] second A raster.
 # @return a new raster. In void context changes this raster.
 sub atan2 {
     my($self, $second) = @_;
@@ -776,9 +770,9 @@ sub atan2 {
 
 ## @method Geo::Raster cos()
 #
-# @brief Calculates the cosine of the cell values of this raster.
+# @brief Calculates the cosine at each cell.
 #
-# @return A new Geo::Raster having the calculated cosine values.
+# @return a new raster. In void context changes this raster.
 # @note The resulting raster will always have as datatype real.
 sub cos {
     my $self = shift;
@@ -793,7 +787,7 @@ sub cos {
 
 ## @method Geo::Raster sin()
 #
-# @brief Calculates the sine of the cell values of this raster.
+# @brief Calculates the sine at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub sin {
@@ -809,8 +803,7 @@ sub sin {
 
 ## @method Geo::Raster exp()
 #
-# @brief Calculates the exponential function with Euler's number as
-# base of the cell values of this raster.
+# @brief Calculates the exponential function at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub exp {
@@ -826,7 +819,7 @@ sub exp {
 
 ## @method Geo::Raster abs()
 #
-# @brief Calculates the absolute value of the cell values of this raster.
+# @brief Calculates the absolute value at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub abs {
@@ -842,10 +835,7 @@ sub abs {
 
 ## @method Geo::Raster sqrt()
 #
-# @brief Calculates the square root of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the square root at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub sqrt {
@@ -861,14 +851,9 @@ sub sqrt {
 
 ## @method Geo::Raster round()
 #
-# @brief Rounds the cell values of this raster to the nearest integer value.
+# @brief Rounds the value at each cell.
 #
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
-# - If the raster has already a as datatype integer, the operation does 
-# nothing.
-#
-# @return a new raster. In void context changes this raster.
+# @return a new integer raster. In void context changes this raster.
 sub round {
     my $self = shift;
     if (ref($self)) {
@@ -890,10 +875,7 @@ sub round {
 
 ## @method Geo::Raster acos()
 #
-# @brief Calculates the arccosine of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the arc-cosine at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub acos {
@@ -909,10 +891,7 @@ sub acos {
 
 ## @method Geo::Raster atan()
 #
-# @brief Calculates the arctangent of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the arc-tangent at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub atan {
@@ -928,14 +907,10 @@ sub atan {
 
 ## @method Geo::Raster ceil()
 #
-# @brief Calculates the ceiling of the cell values of this raster.
+# @brief Calculates at each cell the smallest integer not less than
+# the value.
 #
-# Ceiling is the smallest integer value not less than the grids original value.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
-#
-# @return a new raster. In void context changes this raster.
+# @return a new integer raster. In void context changes this raster.
 sub ceil {
     my $self = shift;
     if (ref($self)) {
@@ -949,10 +924,7 @@ sub ceil {
 
 ## @method Geo::Raster cosh()
 #
-# @brief Calculates the hyperbolic cosine of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates at each cell the hyperbolic cosine of the value.
 #
 # @return a new raster. In void context changes this raster.
 sub cosh {
@@ -968,14 +940,10 @@ sub cosh {
 
 ## @method Geo::Raster floor()
 #
-# @brief Calculates the ceiling of the cell values of this raster.
+# @brief Calculates at each cell the largest integer less than or
+# equal to the value.
 #
-# Floor is the largest integer value not higher than the grids original value.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
-#
-# @return a new raster. In void context changes this raster.
+# @return a new integer raster. In void context changes this raster.
 sub floor {
     my $self = shift;
     if (ref($self)) {
@@ -989,10 +957,7 @@ sub floor {
 
 ## @method Geo::Raster log()
 #
-# @brief Calculates the logarithm of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the logarithm at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub log {
@@ -1008,10 +973,7 @@ sub log {
 
 ## @method Geo::Raster log10()
 #
-# @brief Calculates the base-10 logarithm of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the base-10 logarithm at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub log10 {
@@ -1027,10 +989,10 @@ sub log10 {
 
 ## @fn log_base($base, $value)
 #
-# @brief Calculates the logarithm with a desired base, for example 2 or 10.
-# @param base Desired logarithm base, for example 2 or 10.
+# @brief Calculates the logarithm with a desired base.
+# @param base Desired logarithm base.
 # @param value Value for which the logarithm is calculated.
-# @return The result of the logarithm function.
+# @return the result of the logarithm function.
 sub log_base {
     my ($base, $value) = @_;
     return CORE::log($value)/CORE::log($base);
@@ -1038,10 +1000,7 @@ sub log_base {
 
 ## @method Geo::Raster sinh()
 #
-# @brief Calculates the hyperbolic sine of the cell values of this raster.
-#
-# The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the hyperbolic sine at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub sinh {
@@ -1057,10 +1016,7 @@ sub sinh {
 
 ## @method Geo::Raster tan()
 #
-# @brief Calculates the tangent of the cell values of this raster.
-#
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the tangent at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub tan {
@@ -1076,10 +1032,7 @@ sub tan {
 
 ## @method Geo::Raster tanh()
 #
-# @brief Calculates the hyperbolic tangent of the cell values of this raster.
-#
-# - The operation is performed to this raster, if no resulting new raster 
-# grid is needed, else a new grid with the calculation results is returned.
+# @brief Calculates the hyperbolic tangent at each cell.
 #
 # @return a new raster. In void context changes this raster.
 sub tanh {
