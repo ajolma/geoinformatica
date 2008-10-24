@@ -95,6 +95,12 @@ void
 ral_grid_clear_mask(gd)
 	ral_grid *gd
 
+void
+ral_grid_flip_horizontal(ral_grid *gd)
+
+void
+ral_grid_flip_vertical(ral_grid *gd)
+
 ral_grid *
 ral_grid_get_mask(gd)
 	ral_grid *gd

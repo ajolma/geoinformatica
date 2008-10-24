@@ -323,6 +323,19 @@ sub copy_bounding_box_to {
     ral_grid_copy_bounds($self->{GRID}, $to->{GRID});
 }
 
+
+## @ignore
+sub flip_horizontal {
+    my($self) = @_;
+    ral_grid_flip_horizontal($self->{GRID});
+}
+
+## @ignore
+sub flip_vertical {
+    my($self) = @_;
+    ral_grid_flip_vertical($self->{GRID});
+}
+
 ## @ignore
 *copy_world_to = *copy_bounding_box_to;
 
