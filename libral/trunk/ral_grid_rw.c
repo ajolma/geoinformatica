@@ -23,21 +23,29 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
     ral_grid *gd = NULL;
     double t[6] = {0,1,0,0,0,1};
     double aspect;
+    double original_cell_size;
+    double min_x, max_x, min_y, max_y;
   
     CPLPushErrorHandler(ral_cpl_error);
 
     GDALGetGeoTransform(dataset, t); /* using default is != CE_None */
-    t[5] = fabs(t[5]);
-    RAL_CHECKM(t[1] == t[5], ral_msg("cells are not squares: %f != %f",t[1],t[5]));
+    RAL_CHECKM(t[1] == fabs(t[5]), ral_msg("cells are not squares: %f != %f",t[1],fabs(t[5])));
+    original_cell_size = fabs(t[5]);
+
     RAL_CHECKM(t[2] == t[4] AND t[2] == 0, "the raster is not a strict north up image");
+
+    min_x = t[1] > 0 ? t[0] : t[0]+H*t[1];
+    max_x = t[1] > 0 ? t[0]+H*t[1] : t[0];
+    min_y = t[5] > 0 ? t[3] : t[3]+H*t[5];
+    max_y = t[5] > 0 ? t[3]+H*t[5] : t[3];
 
     W = GDALGetRasterXSize(dataset);
     H = GDALGetRasterYSize(dataset);
 
-    if (clip_region.min.x < t[0]) clip_region.min.x = t[0];
-    if (clip_region.min.y < t[3]-H*t[1]) clip_region.min.y = t[3]-H*t[1];
-    if (clip_region.max.x > t[0]+W*t[1]) clip_region.max.x = t[0]+W*t[1];
-    if (clip_region.max.y > t[3]) clip_region.max.y = t[3];
+    clip_region.min.x = MAX(clip_region.min.x, min_x);
+    clip_region.min.y = MAX(clip_region.min.y, min_y);
+    clip_region.max.x = MIN(clip_region.max.x, max_x);
+    clip_region.max.y = MIN(clip_region.max.y, max_y);
 
     RAL_CHECK((clip_region.min.x < clip_region.max.x) AND 
 	      (clip_region.min.y < clip_region.max.y));
@@ -85,25 +93,25 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
 	RAL_CHECKM(0, "complex data type not supported");
     }
  
-    j0 = floor((clip_region.min.x - t[0])/t[1]+0.0000000001);
-    i0 = floor((t[3] - clip_region.max.y)/t[1]+0.0000000001);
-    w = min(ceil((clip_region.max.x - t[0])/t[1]) - j0, W - j0);
-    h = min(ceil((t[3] - clip_region.min.y)/t[1]) - i0, H - i0);
+    j0 = floor((clip_region.min.x - min_x)/original_cell_size+0.0000000001);
+    i0 = floor((max_y - clip_region.max.y)/original_cell_size+0.0000000001);
+    w = MIN(ceil((clip_region.max.x - min_x)/original_cell_size) - j0, W - j0);
+    h = MIN(ceil((max_y - clip_region.min.y)/original_cell_size) - i0, H - i0);
 
     RAL_CHECK(w > 0 AND h > 0);
 
-    M = ceil((double)h*t[1]/cell_size);
+    M = ceil((double)h*original_cell_size/cell_size);
     aspect = (double)w/(double)h;
     N = aspect*M+0.5;
     if (H < M) M = H;
     if (W < N) N = W;
-    cell_size = (double)h*t[1]/M;
+    cell_size = (double)h*original_cell_size/M;
     
     /*RAL_CHECKM((long)M*N < 100*1024*1024,"too large grid >100MB");*/
 
     RAL_CHECK(gd = ral_grid_create(gd_datatype, M, N));
 
-    ral_grid_set_bounds_csnx(gd, cell_size, t[0] + t[1] * j0, t[3] - t[1] * i0);
+    ral_grid_set_bounds_csnx(gd, cell_size, min_x+(double)j0*original_cell_size, max_y-(double)i0*original_cell_size);
   
     err = GDALRasterIO(hBand, GF_Read, j0, i0, w, h, gd->data, N, M, datatype, 0, 0);
     RAL_CHECK(err == CE_None);
@@ -113,7 +121,9 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
 	if (success)
 	    RAL_CHECK(ral_grid_set_real_nodata_value(gd, nodata_value));
     }
-
+    if (t[1] < 0) ral_grid_flip_horizontal(gd);
+    if (t[5] > 0) ral_grid_flip_vertical(gd);
+    
     CPLPopErrorHandler();
     return gd;
 fail:

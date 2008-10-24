@@ -242,6 +242,8 @@ ral_grid_handle RAL_CALL ral_grid_get_mask(ral_grid *gd);
 void RAL_CALL ral_grid_set_mask(ral_grid *gd, ral_grid *mask);
 void RAL_CALL ral_grid_clear_mask(ral_grid *gd);
 
+void RAL_CALL ral_grid_flip_horizontal(ral_grid *gd);
+void RAL_CALL ral_grid_flip_vertical(ral_grid *gd);
 
 #define RAL_FOR(c, gd) \
     for((c).i=0;(c).i<(gd)->M;(c).i++) for((c).j=0;(c).j<(gd)->N;(c).j++) \

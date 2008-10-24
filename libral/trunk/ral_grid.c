@@ -314,6 +314,62 @@ void ral_grid_clear_mask(ral_grid *gd)
 }
 
 
+void RAL_CALL ral_grid_flip_horizontal(ral_grid *gd)
+{
+    if (gd->datatype == RAL_REAL_GRID) {
+	ral_cell c;
+	RAL_REAL x;
+	for (c.i = 0; c.i < gd->M; c.i++) 
+	    for (c.j = 0; c.j < gd->N/2; c.j++) {
+		ral_cell d = c;
+		d.j = gd->N - 1 - c.j;
+		x = RAL_REAL_GRID_CELL(gd, d);
+		RAL_REAL_GRID_CELL(gd, d) = RAL_REAL_GRID_CELL(gd, c);
+		RAL_REAL_GRID_CELL(gd, c) = x;
+	    } 
+    } else if (gd->datatype == RAL_INTEGER_GRID) {
+	ral_cell c;
+	RAL_INTEGER x;
+	for (c.i = 0; c.i < gd->M; c.i++) 
+	    for (c.j = 0; c.j < gd->N/2; c.j++) {
+		ral_cell d = c;
+		d.j = gd->N - 1 - c.j;
+		x = RAL_INTEGER_GRID_CELL(gd, d);
+		RAL_INTEGER_GRID_CELL(gd, d) = RAL_INTEGER_GRID_CELL(gd, c);
+		RAL_INTEGER_GRID_CELL(gd, c) = x;
+	    }
+    } 
+}
+
+
+void RAL_CALL ral_grid_flip_vertical(ral_grid *gd)
+{
+    if (gd->datatype == RAL_REAL_GRID) {
+	ral_cell c;
+	RAL_REAL x;
+	for (c.i = 0; c.i < gd->M/2; c.i++) 
+	    for (c.j = 0; c.j < gd->N; c.j++) {
+		ral_cell d = c;
+		d.i = gd->M - 1 - c.i;
+		x = RAL_REAL_GRID_CELL(gd, d);
+		RAL_REAL_GRID_CELL(gd, d) = RAL_REAL_GRID_CELL(gd, c);
+		RAL_REAL_GRID_CELL(gd, c) = x;
+	    } 
+    } else if (gd->datatype == RAL_INTEGER_GRID) {
+	ral_cell c;
+	RAL_INTEGER x;
+	for (c.i = 0; c.i < gd->M/2; c.i++) 
+	    for (c.j = 0; c.j < gd->N; c.j++) {
+		ral_cell d = c;
+		d.i = gd->M - 1 - c.i;
+		x = RAL_INTEGER_GRID_CELL(gd, d);
+		RAL_INTEGER_GRID_CELL(gd, d) = RAL_INTEGER_GRID_CELL(gd, c);
+		RAL_INTEGER_GRID_CELL(gd, c) = x;
+	    }
+    } 
+} 
+
+
 int ral_grid_coerce(ral_grid *gd, int data_type)
 {
     if (gd->datatype == RAL_REAL_GRID AND data_type == RAL_INTEGER_GRID) {
