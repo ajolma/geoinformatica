@@ -97,8 +97,10 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 	OGRFieldType color_field_type;
 	if (visual->color_field >= 0) {
 		RAL_CHECK(ral_get_field_type(defn, visual->color_field, &color_field_type));
-	} else /* FID */
+	} else if (visual->color_field == -1) /* FID */
 		color_field_type = OFTInteger;
+	else if (visual->color_field == -2) /* Z */
+		color_field_type = OFTReal;
 
 	switch (color_field_type) {
 	case OFTInteger:

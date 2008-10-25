@@ -670,7 +670,7 @@ sub open_features_dialog {
 	
     my $schema = $self->schema;
     
-    my @columns = ('FID', 'Geom. type');
+    my @columns = ('F id', 'Geom. type');
     my @coltypes = ('Glib::Int', 'Glib::String');
     my @ctypes = ('Integer', 'String');
     
@@ -803,24 +803,26 @@ sub add_features {
 	my @rec;
 	my $rec = 0;
 
-	push @rec, $rec++;
 	my $id = $f->GetFID;
 	next if exists $added->{$id};
-
 	$added->{$id} = 1;
-	push @rec, $id;
 
+	push @rec, $rec++;
+	push @rec, $id;
+	
 	push @rec, $rec++;
 	push @rec, $f->Geometry->GeometryType;
 
 	for my $name (@$fnames) {
-	    if ($f->IsFieldSet($name)) {
-		push @rec, $rec;
+	    if ($name eq 'Z value') {
+		push @rec, $rec++;
+		push @rec, $f->Geometry->GetZ;
+	    } elsif ($f->IsFieldSet($name)) {
+		push @rec, $rec++;
 		my $v = $f->GetField($name);
 		$v = decode($self->{encoding}, $v) if $self->{encoding};
 		push @rec, $v;
 	    }
-	    $rec++;
 	}
 
 	my $iter = $model->insert (undef, 999999);
@@ -1376,7 +1378,7 @@ sub vertices_activated {
 
 	next unless exists $GIDS->{$selected};
 
-	my @path = split /:/, $GIDS->{$selected};
+	my @path = split(/:/, $GIDS->{$selected});
 
 	my $f = $self->{OGR}->{Layer}->GetFeature($path[0]);
 	my $geom = $f->GetGeometryRef();

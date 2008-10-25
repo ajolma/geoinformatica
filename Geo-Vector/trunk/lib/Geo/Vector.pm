@@ -754,6 +754,7 @@ sub schema {
 	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} }
 		       keys %$schema ) {
 	    next if $name eq 'FID';
+	    next if $name eq 'Z value';
 	    my $d    = $schema->{$name};
 	    my $type = $d->{Type};
 	    $type = eval "\$Geo::OGR::OFT$d->{TypeName}" unless $type;
@@ -825,9 +826,14 @@ sub schema {
 	    }
 	};
 	croak "GetFieldCount failed: $@" if $@;
-	$schema->{FID}{Number}   = -1;
-	$schema->{FID}{Type}     = $Geo::OGR::OFTInteger;
-	$schema->{FID}{TypeName} = 'Integer';
+	$schema->{FID} = { Number   => -1,
+			   Type     => $Geo::OGR::OFTInteger,
+			   TypeName => 'Integer' };
+	if ($s and $s->GeometryType eq 'Point25D') {
+	    $schema->{'Z value'} = { Number   => -2,
+				     Type     => $Geo::OGR::OFTReal,
+				     TypeName => 'Real' };
+	}
 	return $schema;
     }
 }

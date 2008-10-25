@@ -193,13 +193,17 @@ ral_visual_feature_table_create(perl_layer, features)
 
 			int field = -1;
 			if (color_field_name) {
+			    if (strcmp(color_field_name, "Z value")) {
+				field = -2;
+			    } else {
 				field = OGR_FD_GetFieldIndex(fed, color_field_name);
 				if (field >= 0) {
-					OGRFieldDefnH fid = OGR_FD_GetFieldDefn(fed, field);
-					OGRFieldType fit = OGR_Fld_GetType(fid);
-					if (!(fit == OFTInteger OR fit == OFTReal))
-						field = -1;
+				    OGRFieldDefnH fid = OGR_FD_GetFieldDefn(fed, field);
+				    OGRFieldType fit = OGR_Fld_GetType(fid);
+				    if (!(fit == OFTInteger OR fit == OFTReal))
+					field = -1;
 				}
+			    }
 			}
 			RAL_STORE(perl_layer, "COLOR_FIELD_VALUE", field, newSViv);
 
