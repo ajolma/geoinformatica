@@ -215,7 +215,7 @@ typedef struct {
     int hue;
     ral_int_range hue_at;
     int hue_dir; /* 1 means rainbow is red->green->blue, -1 means red->blue->green */
-    int color_field;
+    int color_field; /* -2 is Z, -1 is FID, >=0 is the field of feature attribute */
     ral_color_table *color_table;
     ral_string_color_table *string_color_table;
     ral_int_color_bins *int_bins;
