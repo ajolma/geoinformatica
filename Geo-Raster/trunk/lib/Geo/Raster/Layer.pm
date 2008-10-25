@@ -221,7 +221,7 @@ sub save {
 sub type {
     my($self, $format) = @_;
     my $type = $self->data_type;
-    my $tooltip = ($format and $format eq 'long' or $format eq 'tooltip');
+    my $tooltip = ($format and ($format eq 'long' or $format eq 'tooltip'));
     if ($type) {
 	if ($tooltip) {
 	    $type = $type eq 'Integer' ? 'integer-valued raster' : 'real-valued raster';
@@ -740,7 +740,8 @@ sub cache_dim {
 
     my $M = int(($maxy - $miny)/$cellsize)+1;
     my $N = int(($maxx - $minx)/$cellsize)+1;
-    my $bytes = $self->datatype eq 'integer' ? 2 : 4; # should look this up from libral/GDAL
+    my $datatype = $self->datatype || '';
+    my $bytes =  $datatype eq 'Integer' ? 2 : 4; # should look this up from libral/GDAL
     my $size = $M*$N*$bytes;
     if ($size > 1024) {
 	$size = int($size/1024);
