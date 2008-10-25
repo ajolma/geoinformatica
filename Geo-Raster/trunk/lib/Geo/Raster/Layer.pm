@@ -406,7 +406,7 @@ sub open_gdal_properties_dialog {
     my @size = $self->size(of_GDAL=>1);
     $dialog->get_widget('gdal_size_label')->set_text("@size");
 
-    @size = $self->world(of_GDAL=>1);
+    @size = $self->bounding_box(of_GDAL=>1);
     $dialog->get_widget('gdal_min_x_label')->set_text($size[0]);
     $dialog->get_widget('gdal_min_y_label')->set_text($size[1]);
     $dialog->get_widget('gdal_max_x_label')->set_text($size[2]);
