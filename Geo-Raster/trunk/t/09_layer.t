@@ -4,7 +4,7 @@ eval {
 my $have_gnuplot = !$@;
 use Geo::Raster;
 use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 17;
+use Gtk2::TestHelper tests => 18;
 
 my($window, $gis) = setup(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Raster::Layer/]);
 ok(1);
@@ -47,6 +47,10 @@ ok(1);
 $layer->open_colors_dialog($gis);
 ok(1);
 $layer->open_labels_dialog($gis);
+ok(1);
+$a = Geo::Raster->new(10,10);
+$gis->add_layer($a, 'test2');
+$a->properties_dialog($gis);
 ok(1);
 $layer->properties_dialog($gis);
 ok(1);
