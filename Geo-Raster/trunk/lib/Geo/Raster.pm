@@ -262,8 +262,7 @@ sub _with_decimal_point {
 # if there is one.
 # @note At least three parameters are needed to define the bounding box.
 # @return (min_x, min_y, max_x, max_y) if possible
-# @note world is a deprecated alias of bounding_box
-sub bounding_box {
+sub world {
     my $self = shift;
     if (@_) {
 	my($cell_size,$minx,$miny,$maxx,$maxy);

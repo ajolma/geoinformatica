@@ -167,8 +167,7 @@ sub defaults {
     my($self, %params) = @_;
 
     if ($self->{GDAL}) {
-	my $band = $self->{GDAL}->{band};
-	$band = $self->{GDAL}->{dataset}->GetRasterBand($band);
+	my $band = $self->band();
 	my $color_table = $band->GetRasterColorTable;
 	my $color_interpretation = $band->GetRasterColorInterpretation;
 	if ($color_table) {
@@ -406,7 +405,7 @@ sub open_gdal_properties_dialog {
     my @size = $self->size(of_GDAL=>1);
     $dialog->get_widget('gdal_size_label')->set_text("@size");
 
-    @size = $self->bounding_box(of_GDAL=>1);
+    @size = $self->world(of_GDAL=>1);
     $dialog->get_widget('gdal_min_x_label')->set_text($size[0]);
     $dialog->get_widget('gdal_min_y_label')->set_text($size[1]);
     $dialog->get_widget('gdal_max_x_label')->set_text($size[2]);
@@ -438,7 +437,7 @@ sub apply_gdal_properties {
 	$self->alpha($alpha);
 	
 	my $nodata = get_number($dialog->get_widget('gdal_nodata_entry'));
-	my $band = $self->{GDAL}->{dataset}->GetRasterBand($self->{GDAL}->{band});
+	my $band = $self->band();
 	$band->SetNoDataValue($nodata) if $nodata ne '';
     };
     $gui->message("$@") if $@;
@@ -460,7 +459,7 @@ sub cancel_gdal_properties {
     eval {
 	$self->alpha($self->{backup}->{alpha});
 	$self->name($self->{backup}->{name});
-	my $band = $self->{GDAL}->{dataset}->GetRasterBand($self->{GDAL}->{band});
+	my $band = $self->band();
 	$band->SetNoDataValue($self->{backup}->{nodata}) if $self->{backup}->{nodata} and $self->{backup}->{nodata} ne '';
     };
     $gui->message("$@") if $@;
