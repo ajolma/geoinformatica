@@ -136,7 +136,8 @@ sub _interpret_datatype {
 # "integer". Default is integer.
 # - \a copy A raster to be copied into the new raster.
 # - \a like A raster to be used as a model for the new raster (no data is copied).
-# - \a filename A raster file. GDAL is used for opening the file.
+# - \a filename Name of a raster file. GDAL is used for opening the file.
+# - \a access Access mode for GDAL. Either 'ReadOnly' or 'Update'. Default is 'ReadOnly'.
 # - \a band integer (optional) Which band to read from the file. Default is 1.
 # - \a load boolean (optional) Whether to convert the GDAL raster
 # into a libral raster. Default is false.
@@ -259,7 +260,7 @@ sub _with_decimal_point {
 # - \a cell_size Length of the edges of the cells.
 # - \a of_GDAL Return the bounding box of the underlying GDAL raster
 # if there is one.
-# @note At least three parameters are needed to define the world.
+# @note At least three parameters are needed to define the bounding box.
 # @return (min_x, min_y, max_x, max_y) if possible
 # @note world is a deprecated alias of bounding_box
 sub bounding_box {
@@ -293,8 +294,15 @@ sub bounding_box {
 	} elsif (defined($maxx) and defined($miny) and defined($maxy)) {
 	    ral_grid_set_bounds_xnx($self->{GRID}, $maxx, $miny, $maxy);
 	} elsif ($self->{GDAL} and defined($o{of_GDAL})) {
-	    my $w = $self->{GDAL}->{world};
-	    return @$w;
+	    my $dataset = $self->{GDAL}->{dataset};
+	    my @t = $dataset->GeoTransform();
+	    my $h = $dataset->{RasterYSize};
+	    my $w = $dataset->{RasterXSize};
+	    my $min_x = $t[1] > 0 ? $t[0] : $t[0]+$w*$t[1];
+	    my $max_x = $t[1] > 0 ? $t[0]+$w*$t[1] : $t[0];
+	    my $min_y = $t[5] > 0 ? $t[3] : $t[3]+$h*$t[5];
+	    my $max_y = $t[5] > 0 ? $t[3]+$h*$t[5] : $t[3];
+	    return ($min_x, $min_y, $max_x, $max_y);
 	} elsif (!$self->{GRID}) {
 	    return ();
 	} else {
@@ -307,7 +315,7 @@ sub bounding_box {
 	my $w = ral_grid_get_world($self->{GRID});
 	return @$w;
     }
-    $self->_attributes;
+    #$self->_attributes;
 }
 
 ## @ignore
@@ -372,9 +380,9 @@ sub point_in {
 sub g2w {
     my($self, @cell) = @_;
     if ($self->{GDAL}) {
-	my $gdal = $self->{GDAL};
-	my $x = $gdal->{world}->[0] + ($cell[1]+0.5)*$gdal->{cell_size};
-	my $y = $gdal->{world}->[3] - ($cell[0]+0.5)*$gdal->{cell_size};
+	my @t = $self->{GDAL}->{dataset}->GeoTransform;
+	my $x = $t[0] + ($cell[1]+0.5)*$t[1];
+	my $y = $t[3] - ($cell[0]+0.5)*$t[5];
 	return ($x,$y);
     }
     my $point = ral_grid_cell2point( $self->{GRID}, @cell);
@@ -389,11 +397,11 @@ sub g2w {
 sub w2g {
     my($self, @point) = @_;
     if ($self->{GDAL}) {
-	my $gdal = $self->{GDAL};
-	$point[0] -= $gdal->{world}->[0];
-	$point[0] /= $gdal->{cell_size};
-	$point[1] = $gdal->{world}->[3] - $point[1];
-	$point[1] /= $gdal->{cell_size};
+	my @t = $self->{GDAL}->{dataset}->GeoTransform;
+	$point[0] -= $t[0];
+	$point[0] /= $t[1];
+	$point[1] -= $t[3];
+	$point[1] /= $t[5];
 	return (POSIX::floor($point[1]),POSIX::floor($point[0]));
     }
     my $cell = ral_grid_point2cell($self->{GRID}, @point);
@@ -712,9 +720,8 @@ sub value_range {
 	}
 	return @range;
     } elsif ($param{of_GDAL} and $self->{GDAL}) {
-	my $gdal = $self->{GDAL};
-	my $band = $gdal->{dataset}->GetRasterBand($gdal->{band});
-	return($band->GetMinimum, $band->GetMaximum);
+	my $band = $self->band;
+	return($band->GetMinimum, $band->GetMaximum) if $band;
     }
     return () unless $self->{GRID};
     my $range = ral_grid_get_value_range($self->{GRID});
@@ -796,7 +803,8 @@ sub size {
 sub cell_size {
     my($self, %o) = @_;
     if ($self->{GDAL} and $o{of_GDAL}) {
-	return $self->{GDAL}->{cell_size};
+	my @t = $self->{GDAL}->{dataset}->GeoTransform;
+	return CORE::abs($t[1]);
     } elsif (!$self->{GRID}) {
 	return undef;
     } else {
@@ -821,9 +829,8 @@ sub nodata_value {
 	}
     } else {
 	if ($self->{GDAL}) {
-	    my $gdal = $self->{GDAL};
-	    my $band = $gdal->{dataset}->GetRasterBand($gdal->{band});
-	    $nodata_value = $band->GetNoDataValue;
+	    my $band = $self->band();
+	    $nodata_value = $band->GetNoDataValue() if $band;
 	} else {
 	    $nodata_value = ral_grid_get_nodata_value($self->{GRID});
 	}
