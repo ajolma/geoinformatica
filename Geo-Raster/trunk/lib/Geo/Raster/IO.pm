@@ -6,26 +6,20 @@ package Geo::Raster;
 # internal
 sub gdal_open {
     my($self, %params) = @_;
-    my $dataset = Geo::GDAL::Open($params{filename});
+    $params{access} = 'ReadOnly' unless $params{access};
+    my $dataset = Geo::GDAL::Open($params{filename}, $params{access});
     croak "Geo::GDAL::Open failed for ".$params{filename} unless $dataset;
     my $t = $dataset->GetGeoTransform;
     unless ($t) {
 		@$t = (0,1,0,0,0,1);
     }
-    $t->[5] = CORE::abs($t->[5]);
-    croak "Cells are not squares: dx=$t->[1] != dy=$t->[5]" 
-	unless $t->[1] == $t->[5];
+    croak "Cells are not squares: dx=abs($t->[1]) != dy=abs($t->[5])" 
+	unless CORE::abs($t->[1]) == CORE::abs($t->[5]);
     croak "The raster is not a strict north up image."
 	unless $t->[2] == $t->[4] and $t->[2] == 0;
-    my @world = ($t->[0], $t->[3]-$dataset->{RasterYSize}*$t->[1],
-		 $t->[0]+$dataset->{RasterXSize}*$t->[1], $t->[3]);
     my $band = $params{band} || 1;
-
     $self->{GDAL}->{dataset} = $dataset;
-    $self->{GDAL}->{world} = [@world];
-    $self->{GDAL}->{cell_size} = $t->[1];
     $self->{GDAL}->{band} = $band;
-
     if ($params{load}) {
 	cache($self);
 	delete $self->{GDAL};
@@ -119,22 +113,24 @@ sub band {
 # @return Geo::Raster.
 sub cache {
     my $self = shift;
-
-    my $gdal = $self->{GDAL};
-
-    croak "no GDAL" unless $gdal;
-    
-    my $clip = $gdal->{world};
-    my $cell_size = $gdal->{cell_size};
-
+    croak "no GDAL" unless $self->{GDAL};
+    my $dataset = $self->{GDAL}->{dataset};
+    my $clip;
+    my $cell_size;
     if (defined $_[0]) {
 	if (@_ == 1) { # use the given grid as a model
-
-	    croak "usage: \$grid->cache(\$another_grid)" unless isa($_[0], 'Geo::Raster');
-
+	    croak "usage: \$raster->cache(\$another_raster)" unless isa($_[0], 'Geo::Raster');
 	    if ($_[0]->{GDAL}) {
-		$clip = $_[0]->{GDAL}->{world};
-		$cell_size = $_[0]->{GDAL}->{cell_size};
+		my $ds = $_[0]->{GDAL}->{dataset};
+		my $h = $ds->{RasterYSize};
+		my $w = $ds->{RasterXSize};
+		my $t = $ds->GetGeoTransform;
+		my $min_x = $t->[1] > 0 ? $t->[0] : $t->[0]+$w*$t->[1];
+		my $max_x = $t->[1] > 0 ? $t->[0]+$w*$t->[1] : $t->[0];
+		my $min_y = $t->[5] > 0 ? $t->[3] : $t->[3]+$h*$t->[5];
+		my $max_y = $t->[5] > 0 ? $t->[3]+$h*$t->[5] : $t->[3];
+		$clip = [$min_x, $min_y, $max_x, $max_y];
+		$cell_size = CORE::abs($t->[1]);
 	    } else {
 		$clip = ral_grid_get_world($_[0]->{GRID}); 
 		$cell_size = ral_grid_get_cell_size($_[0]->{GRID});
@@ -146,13 +142,24 @@ sub cache {
 		$clip->[3] = $clip->[1];
 		$clip->[1] = $tmp;
 	    }
+	    my $t = $dataset->GetGeoTransform;
+	    $cell_size = CORE::abs($t->[1]);
 	    $cell_size = $_[4] if defined($_[4]) and $_[4] > $cell_size;
 	}
+    } else {
+	my $h = $dataset->{RasterYSize};
+	my $w = $dataset->{RasterXSize};
+	my $t = $dataset->GetGeoTransform;
+	my $min_x = $t->[1] > 0 ? $t->[0] : $t->[0]+$w*$t->[1];
+	my $max_x = $t->[1] > 0 ? $t->[0]+$w*$t->[1] : $t->[0];
+	my $min_y = $t->[5] > 0 ? $t->[3] : $t->[3]+$h*$t->[5];
+	my $max_y = $t->[5] > 0 ? $t->[3]+$h*$t->[5] : $t->[3];
+	$clip = [$min_x, $min_y, $max_x, $max_y];
+	$cell_size = CORE::abs($t->[1]);
     }
 
-    my $gd = ral_grid_create_using_GDAL($gdal->{dataset}, $gdal->{band}, @$clip, $cell_size);
-
-    my $band = $gdal->{dataset}->GetRasterBand($gdal->{band});
+    my $gd = ral_grid_create_using_GDAL($dataset, $self->{GDAL}->{band}, @$clip, $cell_size);
+    my $band = $dataset->GetRasterBand($self->{GDAL}->{band});
     my $nodata_value = $band->GetNoDataValue;
     if (defined $nodata_value and $nodata_value ne '') {
 	ral_grid_set_nodata_value($gd, $nodata_value);
