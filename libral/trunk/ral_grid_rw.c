@@ -34,13 +34,13 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
 
     RAL_CHECKM(t[2] == t[4] AND t[2] == 0, "the raster is not a strict north up image");
 
-    min_x = t[1] > 0 ? t[0] : t[0]+H*t[1];
-    max_x = t[1] > 0 ? t[0]+H*t[1] : t[0];
-    min_y = t[5] > 0 ? t[3] : t[3]+H*t[5];
-    max_y = t[5] > 0 ? t[3]+H*t[5] : t[3];
-
     W = GDALGetRasterXSize(dataset);
     H = GDALGetRasterYSize(dataset);
+
+    min_x = t[1] > 0 ? t[0] : t[0]+W*t[1];
+    max_x = t[1] > 0 ? t[0]+W*t[1] : t[0];
+    min_y = t[5] > 0 ? t[3] : t[3]+H*t[5];
+    max_y = t[5] > 0 ? t[3]+H*t[5] : t[3];
 
     clip_region.min.x = MAX(clip_region.min.x, min_x);
     clip_region.min.y = MAX(clip_region.min.y, min_y);
@@ -112,6 +112,17 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
     RAL_CHECK(gd = ral_grid_create(gd_datatype, M, N));
 
     ral_grid_set_bounds_csnx(gd, cell_size, min_x+(double)j0*original_cell_size, max_y-(double)i0*original_cell_size);
+
+    if (t[1] < 0) {
+	if (j0 > 0 OR w < W) {
+	    j0 = W - (j0+w);
+	}
+    }
+    if (t[5] > 0) {
+	if (i0 > 0 OR h < H) {
+	    i0 = H - (i0+h);
+	}
+    }
   
     err = GDALRasterIO(hBand, GF_Read, j0, i0, w, h, gd->data, N, M, datatype, 0, 0);
     RAL_CHECK(err == CE_None);
