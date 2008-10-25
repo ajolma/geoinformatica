@@ -318,7 +318,7 @@ sub world {
 }
 
 ## @ignore
-*world = *bounding_box;
+*bounding_box = *world;
 
 ## @method copy_world_to(Geo::Raster to)
 #
