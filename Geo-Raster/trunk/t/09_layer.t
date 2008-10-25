@@ -1,10 +1,11 @@
+use strict;
+use Geo::Raster;
+use Gtk2::Ex::Geo;
+use Gtk2::TestHelper tests => 18;
 eval {
     require IPC::Gnuplot;
 };
 my $have_gnuplot = !$@;
-use Geo::Raster;
-use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 18;
 
 my($window, $gis) = setup(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Raster::Layer/]);
 ok(1);
@@ -63,6 +64,8 @@ ok(1);
 ok(1);
 #$gis->run_command('save_all'); # this is a modal dialog box
 ok(1);
+
+$gis->close();
 
 sub setup{
     my %params = @_;
