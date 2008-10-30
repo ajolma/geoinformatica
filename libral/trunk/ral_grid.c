@@ -275,7 +275,12 @@ int ral_grid_set_real_nodata_value(ral_grid *gd, RAL_REAL nodata_value)
     if (gd->datatype == RAL_INTEGER_GRID) {
 	if (gd->nodata_value == NULL)
 	    RAL_CHECKM(gd->nodata_value = RAL_MALLOC(RAL_INTEGER), RAL_ERRSTR_OOM);
-	RAL_CHECKM(ral_r2i(nodata_value, (RAL_INTEGER *)((gd)->nodata_value)), RAL_ERRSTR_IOB);
+	if (nodata_value <= RAL_INTEGER_MIN)
+	    *(RAL_INTEGER *)((gd)->nodata_value) = RAL_INTEGER_MIN;
+	else if (nodata_value >= RAL_INTEGER_MAX)
+	    *(RAL_INTEGER *)((gd)->nodata_value) = RAL_INTEGER_MAX;
+	else
+	    *(RAL_INTEGER *)((gd)->nodata_value) = round(nodata_value);
     } else {
 	if (gd->nodata_value == NULL)
 	    RAL_CHECKM(gd->nodata_value = RAL_MALLOC(RAL_REAL), RAL_ERRSTR_OOM);
