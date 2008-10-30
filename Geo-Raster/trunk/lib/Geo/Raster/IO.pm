@@ -159,11 +159,13 @@ sub cache {
     }
 
     my $gd = ral_grid_create_using_GDAL($dataset, $self->{GDAL}->{band}, @$clip, $cell_size);
-    my $band = $dataset->GetRasterBand($self->{GDAL}->{band});
-    my $nodata_value = $band->GetNoDataValue;
-    if (defined $nodata_value and $nodata_value ne '') {
-	ral_grid_set_nodata_value($gd, $nodata_value);
-    }
+    
+    #done in libral:
+    #my $band = $dataset->GetRasterBand($self->{GDAL}->{band});
+    #my $nodata_value = $band->GetNoDataValue;
+    #if (defined $nodata_value and $nodata_value ne '') {
+	#ral_grid_set_nodata_value($gd, $nodata_value);
+    #}
     
     return Geo::Raster->new($gd) if defined wantarray; # return strictly Geo::Rasters
 
