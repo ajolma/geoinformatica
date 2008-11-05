@@ -822,6 +822,9 @@ sub add_features {
 		my $v = $f->GetField($name);
 		$v = decode($self->{encoding}, $v) if $self->{encoding};
 		push @rec, $v;
+	    } else {
+		push @rec, $rec++;
+		push @rec, undef;
 	    }
 	}
 
