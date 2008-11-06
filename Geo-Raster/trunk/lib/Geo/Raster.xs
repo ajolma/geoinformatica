@@ -103,12 +103,12 @@ pdl2grid(SV *datasv, int datatype, ral_grid *gd)
 		if (gd->datatype == RAL_INTEGER_GRID) {
 		for (i = 0; i < gd->M; i++) for (j = 0; j < gd->N; j++) {
 		    int ii = j+gd->N*i;
-		    int pi = gd->N-j+gd->N*(gd->M-i);
+		    int pi = j+gd->N*(gd->M-i-1);
 		    ((RAL_INTEGER*)(gd->data))[ii] = int_from_pdl(x, datatype, pi);
 		}} else {
 		for (i = 0; i < gd->M; i++) for (j = 0; j < gd->N; j++) {
 		    int ii = j+gd->N*i;
-		    int pi = gd->N-j+gd->N*(gd->M-i);
+		    int pi = j+gd->N*(gd->M-i-1);
 		    ((RAL_REAL*)(gd->data))[ii] = real_from_pdl(x, datatype, pi);
 		}}
 
