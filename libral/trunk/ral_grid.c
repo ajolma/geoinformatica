@@ -110,9 +110,9 @@ ral_grid *ral_grid_create(int datatype, int M, int N)
     gd->N = N;
     gd->cell_size = 1;
     gd->world.min.x = 0;
-    gd->world.max.x = M;
+    gd->world.max.x = N;
     gd->world.min.y = 0;
-    gd->world.max.y = N;
+    gd->world.max.y = M;
     gd->nodata_value = NULL;
     gd->mask = NULL;
     if (gd->datatype == RAL_INTEGER_GRID)
