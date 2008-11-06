@@ -5,6 +5,12 @@ BEGIN {
     use_ok( 'Geo::Raster' );
 }
 
+#use PDL::NetCDF;
+
+#my $ncobj = PDL::NetCDF->new ('t2m.SMHI.HCA2.nc');
+#my $slice = $ncobj->get('t2m', [100, 0, 0, 0], [1, 1, 86, 90]);
+#my $a = Geo::Raster->new($slice);
+
 sub diff {
     my ($a1,$a2) = @_;
     #print "$a1 == $a2?\n";
