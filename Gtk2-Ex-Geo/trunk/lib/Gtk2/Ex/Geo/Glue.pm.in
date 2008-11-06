@@ -1068,17 +1068,16 @@ sub render {
 }
 
 sub simulate {
-    my($self, $sub, $speed) = @_;
+    my($self, $sub) = @_;
     $self->stop;
-    $speed = 300 unless defined $speed;
-    $self->{timeout} = Glib::Timeout->add($speed, $sub);
+    $self->{_event_source} = Glib::Idle->add($sub);
 }
 
 sub stop {
     my($self) = @_;
-    if ($self->{timeout}) {
-	Glib::Source->remove($self->{timeout});
-	$self->{timeout} = undef;
+    if ($self->{_event_source}) {
+	Glib::Source->remove($self->{_event_source});
+	delete $self->{_event_source};
     }
 }
 
