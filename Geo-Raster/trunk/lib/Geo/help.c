@@ -1,3 +1,91 @@
+enum pdl_datatypes { PDL_B, PDL_S, PDL_US, PDL_L, PDL_LL, PDL_F, PDL_D };
+
+RAL_INTEGER int_from_pdl(void *x, int datatype, int i) {
+    switch (datatype) {
+    case PDL_L:
+    {	
+	int *xx = (int *) x;
+	return (RAL_INTEGER)xx[i];
+    }break;
+    case PDL_F:
+    {   	
+	float *xx = (float *) x;
+	return (RAL_INTEGER)xx[i];	
+    }break;    
+    case PDL_S:
+    {   	
+	short *xx = (short *) x;
+	return (RAL_INTEGER)xx[i];	
+    }break;    
+    case PDL_US:
+    {   	
+	unsigned short *xx = (unsigned short *) x;
+	return (RAL_INTEGER)xx[i];	
+    }break;
+    case PDL_D:
+    {   	
+	double *xx = (double *) x;
+	return (RAL_INTEGER)xx[i];	
+    }break;
+    case PDL_B:
+    {   	
+	unsigned char *xx = (unsigned char *) x;
+	return (RAL_INTEGER)xx[i];	
+    }break;    
+    case PDL_LL:
+    {   	
+	long long *xx = (long long *) x;
+	return (RAL_INTEGER)xx[i];	
+    }break;    
+    default:
+	croak ("Not a known data type code=%d", datatype);
+    }
+}
+
+
+RAL_REAL real_from_pdl(void *x, int datatype, int i) {
+    switch (datatype) {
+    case PDL_L:
+    {	
+	int *xx = (int *) x;
+	return (RAL_REAL)xx[i];
+    }break;
+    case PDL_F:
+    {   	
+	float *xx = (float *) x;
+	return (RAL_REAL)xx[i];	
+    }break;    
+    case PDL_S:
+    {   	
+	short *xx = (short *) x;
+	return (RAL_REAL)xx[i];	
+    }break;    
+    case PDL_US:
+    {   	
+	unsigned short *xx = (unsigned short *) x;
+	return (RAL_REAL)xx[i];	
+    }break;
+    case PDL_D:
+    {   	
+	double *xx = (double *) x;
+	return (RAL_REAL)xx[i];	
+    }break;
+    case PDL_B:
+    {   	
+	unsigned char *xx = (unsigned char *) x;
+	return (RAL_REAL)xx[i];	
+    }break;    
+    case PDL_LL:
+    {   	
+	long long *xx = (long long *) x;
+	return (RAL_REAL)xx[i];	
+    }break;    
+    default:
+	croak ("Not a known data type code=%d", datatype);
+    }
+}
+ 
+
 IV SV2Handle(SV *sv)
 {
 	if (SvGMAGICAL(sv))

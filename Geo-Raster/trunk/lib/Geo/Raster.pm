@@ -75,6 +75,25 @@ sub dl_load_flags {0x01}
 XSLoader::load( 'Geo::Raster', $VERSION );
 
 ## @ignore
+sub from_piddle {
+    my($self, $pdl) = @_;
+    $pdl->make_physical;
+    my @dims = $pdl->dims;
+    croak "pdl is not a 2D raster" unless @dims == 2;
+    ral_grid_destroy($self->{GRID}) if $self->{GRID};
+    my $type = $pdl->get_datatype;
+    # should test against libral types
+    my $grid;
+    if ($type < 5) { # an integer type
+	$self->{GRID} = ral_grid_create($INTEGER_GRID, $dims[1], $dims[0]);
+    } else {
+	$self->{GRID} = ral_grid_create($REAL_GRID, $dims[1], $dims[0]);
+    }
+    my $data = $pdl->get_dataref;
+    pdl2grid($data, $type, $self->{GRID});
+}
+
+## @ignore
 sub _new_grid {
     my($self, $grid) = @_;
     return unless $grid;
@@ -167,6 +186,10 @@ sub new {
 	
 	$params{copy} = shift;
 	
+    } elsif (@_ == 1 and ref($_[0]) eq 'PDL') {
+	
+	$params{piddle} = shift;
+	
     } elsif (@_ == 1) {
 	
 	$params{filename} = shift;
@@ -206,7 +229,9 @@ sub new {
 	$self->{GRID} = ral_grid_create_copy($params{copy}->{GRID}, $params{datatype})
     } elsif ($params{use} and ref($params{use}) eq 'ral_gridPtr') {
 	$self->{GRID} = $params{use};
-    } elsif ($params{like}) {
+    } elsif (defined $params{piddle}) {
+	from_piddle($self, $params{piddle});
+    } elsif (defined $params{like}) {
 	$self->{GRID} = ral_grid_create_like($params{like}->{GRID}, $params{datatype});
     } elsif ($params{filename}) {
 	gdal_open($self, %params);

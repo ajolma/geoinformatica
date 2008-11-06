@@ -90,10 +90,27 @@ void
 ral_grid_set_mask(gd, mask)
 	ral_grid *gd
 	ral_grid *mask
-
+    
 void
 ral_grid_clear_mask(gd)
 	ral_grid *gd
+    
+void
+pdl2grid(SV *datasv, int datatype, ral_grid *gd)
+	CODE:
+		void *x = SvPV_nolen(SvRV(datasv));
+		int i,j;
+		if (gd->datatype == RAL_INTEGER_GRID) {
+		for (i = 0; i < gd->M; i++) for (j = 0; j < gd->N; j++) {
+		    int ii = j+gd->N*i;
+		    int pi = gd->N-j+gd->N*(gd->M-i);
+		    ((RAL_INTEGER*)(gd->data))[ii] = int_from_pdl(x, datatype, pi);
+		}} else {
+		for (i = 0; i < gd->M; i++) for (j = 0; j < gd->N; j++) {
+		    int ii = j+gd->N*i;
+		    int pi = gd->N-j+gd->N*(gd->M-i);
+		    ((RAL_REAL*)(gd->data))[ii] = real_from_pdl(x, datatype, pi);
+		}}
 
 void
 ral_grid_flip_horizontal(ral_grid *gd)
