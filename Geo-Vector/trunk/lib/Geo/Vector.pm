@@ -95,19 +95,6 @@ sub render_as_modes {
     return keys %RENDER_AS;
 }
 
-## @cmethod %drivers()
-#
-# @brief Returns a hash of supported OGR drivers.
-# @return a hash ( name => driver ) of supported OGR drivers
-sub drivers {
-    my %d;
-    for (0..Geo::OGR::GetDriverCount()-1) {
-	my $d = Geo::OGR::GetDriver($_);
-	$d{$d->{name}} = $d;
-    }
-    return %d;
-}
-
 ## @cmethod ref %layers($driver, $data_source)
 #
 # @brief Lists the layers that are available in a data source.
@@ -151,37 +138,60 @@ sub delete_layer {
 
 ## @cmethod Geo::Vector new($data_source)
 #
-# @brief Opens the given OGR data source and the first layer in it.
+# @brief Create a new Geo::Vector object for the first layer in a
+# given OGR data souce.
 #
-# To open a geospatial vector file:
+# An example of creating a Geo::Vector object for a ESRI shapefile:
 # @code
 # $v = Geo::Vector->new("borders.shp");
 # @endcode
 #
-# @param data_source An OGR datasource string
+# @param data_source An OGR data source string
 # @return A new Geo::Vector object
 
 ## @cmethod Geo::Vector new(%params)
 #
-# @brief Use named parameters to open or create a new Geo::Vector object.
+# @brief Create a new Geo::Vector object.
 #
-# @param params Named parameters: (see also the named parameters of
-# the Geo::Vector::layer method)
-# - <i>driver</i> => string (optional), used only if data source is not given (Default is 'Memory').
-# - <i>driver_options</i> (optional), forwarded to Geo::OGR::CreateDataSource.
-# - <i>data_source</i> => string, OGR data source (optional)
-# - <i>update</i> => true/false (optional, default is false for existing layers).
-# - <i>schema</i> => as in method schema (optional). May also be
-# 'free' to create a layer of non-homogenous schema.
-# - <i>encoding</i> => string, the encoding of the attribute values of the features
-# - <i>layer</i> => a name of or for the layer
-# - <i>layer_options</i> Forwarded to Geo::OGR::DataSource::CreateLayer
-# - <i>SQL</i> => string (optional) An SQL-string, forwarded to Geo::OGR::DataSource::ExecuteSQL
-# - <i>srs</i> => either a string which defines a spatial reference system 
-# (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object (optional). Default is 'EPSG:4326';
-# - <i>geometry_type</i> => string (optional), forwarded to Geo::OGR::DataSource::CreateLayer
-# - <i>geometries</i> => a reference to a list of geometries to be inserted into the layer 
-# - <i>features</i> => a reference to a list of features to be inserted into the layer 
+# A Geo::Vector object is either a Geo::OGR::Layer or an array of
+# Geo::OGR::Feature objects. To create a new Geo::Vector of the first
+# type, you need to specify either a data source or a name or a schema
+# for the layer. The layer type object requires an OGR driver and data
+# source. The default driver is Memory. If no name or SQL is
+# specified, the first layer in the data source is opened. The feature
+# table type object does not have a unique schema. By default (no name
+# or schema for the layer is specified) this method creates an array
+# of Geo::OGR::Feature objects type of object.
+#
+# @param params Named parameters, all are optional: (see also the
+# named parameters of the Geo::Vector::layer method)
+
+# - \a driver => string, used only if data source is not given,
+# default is 'Memory' for layer type objects.
+# - \a driver_options forwarded to Geo::OGR::CreateDataSource.
+# - \a data_source => string, OGR data source string, required for
+# other layer type objects than in-memory vectors.
+# - \a update => true/false, data source option, default is false for
+# other than in-memory vectors. Required and must be true to create a
+# new layer.
+# - \a schema, as in method Geo::Vector::schema.
+# - \a encoding => string, the encoding of the attribute values of the
+# features.
+# - \a layer => string, a name of or for the layer. Required for new
+# layers except for in-memory ones.
+# - \a layer_options forwarded to Geo::OGR::DataSource::CreateLayer.
+# - \a SQL => string SQL-string, forwarded to
+# Geo::OGR::DataSource::ExecuteSQL, an alternative to \a layer.
+# - \a srs => either a string which defines a spatial reference system
+# (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object. Default
+# is 'EPSG:4326'.
+# - \a geometry_type => string (one of OGR simple feature geometry
+# types), forwarded to Geo::OGR::DataSource::CreateLayer.
+# - \a geometries => a reference to a list of geometries to be
+# inserted into the layer. Assumes a feature table type of an
+# object. Creates features without attributes for the geometries.
+# - \a features => a reference to a list of features to be inserted
+# into the layer. Assumes a feature table type of an object.
 # @return A new Geo::Vector object
 sub new {
     my $package = shift;
@@ -218,8 +228,15 @@ sub new {
     $params{data_source} = $params{filename} if $params{filename};
     $params{data_source} = $params{datasource} if $params{datasource};
     $params{SQL} = $params{sql} if $params{sql};
+    $params{layer} = $params{name} if $params{name};
     $params{layer} = $params{layer_name} if $params{layer_name};
     $params{layer_options} = [] unless $params{layer_options};
+    delete $params{schema} if $params{schema} and $params{schema} eq 'free';
+
+    #for (keys %params) {
+	#print STDERR "create with $_ => $params{$_}\n";
+    #}
+    #print STDERR "end create\n";
 
     my $self = {encoding => $params{encoding}};
     bless $self => (ref($package) or $package);
@@ -227,14 +244,18 @@ sub new {
     if ($params{data_source}) {
 	set_driver($self, $params{driver}, $params{data_source}, $params{update}, $params{driver_options});
     }
-    else {
+    elsif ($params{layer} or $params{schema}) {
 	set_driver($self, 'Memory', '', 1);
 	$params{layer} = 'x' unless $params{layer};
     }
-    $self->{data_source} = $params{data_source};
-
-    if ($params{schema} and $params{schema} eq 'free') {
+    else {
 	$self->{features} = [];
+	for my $g (@{$params{geometries}}) {
+	    $self->geometry($g);
+	}
+	for my $f (@{$params{features}}) {
+	    $self->feature($f);
+	}
 	return $self;
     }
 
@@ -267,7 +288,7 @@ sub new {
     # Create a new
     unless ($self->{OGR}->{Layer}) {
 
-	croak "No name given to the new layer" unless $params{layer};
+	croak "No name specified for the new layer." unless $params{layer};
 	    
 	my $srs;
 	if (ref($params{srs}) and isa($params{srs}, 'Geo::OSR::SpatialReference')) {
@@ -291,20 +312,13 @@ sub new {
 							 $params{layer_options},
 							 $params{layer_schema});
 	};
-	croak "CreateLayer failed (does the datasource have update on?): $@"
+	croak "CreateLayer failed (did you specify update=>1?): $@"
 	    unless $self->{OGR}->{Layer};
 	$self->{update}    = 1;
 	
     }
 
     schema($self, $params{schema}) if $params{schema};
-
-    for my $g (@{$params{geometries}}) {
-	$self->geometry($g);
-    }
-    for my $f (@{$params{features}}) {
-	$self->feature($f);
-    }
 
     return $self;
 }
@@ -332,6 +346,7 @@ sub set_driver {
 	croak "Can't open data source: $data_source: $@" unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     }
+    $self->{data_source} = $data_source;
 }
 
 ## @ignore
@@ -350,11 +365,13 @@ sub DESTROY {
 
 ## @method driver()
 #
-# @brief The driver of this layer.
-# @return The name of the OGR driver as a string. 
+# @brief The driver of the object.
+# @return The name of the OGR driver as a string. Returns 'Memory' if the
+# object is not an OGR layer.
 sub driver {
     my $self = shift;
     return $self->{OGR}->{Driver}->GetName if $self->{OGR} and $self->{OGR}->{Driver};
+    return 'Memory';
 }
 
 ## @method dump(%parameters)
@@ -389,27 +406,33 @@ sub dump {
     }
 }
 
+## @method init_iterate()
+#
+# @brief Reset reading features from the object iteratively.
 sub init_iterate {
     my $self = shift;
-    my $l = $self->{OGR}->{Layer};
-    if ($l) {
-	$l->ResetReading();
-	$self->{_cursor} = $l;
-	return $l;
+    if ($self->{features}) {
+	$self->{_cursor} = 0;
+    } 
+    else {
+	$self->{OGR}->{Layer}->ResetReading();
     }
-    $self->{_cursor} = 0;
-    return 0;
 }
 
-sub get_next {
-    my($self) = @_;
-    if ($self->{OGR}->{Layer}) {
-	return $self->{_cursor}->GetNextFeature()
+## @method next_feature()
+#
+# @brief Read a feature from the object iteratively.
+sub next_feature {
+    my $self = shift;
+    if ($self->{features}) {
+	return if $self->{_cursor} > $#{$self->{features}};
+	return $self->{features}->[$self->{_cursor}++];
     }
-    return if $self->{_cursor} > $#{$self->{features}};
-    return $self->{features}->[$self->{_cursor}++];
+    return $self->{OGR}->{Layer}->GetNextFeature()
 }
+*get_next = *next_feature;
 
+## @ignore
 sub dump_geom {
     my($geom, $fh, $supp) = @_;
     my $type = $geom->GeometryType;
@@ -443,7 +466,7 @@ sub copy {
     my $out = $new->{OGR}->{Layer};
     my $defn = $out->GetLayerDefn() if $out;
     $self->init_iterate;
-    while (my $feature = $self->get_next()) {
+    while (my $feature = $self->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
 	$defn = $feature->GetDefnRef unless $out;
 	my $f = Geo::OGR::Feature->new($defn);
@@ -468,12 +491,12 @@ sub copy {
 # areas to the original.
 # @param[in] params Named parameters: (see also the named
 # parameters of Geo::Vector::new).
-# - <i>distance</i> => float (default is 1.0). The width of the buffer.
-# - <i>quad_segs</i> => int (default is 30). The number of segments used to approximate a 90
+# - \a distance => float (default is 1.0). The width of the buffer.
+# - \a quad_segs => int (default is 30). The number of segments used to approximate a 90
 # degree (quadrant) of curvature.
-# - <i>copy_attributes</i> => true/false (default is false). 
-# - <i>driver</i> default is 'Memory'.
-# - <i>layer</i> default is 'buffer'.
+# - \a copy_attributes => true/false (default is false). 
+# - \a driver default is 'Memory'.
+# - \a layer default is 'buffer'.
 # @return The new Geo::Vector object.
 sub buffer {
     my $self = shift;
@@ -494,7 +517,7 @@ sub buffer {
     my $out = $new->{OGR}->{Layer};
     my $defn = $out->GetLayerDefn() if $out;
     $self->init_iterate;
-    while (my $feature = $self->get_next()) {
+    while (my $feature = $self->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
 	my $buf = $geom->Buffer($w, $q);
 	$defn = $feature->GetDefnRef unless $out;
@@ -531,13 +554,13 @@ sub within {
     my $out = $new->{OGR}->{Layer};
     my @c;
     $other->init_iterate;
-    while (my $feature = $other->get_next()) {
+    while (my $feature = $other->next_feature()) {
 	my $geom = $feature->GetGeometry();
 	push @c, $geom;
     }
     my $defn = $out->GetLayerDefn() if $out;
     $self->init_iterate;
-    while (my $feature = $self->get_next()) {
+    while (my $feature = $self->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
 	my $within = 0;
 	for (@c) {
@@ -590,7 +613,7 @@ sub add {
     }
     my $defn = $out->GetLayerDefn() if $out;
     $other->init_iterate;
-    while (my $feature = $other->get_next()) {
+    while (my $feature = $other->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
 	$defn = $feature->GetDefnRef unless $out;
 	my $f = Geo::OGR::Feature->new($defn);
@@ -1192,21 +1215,21 @@ sub add_feature {
 #
 # @brief Returns features satisfying the given requirement.
 # @param[in] params is a list named parameters
-# - <I>that_contain</I> => an Geo::OGR::Geometry. The returned
+# - \a that_contain => an Geo::OGR::Geometry. The returned
 # features are such that the geometry is within them. If the geometry
 # is a multigeometry, then the features that have at least one of the
 # geometries within.
-# - <I>that_are_within</I> => an Geo::OGR::Geometry. The returned
+# - \a that_are_within => an Geo::OGR::Geometry. The returned
 # features are those that are within the geometry. If the geometry is
 # a multigeometry, then the features are within at least one of the
 # geometries.
-# - <I>that_intersect</I> => Geo::OGR::Geometry object. The returned
+# - \a that_intersect => Geo::OGR::Geometry object. The returned
 # features are those that intersect with the geometry. If the geometry
 # is a multigeometry, then the features intersect with at least one of
 # the geometries.
-# - <I>with_id</I> => Reference to an array of feature indexes (fids).
-# - <I>from</I> => If defined, the number of features that are skipped + 1.
-# - <I>limit</I> => If defined, maximum number of features returned.
+# - \a with_id => Reference to an array of feature indexes (fids).
+# - \a from => If defined, the number of features that are skipped + 1.
+# - \a limit => If defined, maximum number of features returned.
 # @return A reference to an array of features.
 sub features {
     my ( $self, %params ) = @_;
@@ -1509,10 +1532,10 @@ sub world {
 # @brief Clip selected features from the layer into a new layer.
 #
 # @param[in] params is a list of named parameters:
-# - <I>layer_name</I> name for the new layer (default is "clip")
-# - <I>driver</I> driver (default is the driver of the layer)
-# - <I>data_source</I> data source (default is the data source of the layer)
-# - <I>selected_features</I> selected features (a ref to an array)
+# - \a layer_name name for the new layer (default is "clip")
+# - \a driver driver (default is the driver of the layer)
+# - \a data_source data source (default is the data source of the layer)
+# - \a selected_features selected features (a ref to an array)
 # The params are forwarded to the constructor of the new layer.
 # @return A Geo::Vector object.
 # @bug If self is a polygon shapefile, the result seems to be linestrings, but
@@ -1523,7 +1546,7 @@ sub clip {
     $params{layer_name} = 'clip' unless $params{layer_name};
     $params{data_source} = $params{datasource} if $params{datasource}; 
     $params{data_source} = $self->{data_source} unless $params{data_source};
-    $params{driver} = $self->{OGR}->{DataSource}->GetDriver unless $params{driver};
+    $params{driver} = $self->driver unless $params{driver};
 
     my $clip = new Geo::Vector(%params);
 
@@ -1617,19 +1640,19 @@ sub add_layer {
 # the feature to render.
 #
 # @param[in] params is a list of named parameters: 
-# - <i>like</i> (optional). A Geo::Raster object, from which the resulting
+# - \a like (optional). A Geo::Raster object, from which the resulting
 # Geo::Raster object's size and extent are copied.
-# - <i>M</i> (optional). Height of the resulting Geo::Raster object. Has to be
+# - \a M (optional). Height of the resulting Geo::Raster object. Has to be
 # given if hash like is not given. If like is given, then M will not be used.
-# - <i>N</i> (optional). Width of the resulting Geo::Raster object. Has to be
+# - \a N (optional). Width of the resulting Geo::Raster object. Has to be
 # given if hash like is not given. If like is given, then N will not be used.
-# - <i>world</i> (optional). The world (bounding box) of the resulting raster
+# - \a world (optional). The world (bounding box) of the resulting raster
 # layer. Useless to give if parameter like is given, because then it's world
 # will be used.
-# - <i>render_as</i> (optional). Rendering mode, which should be 'Native',
+# - \a render_as (optional). Rendering mode, which should be 'Native',
 # 'Points', 'Lines' or 'Polygons'.
-# - <i>feature</i> (optional). Number of the feature to render.
-# - <i>value_field</i> (optional). Value fields name.
+# - \a feature (optional). Number of the feature to render.
+# - \a value_field (optional). Value fields name.
 # @return A new Geo::Raster, which has the size and extent of the given as
 # @todo make this work for schema free layers
 # parameters and values
