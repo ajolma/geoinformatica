@@ -355,16 +355,6 @@ sub render {
 	my $labeling = $self->labeling;
 	if ($labeling->{field} ne 'No Labels') {
 
-	    my $field;
-	    if ($labeling->{field} eq 'FID') {
-		$field = -1;
-	    } else {
-		my $schema = $self->schema();
-		$schema = $schema->{$labeling->{field}};
-		croak "Geo::Vector::Vector::render: no such field: $labeling->{field}" unless $schema;
-		$field = $schema->{Number};
-	    }
-
 	    my @color = @{$labeling->{color}};
 	    $color[3] = int($self->{ALPHA}*$color[3]/255);
 	    for (@color) {
@@ -405,7 +395,7 @@ sub render {
 
 		my @pixel = $overlay->point2pixmap_pixel(@point);
 
-		my $str = $field < 0 ? $f->GetFID : $f->GetFieldAsString($field);
+		my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
 		next unless defined $str or $str eq '';
 		$str = decode($self->{encoding}, $str) if $self->{encoding};
 
@@ -668,23 +658,16 @@ sub open_features_dialog {
     }
     $dialog->get_widget('features_dialog')->set_title("Features of ".$self->name);
 	
-    my $schema = $self->schema;
-    
-    my @columns = ('F id', 'Geom. type');
-    my @coltypes = ('Glib::Int', 'Glib::String');
-    my @ctypes = ('Integer', 'String');
-    
-    # OGR field name to GTK type name # NOT USED, using string for all and custom sort
-    my %t2t = (Integer=>'Int', Real=>'Double');
-    
+    my @columns;
+    my @coltypes;
+    my @ctypes;
+    my $schema = $self->schema;    
     for my $name (sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema) {
-	next if $name eq 'FID';
 	my $n = $name;
 	$n =~ s/_/__/g;
-	my $type = $t2t{$schema->{$name}{TypeName}};
-	$type = 'String'; # unless $type;
+	$n =~ s/^\.//;
 	push @columns, $n;
-	push @coltypes, 'Glib::'.$type;
+	push @coltypes, 'Glib::String'; # use custom sort
 	push @ctypes, $schema->{$name}{TypeName};
     }
     
@@ -768,11 +751,7 @@ sub fill_ftv {
 
     $model->clear;
 
-    my @fnames;
-    for my $name (sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema) {
-	next if $name eq 'FID';
-	push @fnames, $name;
-    }
+    my @fnames = sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema;
 
     my $features = $self->selected_features;
 
@@ -807,19 +786,10 @@ sub add_features {
 	next if exists $added->{$id};
 	$added->{$id} = 1;
 
-	push @rec, $rec++;
-	push @rec, $id;
-	
-	push @rec, $rec++;
-	push @rec, $f->Geometry->GeometryType;
-
 	for my $name (@$fnames) {
-	    if ($name eq 'Z value') {
+	    if ($name =~ /^\./ or $f->IsFieldSet($name)) {
 		push @rec, $rec++;
-		push @rec, $f->Geometry->GetZ;
-	    } elsif ($f->IsFieldSet($name)) {
-		push @rec, $rec++;
-		my $v = $f->GetField($name);
+		my $v = Geo::Vector::feature_attribute($f, $name);
 		$v = decode($self->{encoding}, $v) if $self->{encoding};
 		push @rec, $v;
 	    } else {
@@ -1123,13 +1093,14 @@ sub feature_activated2 {
 
 	my @recs;
 	for my $name (sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema) {
-	    next if $name eq 'FID';
 	    my @rec;
 	    my $rec = 0;
 	    push @rec, $rec++;
-	    push @rec, $name;
+	    my $n = $name;
+	    $n =~ s/^\.//;
+	    push @rec, $n;
 	    push @rec, $rec++;
-	    push @rec, $f->GetField($name);
+	    push @rec, Geo::Vector::feature_attribute($f, $name);
 	    push @recs,\@rec;
 	}
 
@@ -2148,8 +2119,10 @@ sub show_schema {
     my $schema = $vector->schema();
     for my $name (sort {$b cmp $a} keys %$schema) {
 	my $iter = $schema_model->insert (undef, 0);
+	my $n = $name;
+	$n =~ s/^\.//;
 	$schema_model->set ($iter,
-			    0, $name,
+			    0, $n,
 			    1, $schema->{$name}{TypeName}
 			    );
     }

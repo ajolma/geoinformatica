@@ -174,7 +174,9 @@ sub delete_layer {
 # - \a update => true/false, data source option, default is false for
 # other than in-memory vectors. Required and must be true to create a
 # new layer.
-# - \a schema, as in method Geo::Vector::schema.
+# - \a schema, as in method Geo::Vector::schema. Note that the
+# geometry type is also specified within the schema using the pseudo
+# attribute ".GeometryType".
 # - \a encoding => string, the encoding of the attribute values of the
 # features.
 # - \a layer => string, a name of or for the layer. Required for new
@@ -185,8 +187,6 @@ sub delete_layer {
 # - \a srs => either a string which defines a spatial reference system
 # (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object. Default
 # is 'EPSG:4326'.
-# - \a geometry_type => string (one of OGR simple feature geometry
-# types), forwarded to Geo::OGR::DataSource::CreateLayer.
 # - \a geometries => a reference to a list of geometries to be
 # inserted into the layer. Assumes a feature table type of an
 # object. Creates features without attributes for the geometries.
@@ -205,7 +205,9 @@ sub new {
 	$params{layer} = $params{filename};
 	delete $params{filename};
     }
-    
+
+    $params{geometry_type} = $params{schema}{'.GeometryType'}{TypeName} if ref $params{schema};
+
     my %defaults = ( driver => '',
 		     driver_options => [],
 		     filename => '',
@@ -232,7 +234,7 @@ sub new {
     $params{layer} = $params{layer_name} if $params{layer_name};
     $params{layer_options} = [] unless $params{layer_options};
     delete $params{schema} if $params{schema} and $params{schema} eq 'free';
-
+    
     #for (keys %params) {
 	#print STDERR "create with $_ => $params{$_}\n";
     #}
@@ -303,14 +305,12 @@ sub new {
 		croak "SRS $params{srs} not yet supported";
 	    }
 	}
-	    
 	eval {
 	    $self->{OGR}->{Layer} =
 		$self->{OGR}->{DataSource}->CreateLayer( $params{layer}, 
 							 $srs, 
 							 $params{geometry_type},
-							 $params{layer_options},
-							 $params{layer_schema});
+							 $params{layer_options});
 	};
 	croak "CreateLayer failed (did you specify update=>1?): $@"
 	    unless $self->{OGR}->{Layer};
@@ -397,7 +397,7 @@ sub dump {
 	$s = $self->schema($i-1) unless $s;
 	$i++;
 	for my $name (sort { $s->{$a}{Number} <=> $s->{$b}{Number} } keys %$s) {
-	    next if $name eq 'FID';
+	    next if $name =~ /^\./;
 	    my $value = $feature->GetField($name);
 	    print $fh "$name: $value\n";
 	}
@@ -471,7 +471,7 @@ sub copy {
 	$defn = $feature->GetDefnRef unless $out;
 	my $f = Geo::OGR::Feature->new($defn);
 	for my $name (keys %{$params{schema}}) {
-	    next if $name eq 'FID';
+	    next if $name =~ /^\./;
 	    $f->SetField($name, $feature->GetField($name));
 	}
 	$f->SetGeometry($geom);
@@ -524,7 +524,7 @@ sub buffer {
 	my $f = Geo::OGR::Feature->new($defn);
 	if ($params{schema}) {
 	    for my $name (keys %{$params{schema}}) {
-		next if $name eq 'FID';
+		next if $name =~ /^\./;
 		$f->SetField($name, $feature->GetField($name));
 	    }
 	}
@@ -574,7 +574,7 @@ sub within {
 	my $f = Geo::OGR::Feature->new($defn);
 	if ($params{schema}) {
 	    for my $name (keys %{$params{schema}}) {
-		next if $name eq 'FID';
+		next if $name =~ /^\./;
 		$f->SetField($name, $feature->GetField($name));
 	    }
 	}
@@ -619,7 +619,7 @@ sub add {
 	my $f = Geo::OGR::Feature->new($defn);
 	if ($params{schema}) {
 	    for my $name (keys %{$params{schema}}) {
-		next if $name eq 'FID';
+		next if $name =~ /^\./;
 		$f->SetField($name, $feature->GetField($name));
 	    }
 	}
@@ -727,45 +727,55 @@ sub geometry_type {
     return $GEOMETRY_TYPE_INV{$t};
 }
 
-## @method hashref schema(hashref schema, Geo::OGR::Feature feature)
+## @method hashref schema(hashref schema)
 #
-# @brief For a layer object gets or sets the schema of the layer.
-# For a feature set object requires a named parameter that specifies the feature.
+# @brief Get or set the schema of the object.
 #
-# @param[in] schema is a hashref field_name=>(Number, Type, TypeName, Justify,
-# Width, Precision)=>value. So schema is a reference to a hash, whose keys are
-# field names and values are hashrefs. The keys of the second hash are Number
-# (o), Type (o), TypeName (i/o), and Justify, Width, and Precision (i/o, not
-# obligatory). Fields are only created if they don't already exist in the layer.
-# The returned schema contains a pseudofield FID (feature id).
-# @param[in] feature The feature whose schema is queried (required for feature
-# set layers)
-# @return For a layer object returns a reference to the schema of the layer.
-# For a feature object returns a reference to the specified features schema.
+# For a layer object there is only one schema. For a feature table
+# object the schema is a feature specific (see the calling syntax
+# below). The schema is a hash (actually a reference to an anonymous
+# hash). The keys are attribute names except for pseudo
+# attributes. The names of the pseudo attributes start with a dot
+# ".". Currently there are the following pseudo attributes:
+# ".GeometryType", ".FID", and ".Z". Z attribute is defined only for
+# point features. FID pseudo attribute is the feature id as used by
+# OGR.
+#
+# The value of the attribute entry in the schema is an anonymous hash
+# with keys such as Number, TypeName, Justify, Width, and Precision,
+# i.e. Geo::OGR::FieldDefn attributes etc. For the pseudo attribute
+# GeometryType the value is simply the name of the geometry type.
+#
+# @param[in] schema (optional) a reference to a hash specifying the schema.
+# @return the schema.
+
+## @method hashref schema($feature, hashref schema)
+#
+# @brief Get or set the schema of a feature in a feature table object.
+#
+# @param[in] feature the index of the feature, whose schema to get or set.
+# @param[in] schema (optional) a reference to a hash specifying the schema.
+# @return the schema.
 sub schema {
-    my $self   = shift;
-    my $schema = shift;
-    my $feature;
-    if ( ref($schema) ) {
-	$feature = shift;
-    }
-    else {
+    my($self, $schema, $feature) = @_;
+    if (ref($feature)) {
+	my $s = $schema;
+	$schema = $feature;
+	$feature = $s;
+    } 
+    elsif (defined $schema and not ref($schema)) {
 	$feature = $schema;
-	$schema  = undef;
+	$schema = undef;
     }
-    my $s;
-    if ( $self->{features} ) {
-	$s = $self->{features}->[$feature]->GetDefnRef() if defined $feature;
-    }
-    else {
-	$s = $self->{OGR}->{Layer}->GetLayerDefn();
-    }
+    my $defn = $self->{features} ?
+	(defined $feature ? $self->{features}->[$feature]->GetDefnRef() : undef) : 
+	$self->{OGR}->{Layer}->GetLayerDefn();
     if ($schema) {
-	croak "refusing to set the schema of all features in a feature table at once" unless $s;
+	croak "refusing to set the schema of all features in a feature table at once" unless $defn;
 	my %exists;
-	my $n = $s->GetFieldCount();
+	my $n = $defn->GetFieldCount();
 	for my $i ( 0 .. $n - 1 ) {
-	    my $fd   = $s->GetFieldDefn($i);
+	    my $fd   = $defn->GetFieldDefn($i);
 	    my $name = $fd->GetName;
 	    $exists{$name} = 1;
 	}
@@ -776,8 +786,7 @@ sub schema {
 	my $recreate = 0;
 	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} }
 		       keys %$schema ) {
-	    next if $name eq 'FID';
-	    next if $name eq 'Z value';
+	    next if $name =~ /^\./;
 	    my $d    = $schema->{$name};
 	    my $type = $d->{Type};
 	    $type = eval "\$Geo::OGR::OFT$d->{TypeName}" unless $type;
@@ -799,16 +808,14 @@ sub schema {
 	    }
 	}
 	if ( $self->{features} and $recreate ) {
-	    my $sg = $s->GetGeometryRef();
+	    my $sg = $defn->GetGeometryRef();
 	    my $dg = Geo::OGR::Geometry->new( $sg->GetGeometryType );
 	    $dg->ACQUIRE;
 	    copy_geometry_data( $sg, $dg );
 	    my $d = Geo::OGR::FeatureDefn->new();
-	    for my $name (
-			  sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} }
-			  keys %$schema ) {
-		my $fd =
-		    Geo::OGR::FieldDefn->new( $name, $schema->{$name}{Type} );
+	    for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} }
+			   keys %$schema ) {
+		my $fd = Geo::OGR::FieldDefn->new( $name, $schema->{$name}{Type} );
 		$fd->ACQUIRE;
 		$fd->SetJustify( $schema->{$name}{Justify} )
 		    if exists $schema->{$name}{Justify};
@@ -827,17 +834,17 @@ sub schema {
 	    my $f = Geo::OGR::Feature->new($d);
 	    $f->SetGeometry($dg);
 	    for my $name ( keys %$schema ) {
-		$f->SetField( $name, $s->GetField($name) ) if $exists{$name};
+		$f->SetField( $name, $defn->GetField($name) ) if $exists{$name};
 	    }
 	    $self->{features}->[$feature] = $f;
 	}
     } else {
-	return unless $s;
+	return unless $defn;
 	$schema = {};
 	eval {
-	    my $n = $s->GetFieldCount();
+	    my $n = $defn->GetFieldCount();
 	    for my $i ( 0 .. $n - 1 ) {
-		my $fd   = $s->GetFieldDefn($i);
+		my $fd   = $defn->GetFieldDefn($i);
 		my $name = $fd->GetName;
 		$schema->{$name}{Number}   = $i;
 		$schema->{$name}{Type}     = $fd->GetType;
@@ -849,15 +856,33 @@ sub schema {
 	    }
 	};
 	croak "GetFieldCount failed: $@" if $@;
-	$schema->{FID} = { Number   => -1,
-			   Type     => $Geo::OGR::OFTInteger,
-			   TypeName => 'Integer' };
-	if ($s and $s->GeometryType eq 'Point25D') {
-	    $schema->{'Z value'} = { Number   => -2,
-				     Type     => $Geo::OGR::OFTReal,
-				     TypeName => 'Real' };
+	$schema->{'.FID'} = { Number   => -1,
+			      Type     => $Geo::OGR::OFTInteger,
+			      TypeName => 'Integer' };
+	if ($defn->GeometryType eq 'Point25D') {
+	    $schema->{'.Z'} = { Number   => -2,
+				Type     => $Geo::OGR::OFTReal,
+				TypeName => 'Real' };
 	}
+	$schema->{'.GeometryType'} = {
+	    Number => -3,
+	    TypeName => $defn->GeometryType };
 	return $schema;
+    }
+}
+
+sub feature_attribute {
+    my($f, $a) = @_;
+    if ($a =~ /^\./) { # pseudo fields
+	if ($a eq '.FID') {
+	    return $f->GetFID;
+	} elsif ($a eq '.Z') {
+	    return $f->Geometry->GetZ;
+	} elsif ($a eq '.GeometryType') {
+	    return $f->Geometry->GeometryType;
+	}
+    } else {
+	return $f->GetField($a);
     }
 }
 
@@ -931,7 +956,7 @@ sub value_range {
 	or $schema->{TypeName}     eq 'Real';
     
     return ( 0, $self->{OGR}->{Layer}->GetFeatureCount - 1 )
-	if $field_name eq 'FID';
+	if $field_name eq '.FID';
     
     my $field = $schema->{Number};
     
@@ -950,7 +975,7 @@ sub value_range {
     while (1) {
 	my $f = $self->{OGR}->{Layer}->GetNextFeature();
 	last unless $f;
-	my $value = $f->GetFieldAsString($field);
+	my $value = $f->GetField($field);
 	$range[0] =
 	    defined $range[0]
 	    ? ( $range[0] < $value ? $range[0] : $value )
@@ -1069,10 +1094,10 @@ sub feature {
 	my $defn = $f->GetDefnRef;
 	$feature = {};
 	my $n = $defn->GetFieldCount();
-	for my $fid ( 0 .. $n - 1 ) {
-	    my $fd   = $defn->GetFieldDefn($fid);
+	for my $i ( 0 .. $n - 1 ) {
+	    my $fd   = $defn->GetFieldDefn($i);
 	    my $name = $fd->GetName;
-	    $feature->{$name} = $f->GetField($fid);
+	    $feature->{$name} = $f->GetField($i);
 	}
 	$feature->{geometry} = Geo::OGC::Geometry->new
 	    (Text => $f->GetGeometryRef->ExportToWkt);
@@ -1569,7 +1594,7 @@ sub clip {
 	$feature->SetGeometry($geometry); # makes a copy
 	
 	for my $i (0..$schema->GetFieldCount-1) {
-	    my $value = $f->GetFieldAsString($i);
+	    my $value = $f->GetField($i);
 	    $feature->SetField($i, $value) if defined $value;
 	}
 	
@@ -1618,10 +1643,10 @@ sub add_layer {
 	my $feature = new Geo::OGR::Feature($defn);
 	$feature->SetGeometry($geometry);    # makes a copy
 	
-	for my $fn ( keys %$schema ) {
-	    next if $fn eq 'FID';
-	    next unless $another_schema->{$fn};
-	    $feature->SetField( $fn, $f->GetFieldAsString($fn) );
+	for my $name ( keys %$schema ) {
+	    next if $name =~ /^\./;
+	    next unless $another_schema->{$name};
+	    $feature->SetField($name, $f->GetField($name));
 	}
 	$self->{OGR}->{Layer}->CreateFeature($feature);
     }
@@ -1762,7 +1787,7 @@ sub graph {
 	    $node{$last}++;
 	    
 	    # edges
-	    my $liikennevi = $feature->GetFieldAsString('LIIKENNEVI');
+	    my $liikennevi = $feature->GetField('LIIKENNEVI');
 	    if ( $liikennevi == 2 ) {
 		$edge{$first}{$last} = $cost;
 		$edge{$last}{$first} = $cost;

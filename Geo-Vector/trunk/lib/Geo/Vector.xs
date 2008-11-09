@@ -193,7 +193,7 @@ ral_visual_feature_table_create(perl_layer, features)
 
 			int field = -1;
 			if (color_field_name) {
-			    if (strcmp(color_field_name, "Z value")) {
+			    if (strcmp(color_field_name, ".Z")) {
 				field = -2;
 			    } else {
 				field = OGR_FD_GetFieldIndex(fed, color_field_name);
