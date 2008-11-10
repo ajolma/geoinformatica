@@ -662,7 +662,7 @@ sub open_features_dialog {
     my @coltypes;
     my @ctypes;
     my $schema = $self->schema;    
-    for my $name (sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema) {
+    for my $name (sort {$schema->{$a}{VisualOrder} <=> $schema->{$b}{VisualOrder}} keys %$schema) {
 	my $n = $name;
 	$n =~ s/_/__/g;
 	$n =~ s/^\.//;
@@ -735,6 +735,14 @@ sub close_features_dialog {
 
 
 ##@ignore
+sub in_field_order {
+    my $_a = $a;
+    my $_b = $b;
+    
+}
+
+
+##@ignore
 sub fill_ftv {
     my($self, $gui) = @{$_[1]};
 
@@ -751,7 +759,7 @@ sub fill_ftv {
 
     $model->clear;
 
-    my @fnames = sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema;
+    my @fnames = sort { $schema->{$a}{VisualOrder} <=> $schema->{$b}{VisualOrder} } keys %$schema;
 
     my $features = $self->selected_features;
 
@@ -1092,7 +1100,7 @@ sub feature_activated2 {
 	$model->clear;
 
 	my @recs;
-	for my $name (sort {$schema->{$a}{Number} <=> $schema->{$b}{Number}} keys %$schema) {
+	for my $name (sort {$schema->{$a}{VisualOrder} <=> $schema->{$b}{VisualOrder}} keys %$schema) {
 	    my @rec;
 	    my $rec = 0;
 	    push @rec, $rec++;

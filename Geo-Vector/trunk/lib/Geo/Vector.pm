@@ -780,12 +780,12 @@ sub schema {
 	    $exists{$name} = 1;
 	}
 	for my $name ( keys %$schema ) {
+	    next if $name =~ /^\./;
 	    $schema->{$name}{Number} = $n++
 		unless defined $schema->{$name}{Number};
 	}
 	my $recreate = 0;
-	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} }
-		       keys %$schema ) {
+	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
 	    next if $name =~ /^\./;
 	    my $d    = $schema->{$name};
 	    my $type = $d->{Type};
@@ -813,8 +813,8 @@ sub schema {
 	    $dg->ACQUIRE;
 	    copy_geometry_data( $sg, $dg );
 	    my $d = Geo::OGR::FeatureDefn->new();
-	    for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} }
-			   keys %$schema ) {
+	    for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
+		next if $name =~ /^\./;
 		my $fd = Geo::OGR::FieldDefn->new( $name, $schema->{$name}{Type} );
 		$fd->ACQUIRE;
 		$fd->SetJustify( $schema->{$name}{Justify} )
@@ -834,6 +834,7 @@ sub schema {
 	    my $f = Geo::OGR::Feature->new($d);
 	    $f->SetGeometry($dg);
 	    for my $name ( keys %$schema ) {
+		next if $name =~ /^\./;
 		$f->SetField( $name, $defn->GetField($name) ) if $exists{$name};
 	    }
 	    $self->{features}->[$feature] = $f;
@@ -867,6 +868,14 @@ sub schema {
 	$schema->{'.GeometryType'} = {
 	    Number => -3,
 	    TypeName => $defn->GeometryType };
+	
+        # sort order for visual interfaces, first FID and other pseudo attributes, the fields in order
+	for my $key (keys %$schema) {
+	    my $a = $schema->{$key}{Number};
+	    $a = -100-$a if $a < 0;
+	    $schema->{$key}{VisualOrder} = $a;
+	}
+
 	return $schema;
     }
 }
