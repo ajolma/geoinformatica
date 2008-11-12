@@ -1,7 +1,7 @@
 use File::Basename;
 use Geo::Vector;
 use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 13;
+use Gtk2::TestHelper tests => 12;
 
 my($window, $gis) = setup(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer/]);
 ok(1);
