@@ -1753,12 +1753,20 @@ sub open_open_vector_dialog {
     }
     $treeview->signal_connect(button_press_event => sub 
 			      {
+                                  if ($combo->get_active) {
+                                      $combo->set_active(0);
+                                      $oneself->{dialog}->get_widget('open_vector_layer_treeview')->get_model->clear;
+                                  }
 				  my($treeview, $event, $oneself) = @_;
 				  select_directory($oneself, $treeview) if $event->type =~ /^2button/;
 				  return 0;
 			      }, $oneself);
     $treeview->signal_connect(key_press_event => sub
 			      {
+                                  if ($combo->get_active) {
+                                      $combo->set_active(0);
+                                      $oneself->{dialog}->get_widget('open_vector_layer_treeview')->get_model->clear;
+                                  }
 				  my($treeview, $event, $oneself) = @_;
 				  select_directory($oneself, $treeview) if $event->keyval == $Gtk2::Gdk::Keysyms{Return};
 				  return 0;
@@ -1950,6 +1958,7 @@ sub fill_directory_treeview {
 	$b->signal_connect("clicked", 
 			   sub {
 			       my($button, $self) = @_;
+                               $self->{dialog}->get_widget('open_vector_datasource_combobox_entry')->set_active(0);
 			       my $n = $button->get_label;
 			       if ($n eq $self->{volume}) {
 				   $self->{path} = '';
