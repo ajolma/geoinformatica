@@ -104,9 +104,7 @@ sub layers {
     $driver = '' unless $driver;
     $data_source = '' unless $data_source;
     my $self = {};
-    eval {
-	set_driver($self, $driver, $data_source, 0);
-    };
+    set_driver($self, $driver, $data_source, 0);
     return unless $self->{OGR}->{DataSource};
     my %layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
@@ -339,12 +337,14 @@ sub set_driver {
 	    $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $options);
 	};
 	$self->{update} = 1;
-	croak "Can't create data source: $data_source: $@" unless $self->{OGR}->{DataSource};
+        $@ = "no reason given" unless $@;
+	croak "Can't create data source: $@" unless $self->{OGR}->{DataSource};
     } else {
 	eval {
 	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $update);
 	};
-	croak "Can't open data source: $data_source: $@" unless $self->{OGR}->{DataSource};
+        $@ = "no reason given" unless $@;
+	croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     }
     $self->{data_source} = $data_source;
@@ -1087,8 +1087,7 @@ sub feature {
     elsif ( ref($fid) ) {
 	$self->add_feature($fid);
     }
-    else {
-	
+    else {	
 	# retrieve
 	my $f;
 	if ( $self->{features} ) {
