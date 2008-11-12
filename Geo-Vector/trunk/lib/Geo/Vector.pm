@@ -183,7 +183,8 @@ sub delete_layer {
 # layers except for in-memory ones.
 # - \a layer_options forwarded to Geo::OGR::DataSource::CreateLayer.
 # - \a SQL => string SQL-string, forwarded to
-# Geo::OGR::DataSource::ExecuteSQL, an alternative to \a layer.
+# Geo::OGR::DataSource::ExecuteSQL, an alternative to \a layer. If \a
+# SQL is given, \a layer is not consulted.
 # - \a srs => either a string which defines a spatial reference system
 # (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object. Default
 # is 'EPSG:4326'.
@@ -263,12 +264,7 @@ sub new {
 
     if ($self->{OGR}->{DataSource}->GetLayerCount > 0) {
 	
-	if ($params{layer}) {
-	    
-	    $self->{OGR}->{Layer} =
-		$self->{OGR}->{DataSource}->GetLayerByName( $params{layer} );
-	    
-	} elsif ( $params{SQL} ) {
+	if ( $params{SQL} ) {
 	    
 	    $self->{SQL} = $params{SQL};
 	    eval {
@@ -277,6 +273,11 @@ sub new {
 	    };
 	    croak "ExecuteSQL failed: $@" unless $self->{OGR}->{Layer};
 
+	} elsif ($params{layer}) {
+	    
+	    $self->{OGR}->{Layer} =
+		$self->{OGR}->{DataSource}->GetLayerByName( $params{layer} );
+	    
 	} else {
 	
 	    # open the first layer
