@@ -381,30 +381,36 @@ sub render {
 	
 		my $geometry = $f->GetGeometryRef();
 
-		my ($size, @point) = label_placement($geometry, $overlay->{pixel_size});
+		my @placements = label_placement($geometry, $overlay->{pixel_size}, @$viewport, $f->GetFID);
 		
-		last unless (@point and defined($point[0]) and defined($point[1]));
+		for (@placements) {
 
-		next if ($labeling->{min_size} > 0 and $size < $labeling->{min_size});
+		    my ($size, @point) = @$_;
+		
+		    last unless (@point and defined($point[0]) and defined($point[1]));
 
-		next if 
-		    $point[0] < $viewport->[0] or 
-		    $point[0] > $viewport->[2] or
-		    $point[1] < $viewport->[1] or
-		    $point[1] > $viewport->[3];
+		    next if ($labeling->{min_size} > 0 and $size < $labeling->{min_size});
 
-		my @pixel = $overlay->point2pixmap_pixel(@point);
+		    next if 
+			$point[0] < $viewport->[0] or 
+			$point[0] > $viewport->[2] or
+			$point[1] < $viewport->[1] or
+			$point[1] > $viewport->[3];
+		    
+		    my @pixel = $overlay->point2pixmap_pixel(@point);
+		    
+		    my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
+		    next unless defined $str or $str eq '';
+		    $str = decode($self->{encoding}, $str) if $self->{encoding};
+		    
+		    my $layout = Gtk2::Pango::Cairo::create_layout($cr);
+		    $layout->set_font_description($font_desc);    
+		    $layout->set_text($str);
+		    my($width, $height) = $layout->get_pixel_size;
+		    $cr->move_to($pixel[0]+$wc*$width+$dw, $pixel[1]+$hc*$height);
+		    Gtk2::Pango::Cairo::show_layout($cr, $layout);
 
-		my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
-		next unless defined $str or $str eq '';
-		$str = decode($self->{encoding}, $str) if $self->{encoding};
-
-		my $layout = Gtk2::Pango::Cairo::create_layout($cr);
-		$layout->set_font_description($font_desc);    
-		$layout->set_text($str);
-		my($width, $height) = $layout->get_pixel_size;
-		$cr->move_to($pixel[0]+$wc*$width+$dw, $pixel[1]+$hc*$height);
-		Gtk2::Pango::Cairo::show_layout($cr, $layout);
+		}
 
 	    }
 	}
@@ -412,33 +418,84 @@ sub render {
 }
 
 ##@ignore
+sub piece_of_line_string {
+    my($geom, $i0, $minx, $miny, $maxx, $maxy) = @_;
+    my($x, $y);
+    while(1) {
+	$x = $geom->GetX($i0);
+	$y = $geom->GetY($i0);
+	last if $x >= $minx and $y >= $miny and $x <= $maxx and $y <= $maxy;
+	$i0++;
+	return if $i0 >= $geom->GetPointCount-1;
+    }
+    my $l = 0;
+    my $i1 = $i0+1;
+    my $x0 = $x;
+    my $y0 = $y;
+    while (1) {
+	$x = $geom->GetX($i1);
+	$y = $geom->GetY($i1);
+	$l += sqrt(($x0-$x)*($x0-$x)+($y0-$y)*($y0-$y));
+	last if $x < $minx or $y < $miny or $x > $maxx or $y > $maxy;
+	$i1++;
+	last if $i1 >= $geom->GetPointCount;
+	$x0 = $x;
+	$y0 = $y;
+    }
+    return ($i0, $i1, $l);
+}
+
+##@ignore
 sub label_placement {
-    my($geom, $scale) = @_;
+    my($geom, $scale, $minx, $miny, $maxx, $maxy, $fid) = @_;
     my $type = $geom->GetGeometryType & ~0x80000000;
     if ($type == $Geo::OGR::wkbPoint) {
-	return (0, $geom->GetX(0), $geom->GetY(0));
-    } elsif ($type == $Geo::OGR::wkbLineString) {
-	my $len = line_string_length($geom);
-	my $h = $len/2;
-	my $x0 = $geom->GetX(0);
-	my $y0 = $geom->GetY(0);
-	return ($x0, $y0) if $len == 0;
-	for (1..$geom->GetPointCount-1) {
-	    my $x1 = $geom->GetX($_);
-	    my $y1 = $geom->GetY($_);
-	    my $l = sqrt(($x1-$x0)*($x1-$x0)+($y1-$y0)*($y1-$y0));
-	    if ($h > $l) {
-		$h -= $l;
-	    } else {
-		return ($len/$scale, $x0+($x1-$x0)*$h/$l, $y0+($y1-$y0)*$h/$l);
+	return ([0, $geom->GetX(0), $geom->GetY(0)]);
+    } 
+    elsif ($type == $Geo::OGR::wkbLineString) {
+
+	my $i0 = 0;
+	my $i1;
+	my $len;
+	my @placements;
+	while (1) {
+	    ($i0, $i1, $len) = piece_of_line_string($geom, $i0, $minx, $miny, $maxx, $maxy);
+	    last unless defined $i0;
+	    # a label between i0 and i1
+
+	    my $h = $len/2;
+	    my $x0 = $geom->GetX($i0);
+	    my $y0 = $geom->GetY($i0);
+	    if ($len == 0) {
+		push @placements, [0, $x0, $y0];
+	    } 
+	    else {
+		for ($i0+1..$i1) {
+		    my $x1 = $geom->GetX($_);
+		    my $y1 = $geom->GetY($_);
+		    my $l = sqrt(($x1-$x0)*($x1-$x0)+($y1-$y0)*($y1-$y0));
+		    if ($h > $l) {
+			$h -= $l;
+		    } else {
+			push @placements, [$len/$scale, $x0+($x1-$x0)*$h/$l, $y0+($y1-$y0)*$h/$l];
+			last;
+		    }
+		    $x0 = $x1;
+		    $y0 = $y1;
+		}
 	    }
-	    $x0 = $x1;
-	    $y0 = $y1;
+
+	    last if $i1 >= $geom->GetPointCount;
+	    $i0 = $i1;
 	}
-    } elsif ($type == $Geo::OGR::wkbPolygon) {
+	return @placements;
+	
+    } 
+    elsif ($type == $Geo::OGR::wkbPolygon) {
 	my $c = $geom->Centroid;
-	return ($geom->GetArea/($scale*$scale), $c->GetX, $c->GetY);
-    } elsif ($type == $Geo::OGR::wkbMultiLineString or $type == $Geo::OGR::wkbMultiLineString25D) {
+	return ([$geom->GetArea/($scale*$scale), $c->GetX, $c->GetY]);
+    } 
+    elsif ($type == $Geo::OGR::wkbMultiLineString or $type == $Geo::OGR::wkbMultiLineString25D) {
 	my $len = 0;
 	my $longest = -1;
 	for my $i (0..$geom->GetGeometryCount()-1) {
@@ -449,7 +506,8 @@ sub label_placement {
 	    }
 	}
 	return label_placement($geom->GetGeometryRef($longest), $scale) if $longest >= 0;
-    } elsif ($type == $Geo::OGR::wkbMultiPolygon or $type == $Geo::OGR::wkbGeometryCollection) {
+    } 
+    elsif ($type == $Geo::OGR::wkbMultiPolygon or $type == $Geo::OGR::wkbGeometryCollection) {
 	my $size = 0;
 	my $largest = -1;
 	for my $i (0..$geom->GetGeometryCount()-1) {
@@ -1971,14 +2029,28 @@ sub fill_layer_treeview {
     return unless $data_source;
 
     $self->{_open_data_source} = $data_source;
-    my $layers = Geo::Vector::layers('', $data_source);
+    my $layers;
+    eval {
+        $layers = Geo::Vector::layers('', $data_source);
+    };
     my @layers = sort {$b cmp $a} keys %$layers;
-    for my $name (@layers) {
-	my $iter = $model->insert (undef, 0);
-	$model->set ($iter, 0, $name, 1, $layers->{$name});
+    if (@layers) {
+        for my $name (@layers) {
+            my $iter = $model->insert (undef, 0);
+            $model->set ($iter, 0, $name, 1, $layers->{$name});
+        }
+        $treeview->set_cursor(Gtk2::TreePath->new(0));
+    } 
+    else {
+        my $iter = $model->insert (undef, 0);
+        $model->set ($iter, 0, "no layers found", 1, "");
+        unless ($@ =~ /no reason given/) {
+            $@ =~ s/RuntimeError\s+//;
+            $@ =~ s/FATAL:\s+(\w)/uc($1)/e;
+            $@ =~ s/\s+at\s+\w+\.\w+\s+line\s+\d+\s+//;
+            $model->set ($model->append(undef), 0, $@, 1, "");
+        }
     }
-    $treeview->set_cursor(Gtk2::TreePath->new(0)) if @layers;
-
     on_layer_treeview_cursor_changed($treeview, $self);
     return @layers > 0;
 }
@@ -2028,7 +2100,7 @@ sub connect_data_source {
 	    $self->{gui}{resources}{datasources}{$data_source} = 1;
 	}
     } else {
-	$self->{gui}->message("No layers found in data source\n'$data_source'.");
+	#$self->{gui}->message("No layers found in data source\n'$data_source'.");
 	fill_directory_treeview($self);
     }
 }
