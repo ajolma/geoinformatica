@@ -956,6 +956,7 @@ sub zoom_to_selected_features {
     my $features = get_selected($treeview->get_selection);
     $features = $self->features(with_id=>[keys %$features]);
 
+    my @viewport = $gui->{overlay}->get_viewport;
     my @extent = ();
     
     for (@$features) {
@@ -971,7 +972,20 @@ sub zoom_to_selected_features {
 	
     }
 
-    $gui->{overlay}->zoom_to(@extent) if @extent;
+    if (@extent) {
+	
+	# a point?
+	if ($extent[2] - $extent[0] <= 0) {
+	    $extent[0] -= ($viewport[2] - $viewport[0])/10;
+	    $extent[2] += ($viewport[2] - $viewport[0])/10;
+	}
+	if ($extent[3] - $extent[1] <= 0) {
+	    $extent[1] -= ($viewport[3] - $viewport[1])/10;
+	    $extent[3] += ($viewport[3] - $viewport[1])/10;
+	}
+	
+	$gui->{overlay}->zoom_to(@extent);
+    }
 }
 
 ##@ignore
@@ -1455,7 +1469,7 @@ sub open_clip_dialog {
 
 	$dialog->get_widget('clip_cancel_button')->signal_connect(clicked => \&cancel_clip, [$self, $gui]);
 	$dialog->get_widget('clip_ok_button')->signal_connect(clicked => \&do_clip, [$self, $gui, 1]);
-	$entry->signal_connect(changed => \&clip_data_source_changed, [$self, $gui]);
+	#$entry->signal_connect(changed => \&clip_data_source_changed, [$self, $gui]);
 	
     } elsif (!$dialog->get_widget('vector_clip_dialog')->get('visible')) {
 	$dialog->get_widget('vector_clip_dialog')->move(@{$self->{clip_dialog_position}}) if $self->{clip_dialog_position};
@@ -1509,25 +1523,26 @@ sub do_clip {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{clip_dialog};
 
-    my %ret;
-    $ret{layer_name} = $dialog->get_widget('clip_name_entry')->get_text;
-    $ret{data_source} = $dialog->get_widget('clip_datasource_entry')->get_text;
-    $ret{selected_features} = $self->selected_features;
-
-    my $layers = Geo::Vector::layers('', $ret{data_source});
+    my %ret = (
+	create => $dialog->get_widget('clip_name_entry')->get_text,
+	data_source => $dialog->get_widget('clip_datasource_entry')->get_text,
+	selected_features => $self->selected_features,
+	driver => $dialog->get_widget('clip_driver_combobox')->get_active_text
+	);
     
-    if ($layers->{$ret{layer_name}}) {
+    my $layers;
+
+    eval {
+	$layers = Geo::Vector::layers($ret{driver}, $ret{data_source});
+    };
+    
+    if ($layers and $layers->{$ret{create}}) {
 	
 	$gui->message("Data source '$ret{data_source}' already contains a layer '$ret{layer_name}'.");
 	return;
 	
     } else {
-	
-	my $combo = $dialog->get_widget('clip_driver_combobox');
-	my $model = $combo->get_model;
-	my $iter = $model->get_iter_from_string($combo->get_active());
-	$ret{driver} = $model->get($iter);
-	
+
 	my $new_layer = $self->clip(%ret);
 	$gui->add_layer($new_layer, $ret{layer_name}, 1);
 	#$gui->set_layer($new_layer);
@@ -1662,11 +1677,8 @@ sub apply_rasterize {
     my($self, $gui, $close) = @{$_[1]};
     my $dialog = $self->{rasterize_dialog};
     
-    my %ret;
-    $ret{name} = $dialog->get_widget('rasterize_name_entry')->get_text();
-    
-    my $combo = $dialog->get_widget('rasterize_like_combobox');
-    my $model = $combo->get_model->get($combo->get_active_iter);
+    my %ret = (name => $dialog->get_widget('rasterize_name_entry')->get_text());
+    my $model = $dialog->get_widget('rasterize_like_combobox')->get_active_text;
     
     if ($model eq "Use current view") {
 	# need M (height), N (width), world
@@ -1682,8 +1694,7 @@ sub apply_rasterize {
     $ret{feature} = $dialog->get_widget('rasterize_fid_entry')->get_text;
     $ret{feature} = -1 unless $ret{feature} =~ /^\d+$/;
 
-    $combo = $dialog->get_widget('rasterize_value_field_combobox');
-    my $field = $combo->get_model->get($combo->get_active_iter);
+    my $field = $dialog->get_widget('rasterize_value_field_combobox')->get_active_text;
     
     if ($field ne 'Draw with value 1') {
 	$ret{value_field} = $field;
