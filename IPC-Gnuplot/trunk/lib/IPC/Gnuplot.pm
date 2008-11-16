@@ -104,11 +104,18 @@ sub get_plot_datasets {
 	    # elements of this are either well known objects, type, or first element of values
 	    while ($index <= $#$this) {
 		if (ref($this->[$index]) eq 'HASH') {
-		    my @data;
-		    for my $x (sort {$a<=>$b} keys %$this) {
-			push @data, [$x, $this->{$x}];
+		    my $hash = $this->[$index];
+		    if ($hash->{function}) {
+			push @datasets, ['function', $hash];
+		    } elsif ($hash->{xy}) {
+			push @datasets, ['data', $hash];
+		    } else {
+			my @data;
+			for my $x (sort {$a<=>$b} keys %$hash) {
+			    push @data, [$x, $hash->{$x}];
+			}
+			push @datasets, ['point_series', \@data];
 		    }
-		    push @datasets, ['point_series', \@data];
 		    $index++;
 		} elsif (ref($this->[$index])) {
 		    croak "expected a well known object or dataset type specifier at $index\n";
@@ -181,13 +188,11 @@ sub plot {
     my $fh = select(GNUPLOT); $| = 1;
     my $datafile = $params{datafile} || 'plot_data';
     if ($params{image_file}) {
+	$params{file} = $params{image_file} unless $params{file};
 	gnuplot("set terminal png");
 	gnuplot("set output \"$params{file}.png\"");
     }
-    $params{with} = 'lines' unless $params{with};
-    my $xrange = $params{xrange} ? $params{xrange} : '';
-    my $yrange = $params{yrange} ? $params{yrange} : '';
-    my $paramsther = $params{other} ? ', ' . $params{other} : '';
+    my $other = $params{other} ? ', ' . $params{other} : '';
 
     gnuplot("set xdata");
     gnuplot("set format x");
@@ -195,85 +200,140 @@ sub plot {
     # an array of [type, dataset]
     my $datasets = get_plot_datasets($this);
 
-    my($minx, $maxx, $miny, $maxy);
-    my $range = 0;
-    my @title;
+    my @range; # $minx, $maxx, $miny, $maxy
+    my $scale = $params{scale} ? $params{scale} : 0;
     my @what;
+    my @axes;
+    my @title;
     my @with;
-    my @index;
-    my @using;
     my $index = 0;
     my $plot_index = 0;
 
     for (@$datasets) {
 	my($type, $dataset) = @$_;
 	#print STDERR "type=$type, dataset=$dataset\n";
-	if (defined $params{title}) {
-	    my $t = ref($params{title}) ? $params{title}->[$index] : $params{title};
-	    $title[$index] = "title \"$t\"";
-	} else {
-	    if ($type =~ /^f/) {
-		$title[$index] = "title \"$dataset\"";
-	    } elsif ($type =~ /^d/) {
-		$title[$index] = "title $dataset";
-	    } else {
-		$title[$index] = "title \"$index\"";
+
+	if (ref($dataset) eq 'HASH' and 
+	    ($dataset->{function} or $dataset->{xy} or $dataset->{y} or $dataset->{ty})) 
+	{
+	    if ($scale) {
+		if ($dataset->{xy}) {
+		    @range = range_from_xy($dataset->{xy}, @range);
+		} elsif ($dataset->{y}) {
+		    @range = range_from_y($dataset->{y}, @range);
+		}
 	    }
+	    if ($dataset->{function}) {
+		$what[$index] = $dataset->{function};
+	    } else {
+		$self->output($datafile, $index ? (gnuplot_add=>1) : (0=>0));
+		$self->p($dataset->{xy}, column=>$dataset->{column});
+		$self->output;
+		$what[$index] = "\"$datafile\" index $plot_index";
+		$plot_index++;
+		$what[$index] .= $dataset->{using} ? "using \"$dataset->{using}\"" : ' using 1:2';
+	    }
+	    $axes[$index] = '';
+	    $title[$index] = '';
+	    $with[$index] = 'lines';
+	    $axes[$index] = "axes $dataset->{axes}" if $dataset->{axes};
+	    $title[$index] = "title \"$dataset->{title}\"" if $dataset->{title};
+	    $title[$index] = "notitle" if $dataset->{notitle};
+	    $with[$index] = "$dataset->{with}" if $dataset->{with};
+	    $index++;
+	    next;
+	}
+
+	if ($type =~ /^f/) {
+	    $title[$index] = "title \"$dataset\"";
+	} elsif ($type =~ /^d/) {
+	    $title[$index] = "title $dataset";
+	} else {
+	    $title[$index] = "notitle";
 	}
 	$with[$index] = ref($params{with}) ? $params{with}->[$index] : $params{with};
-	if (defined $params{using}) {
-	    my $u = ref($params{using}) ? $params{using}->[$index] : $params{using};
-	    $using[$index] = "using \"$u\"";
-	} else {
-	    $using[$index] = '';
-	}
 	if ($type =~ /^p/) {
-	    $using[$index] = 'using 1:2' unless $using[$index];
-	    for (@$dataset) {
-		$minx = $_->[0] if !defined($minx) or $_->[0] < $minx;
-		$maxx = $_->[0] if !defined($maxx) or $_->[0] > $maxx;
-		$miny = $_->[1] if !defined($miny) or $_->[1] < $miny;
-		$maxy = $_->[1] if !defined($maxy) or $_->[1] > $maxy;
-	    }
+	    @range = range_from_xy($dataset, @range);
+	    $with[$index] = 'impulses' unless $with[$index];
 	} elsif ($type =~ /^v/) {
-	    for (@$dataset) {
-		$miny = $_ if !defined($miny) or $_ < $miny;
-		$maxy = $_ if !defined($maxy) or $_ > $maxy;
-	    }
+	    @range = range_from_y($dataset, @range);
+	    $with[$index] = 'points' unless $with[$index];
 	}
 	if ($type =~ /^p/ or $type =~ /^v/) {
 	    $self->output($datafile, $index ? (gnuplot_add=>1) : (0=>0));
 	    $self->p($dataset, column=>$params{column});
 	    $self->output;
-	    $what[$index] = "\"$datafile\"";
-	    $index[$index] = "index $plot_index";
+	    $what[$index] = "\"$datafile\" index $plot_index";
 	    $plot_index++;
+	    $what[$index] .= ' using 1:2';
 	} else {
 	    $what[$index] = $dataset;
-	    $index[$index] = '';
-	}
-	if ($with[$index] eq 'impulses') {
-	    $range = 1;
 	}
 	$index++;
     }
 
-    if ($range) {
-	$xrange = "[$minx:$maxx]";
+    my($xrange, $yrange);
+    if ($scale) {
+	$xrange = defined $range[0] ? "[$range[0]:$range[1]]" : '[]';
+	$yrange = "[$range[2]:$range[3]]";
+    } else {
+	$xrange = $params{xrange} ? $params{xrange} : '[]';
+	$yrange = $params{yrange} ? $params{yrange} : '[]';
     }
 
-    my $plot = "plot $xrange$yrange $what[0] $index[0] $using[0] $title[0] with $with[0]";
+    my $plot = "plot $xrange $yrange $what[0] $title[0] with $with[0]";
     for $index (1..$#$datasets) {
-	$plot .= ", $what[$index] $index[$index] $using[$index] $title[$index] with $with[$index]";
+	$plot .= ", $what[$index] $title[$index] with $with[$index]";
     }
-    gnuplot($plot . $paramsther);
+    print STDERR "$plot\n";
+    gnuplot($plot . $other);
 
-    if ($params{file}) {
+    if ($params{image_file}) {
 	gnuplot("set terminal x11");
 	gnuplot("set output");
     }
 
     select($fh);
+}
+
+sub range_from_xy {
+    my $dataset = shift;
+    for (@$dataset) {
+	$_[0] = min($_->[0], $_[0]);
+	$_[1] = max($_->[0], $_[1]);
+	$_[2] = min($_->[1], $_[2]);
+	$_[3] = max($_->[1], $_[3]);
+    }
+    return @_;
+}
+
+sub range_from_y {
+    my $dataset = shift;
+    for (@$dataset) {
+	$_[2] = min($_, $_[2]);
+	$_[3] = max($_, $_[3]);
+    }
+    return @_;
+}
+
+sub min {
+    my $min = shift;
+    return unless defined $min;
+    for (@_) {
+	return $min unless defined $_;
+	$min = $_ if $_ < $min;
+    }
+    return $min;
+}
+
+sub max {
+    my $max = shift;
+    return unless defined $max;
+    for (@_) {
+	return $max unless defined $_;
+	$max = $_ if $_ > $max;
+    }
+    return $max;
 }
 
 ## @ignore
