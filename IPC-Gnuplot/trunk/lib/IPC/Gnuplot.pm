@@ -285,7 +285,7 @@ sub plot {
     for $index (1..$#$datasets) {
 	$plot .= ", $what[$index] $title[$index] with $with[$index]";
     }
-    print STDERR "$plot\n";
+    #print STDERR "$plot\n";
     gnuplot($plot . $other);
 
     if ($params{image_file}) {
