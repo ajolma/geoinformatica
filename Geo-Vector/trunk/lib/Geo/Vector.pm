@@ -103,8 +103,8 @@ sub layers {
     my($driver, $data_source) = @_;
     $driver = '' unless $driver;
     $data_source = '' unless $data_source;
-    my $self = {};
-    set_driver($self, $driver, $data_source, 0);
+    my $self = { update => 0 };
+    set_driver($self, $driver, $data_source);
     return unless $self->{OGR}->{DataSource};
     my %layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
@@ -125,8 +125,8 @@ sub layers {
 # @param[in] layer Name of the layer that should be deleted.
 sub delete_layer {
     my($driver, $data_source, $layer) = @_;
-    my $self = {};
-    set_driver($self, $driver, $data_source, 1);
+    my $self = { update => 1 };
+    set_driver($self, $driver, $data_source);
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
 	my $l = $self->{OGR}->{DataSource}->GetLayerByIndex($i);
 	$self->{OGR}->{DataSource}->DeleteLayer($i), last
@@ -178,7 +178,9 @@ sub delete_layer {
 # - \a encoding => string, the encoding of the attribute values of the
 # features.
 # - \a layer => string, a name of or for the layer. Required for new
-# layers except for in-memory ones.
+# layers except for in-memory ones. To explicitly require a new layer,
+# use \a create.
+# - \a create => string, a name for a new layer. Implies update => 1.
 # - \a layer_options forwarded to Geo::OGR::DataSource::CreateLayer.
 # - \a SQL => string SQL-string, forwarded to
 # Geo::OGR::DataSource::ExecuteSQL, an alternative to \a layer. If \a
@@ -232,6 +234,7 @@ sub new {
     $params{layer} = $params{name} if $params{name};
     $params{layer} = $params{layer_name} if $params{layer_name};
     $params{layer_options} = [] unless $params{layer_options};
+    $params{update} = 1 if $params{create};
     delete $params{schema} if $params{schema} and $params{schema} eq 'free';
     
     #for (keys %params) {
@@ -239,14 +242,17 @@ sub new {
     #}
     #print STDERR "end create\n";
 
-    my $self = {encoding => $params{encoding}};
+    my $self = { encoding => $params{encoding},
+		 update => $params{update},
+    };
     bless $self => (ref($package) or $package);
     
     if ($params{data_source}) {
-	set_driver($self, $params{driver}, $params{data_source}, $params{update}, $params{driver_options});
+	set_driver($self, $params{driver}, $params{data_source}, $params{driver_options});
     }
     elsif ($params{layer} or $params{schema}) {
-	set_driver($self, 'Memory', '', 1);
+	$self->{update} = 1;
+	set_driver($self, 'Memory', '');
 	$params{layer} = 'x' unless $params{layer};
     }
     else {
@@ -260,7 +266,7 @@ sub new {
 	return $self;
     }
 
-    if ($self->{OGR}->{DataSource}->GetLayerCount > 0) {
+    if (!$params{create} and $self->{OGR}->{DataSource}->GetLayerCount > 0) {
 	
 	if ( $params{SQL} ) {
 	    
@@ -272,7 +278,7 @@ sub new {
 	    croak "ExecuteSQL failed: $@" unless $self->{OGR}->{Layer};
 
 	} elsif ($params{layer}) {
-	    
+
 	    $self->{OGR}->{Layer} =
 		$self->{OGR}->{DataSource}->GetLayerByName( $params{layer} );
 	    
@@ -288,6 +294,8 @@ sub new {
 
     # Create a new
     unless ($self->{OGR}->{Layer}) {
+
+	$params{layer} = $params{create} if $params{create};
 
 	croak "No name specified for the new layer." unless $params{layer};
 	    
@@ -313,7 +321,6 @@ sub new {
 	};
 	croak "CreateLayer failed (did you specify update=>1?): $@"
 	    unless $self->{OGR}->{Layer};
-	$self->{update}    = 1;
 	
     }
 
@@ -324,7 +331,7 @@ sub new {
 
 ## @ignore
 sub set_driver {
-    my($self, $driver, $data_source, $update, $options) = @_;
+    my($self, $driver, $data_source, $options) = @_;
     $options = [] unless $options;
     if ($driver) {
 	if (isa($driver, 'Geo::OGR::Driver')) {
@@ -336,12 +343,11 @@ sub set_driver {
 	eval {
 	    $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $options);
 	};
-	$self->{update} = 1;
         $@ = "no reason given" unless $@;
 	croak "Can't create data source: $@" unless $self->{OGR}->{DataSource};
     } else {
 	eval {
-	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $update);
+	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $self->{update});
 	};
         $@ = "no reason given" unless $@;
 	croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
@@ -1577,7 +1583,7 @@ sub world {
 sub clip {
     my($self, %params) = @_;
 
-    $params{layer_name} = 'clip' unless $params{layer_name};
+    $params{create} = 'clip' unless $params{create};
     $params{data_source} = $params{datasource} if $params{datasource}; 
     $params{data_source} = $self->{data_source} unless $params{data_source};
     $params{driver} = $self->driver unless $params{driver};
@@ -1612,7 +1618,8 @@ sub clip {
     }
     
     $clip->{OGR}->{Layer}->SyncToDisk;
-
+    $params{layer} = $params{create};
+    delete $params{create};
     return Geo::Vector->new(%params);
 }
 
