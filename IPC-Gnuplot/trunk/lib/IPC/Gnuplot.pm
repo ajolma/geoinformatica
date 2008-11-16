@@ -258,7 +258,9 @@ sub plot {
 	} elsif ($type =~ /^v/) {
 	    @range = range_from_y($dataset, @range);
 	    $with[$index] = 'points' unless $with[$index];
-	}
+	} else {
+            $with[$index] = 'lines' unless $with[$index];
+        }
 	if ($type =~ /^p/ or $type =~ /^v/) {
 	    $self->output($datafile, $index ? (gnuplot_add=>1) : (0=>0));
 	    $self->p($dataset, column=>$params{column});
