@@ -165,6 +165,7 @@ sub exception_handler {
     if ($_[0] =~ /\@INC contains/) {
 	$_[0] =~ s/\(\@INC contains.*?\)//;
     }
+    $_[0] =~ s/\s+at [\/\w\.]gui\.pl line \d+//;
     my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent','info','close',$_[0]);
     $dialog->signal_connect(response => \&destroy_dialog);
     $dialog->show_all;
