@@ -339,7 +339,7 @@ sub render {
 	    Geo::Vector::ral_visual_layer_destroy($layer);
 	}
 	
-	if ( @{$self->{BORDER_COLOR}} ) {
+	if ( @{$self->{BORDER_COLOR}} and ($self->{RENDER_AS} eq 'Native' or $self->{RENDER_AS} eq 'Polygons')) {
 	    
 	    my @color = @{$self->{BORDER_COLOR}};
 	    push @color, 255;
@@ -466,7 +466,7 @@ sub label_placement {
 	    my $h = $len/2;
 	    my $x0 = $geom->GetX($i0);
 	    my $y0 = $geom->GetY($i0);
-	    if ($len == 0) {
+	    if ($len == 0 or $scale == 0) {
 		push @placements, [0, $x0, $y0];
 	    } 
 	    else {
@@ -477,7 +477,10 @@ sub label_placement {
 		    if ($h > $l) {
 			$h -= $l;
 		    } else {
-			push @placements, [$len/$scale, $x0+($x1-$x0)*$h/$l, $y0+($y1-$y0)*$h/$l];
+			$x0 += $l == 0 ? 0 : ($x1-$x0)*$h/$l;
+			$y0 += $l == 0 ? 0 : ($y1-$y0)*$h/$l;
+		       
+			push @placements, [$len/$scale, $x0, $y0];
 			last;
 		    }
 		    $x0 = $x1;
