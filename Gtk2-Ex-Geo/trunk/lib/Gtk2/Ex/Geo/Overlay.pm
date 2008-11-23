@@ -385,6 +385,23 @@ sub get_focus {
 }
 
 {
+    package Gtk2::Ex::Geo::PseudoOverlay;
+    sub round {
+	return int($_[0] + .5 * ($_[0] <=> 0));
+    }
+    sub new {
+	my($class, $minX, $maxY, $pixel_size) = @_;	
+	my $self = { minX => $minX,
+		     maxY => $maxY,
+		     pixel_size => $pixel_size
+	};
+	bless($self, $class); 
+    }
+    sub point2pixmap_pixel {
+	my($self, @p) = @_;
+	return (round(($p[0] - $self->{minX})/$self->{pixel_size} - 0.5),
+		round(($self->{maxY} - $p[1])/$self->{pixel_size} - 0.5));
+    }
     package Gtk2::Ex::Geo::Canvas;
     our @ISA = qw(Gtk2::Gdk::Pixbuf);
  
@@ -395,6 +412,8 @@ sub get_focus {
 	   $bg_r, $bg_g, $bg_b, $bg_a, $overlay) = @_;
 	
 	return unless defined $minX;
+
+	$overlay = Gtk2::Ex::Geo::PseudoOverlay->new($minX, $maxY, $pixel_size) unless $overlay;
 	
 	my @viewport = ($minX+$pixel_size*$w_offset, 0, 0, $maxY-$pixel_size*$h_offset);
 	$viewport[2] = $viewport[0]+$pixel_size*$width;
