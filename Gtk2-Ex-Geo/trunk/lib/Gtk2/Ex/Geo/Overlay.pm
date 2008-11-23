@@ -92,7 +92,7 @@ sub INIT_INSTANCE {
     $self->{step} = 8;
 
     $self->{offset} = [0, 0];
-    @{$self->{bg_color}} = (255, 255, 255);
+    @{$self->{bg_color}} = (255, 255, 255, 255);
 }
 
 ## @method
@@ -392,7 +392,7 @@ sub get_focus {
 	my($class, $layers, 
 	   $minX, $maxY, $pixel_size, $w_offset, $h_offset,
 	   $width, $height,
-	   $bg_r, $bg_g, $bg_b, $overlay) = @_;
+	   $bg_r, $bg_g, $bg_b, $bg_a, $overlay) = @_;
 	
 	return unless defined $minX;
 	
@@ -403,7 +403,7 @@ sub get_focus {
 	my $pb = &Gtk2::Ex::Geo::gtk2_ex_geo_pixbuf_create($width, $height,
 							   $viewport[0], $viewport[3],
 							   $pixel_size, 
-							   $bg_r, $bg_g, $bg_b);
+							   $bg_r, $bg_g, $bg_b, $bg_a);
 	
 	my $surface = &Gtk2::Ex::Geo::gtk2_ex_geo_pixbuf_get_cairo_surface($pb);
 	my $cr = Cairo::Context->create($surface);

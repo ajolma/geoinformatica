@@ -27,7 +27,7 @@ gtk2_ex_geo_pixbuf_destroy_notify (guchar * pixels,
 MODULE = Gtk2::Ex::Geo		PACKAGE = Gtk2::Ex::Geo
 
 gtk2_ex_geo_pixbuf *
-gtk2_ex_geo_pixbuf_create(int width, int height, double minX, double maxY, double pixel_size, int bgc1, int bgc2, int bgc3)
+gtk2_ex_geo_pixbuf_create(int width, int height, double minX, double maxY, double pixel_size, int bgc1, int bgc2, int bgc3, int bga)
 	CODE:
 		gtk2_ex_geo_pixbuf *pb = malloc(sizeof(gtk2_ex_geo_pixbuf));
 		if (pb) {
@@ -35,9 +35,9 @@ gtk2_ex_geo_pixbuf_create(int width, int height, double minX, double maxY, doubl
 			pb->destroy_fn = NULL;
 			pb->image = malloc(4*width*height);
 			pb->colorspace = GDK_COLORSPACE_RGB;
-			pb->has_alpha = FALSE;
+			pb->has_alpha = TRUE; /*FALSE;*/
 			pb->image_rowstride = 4 * width;
-			pb->rowstride = 3 * width;
+			pb->rowstride = 4 * width;
 			pb->bits_per_sample = 8;
 			pb->height = height;
 			pb->width = width;
@@ -48,7 +48,7 @@ gtk2_ex_geo_pixbuf_create(int width, int height, double minX, double maxY, doubl
 				int i,j;
 				for (i = 0; i < height; i++) for (j = 0; j < width; j++) {
 					int k = 4*i*width+4*j;
-					(pb->image)[k+3] = 255;
+					(pb->image)[k+3] = bga;
  					(pb->image)[k+2] = bgc1;
 					(pb->image)[k+1] = bgc2;
 					(pb->image)[k+0] = bgc3;
@@ -119,13 +119,15 @@ gtk2_ex_geo_pixbuf_get_pixbuf(gtk2_ex_geo_pixbuf *pb)
 				dst[0] = src[2];
 				dst[1] = src[1];
 				dst[2] = src[0];
+                                dst[3] = src[3];
 #else
 				dst[0] = src[1];
 				dst[1] = src[2];
 				dst[2] = src[3];
+                                dst[3] = src[0];
 #endif
 				src += 4;
-				dst += 3;
+				dst += 4;
 			}
 		}
 		RETVAL =

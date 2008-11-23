@@ -493,7 +493,7 @@ sub overlay_menu {
 		     $c = $d->colorsel->get_current_color;
 		     $d->destroy;
 		     $self->{bg_color} = 
-			 [int($c->red/257),int($c->green/257),int($c->blue/257)];
+			 [int($c->red/257),int($c->green/257),int($c->blue/257),255];
 		     $self->render;
 		 } else {
 		     $d->destroy};
