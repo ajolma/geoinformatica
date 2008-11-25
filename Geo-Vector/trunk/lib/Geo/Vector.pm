@@ -890,12 +890,13 @@ sub schema {
 sub feature_attribute {
     my($f, $a) = @_;
     if ($a =~ /^\./) { # pseudo fields
+        my $g = $f->Geometry;
 	if ($a eq '.FID') {
 	    return $f->GetFID;
 	} elsif ($a eq '.Z') {
-	    return $f->Geometry->GetZ;
+	    return $g->GetZ if $g;
 	} elsif ($a eq '.GeometryType') {
-	    return $f->Geometry->GeometryType;
+	    return $g->GeometryType if $g;
 	}
     } else {
 	return $f->GetField($a);
