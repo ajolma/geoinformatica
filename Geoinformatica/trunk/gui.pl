@@ -92,7 +92,7 @@ sub setup{
 	  history => "$home.rash_history", 
 	  resources => "$home.rashrc", 
 	  main_window => $window,
-	  'overlay:bg_color' => [200, 200, 200],
+	  'overlay:bg_color' => [200, 200, 200, 255],
 	  );
     
     for (@{$params{classes}}) {
