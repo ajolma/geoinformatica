@@ -464,7 +464,7 @@ sub render {
 
     my @tmp = ($self->{minX}, $self->{maxY}, $self->{pixel_size}, @{$self->{offset}});
     $self->{pixbuf} = Gtk2::Ex::Geo::Canvas->new
-	($self->{layers}, @tmp, @{$self->{viewport_size}}, @{$self->{bg_color}}, $self);
+	($self->{layers}, @tmp, @{$self->{viewport_size}}, @{$self->{bg_color}}[0..3], $self);
 
     return unless $self->{pixbuf};
 
