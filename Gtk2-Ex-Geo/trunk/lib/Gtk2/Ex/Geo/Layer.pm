@@ -199,10 +199,16 @@ sub defaults {
     $self->{LABEL_FONT} = 'sans 12' unless exists $self->{LABEL_FONT};
     $self->{LABEL_COLOR} = [0, 0, 0, 255] unless exists $self->{LABEL_COLOR};
     $self->{LABEL_MIN_SIZE} = 0 unless exists $self->{LABEL_MIN_SIZE};
+    $self->{INCREMENTAL_LABELS} = 0 unless exists $self->{INCREMENTAL_LABELS};
+    $self->{LABEL_VERT_NUDGE} = 0.3 unless exists $self->{LABEL_VERT_NUDGE};
+    $self->{LABEL_HORIZ_NUDGE_LEFT} = 6 unless exists $self->{LABEL_HORIZ_NUDGE_LEFT};
+    $self->{LABEL_HORIZ_NUDGE_RIGHT} = 10 unless exists $self->{LABEL_HORIZ_NUDGE_RIGHT};
 
     $self->{BORDER_COLOR} = [] unless exists $self->{BORDER_COLOR};
 
     $self->{SELECTED_FEATURES} = [];
+    
+    $self->{RENDERER} = 0; # the default, later 'Cairo' will be implemented fully
   
     # set from input
     
@@ -757,6 +763,7 @@ sub labeling {
 	$self->{LABEL_FONT} = $labeling->{font};
 	@{$self->{LABEL_COLOR}} =@{$labeling->{color}};
 	$self->{LABEL_MIN_SIZE} = $labeling->{min_size};
+        $self->{INCREMENTAL_LABELS} = $labeling->{incremental};
     } else {
 	$labeling = {};
 	$labeling->{field} = $self->{LABEL_FIELD};
@@ -764,6 +771,7 @@ sub labeling {
 	$labeling->{font} = $self->{LABEL_FONT};
 	@{$labeling->{color}} = @{$self->{LABEL_COLOR}};
 	$labeling->{min_size} = $self->{LABEL_MIN_SIZE};
+        $labeling->{incremental} = $self->{INCREMENTAL_LABELS};
     }
     return $labeling;
 }
@@ -1992,6 +2000,7 @@ sub open_labels_dialog {
     $dialog->get_widget('labels_font_label')->set_text($labeling->{font});
     $dialog->get_widget('labels_color_label')->set_text("@{$labeling->{color}}");
     $dialog->get_widget('labels_min_size_entry')->set_text($labeling->{min_size});
+    $dialog->get_widget('labels_incremental_checkbutton')->set_active($labeling->{incremental});
     
     $dialog->get_widget('labels_dialog')->show_all;
 }
@@ -2017,6 +2026,7 @@ sub apply_labels {
     $labeling->{font} = $dialog->get_widget('labels_font_label')->get_text;
     @{$labeling->{color}} = split(/ /, $dialog->get_widget('labels_color_label')->get_text);
     $labeling->{min_size} = $dialog->get_widget('labels_min_size_entry')->get_text;
+    $labeling->{incremental} = $dialog->get_widget('labels_incremental_checkbutton')->get_active();
 
     $self->labeling($labeling);
 
