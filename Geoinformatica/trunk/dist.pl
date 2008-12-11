@@ -100,7 +100,9 @@ $mday = "0$mday" if $mday < 10;
 my $devel = "devel"; # -$year-$mon-$mday";
 
 for (glob("$LOCAL/bin/*.exe")) {
+    next if /swig.exe/;
     my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+    next if $file =~ /^[A-Z]/;
     copy($_, "$DIST/bin/$file");
 }
 
@@ -210,7 +212,7 @@ sub simple_copy {
     my $x = "copy \"$from\" \"$to\"";
     print "$x\n";
     system $x;
-    if ($to=~/\.dll$/ and ($to=~/libgdal/ or $to=~/libgeos/)) {
+    if ($to=~/\.dll$/ and ($to=~/libgdal/ or $to=~/libgeos/ or $to=~/libxerces/)) {
 	system "strip --strip-debug $to";
     }
 }
