@@ -100,6 +100,7 @@ sub defaults {
     $self->SUPER::defaults(%params);
     $self->{RENDER_AS} = 'Native' unless exists $self->{RENDER_AS};
     $self->{RENDER_AS} = $params{render_as} if exists $params{render_as};
+    $self->{LINE_WIDTH} = 1;
 }
 
 ## @method $type()
@@ -333,11 +334,13 @@ sub render {
 	$self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};
 	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };
 	
-	my $layer = Geo::Vector::ral_visual_layer_create( $self, Geo::Vector::OGRLayerH($self->{OGR}->{Layer}) );
-	if ($layer) {
-	    Geo::Vector::ral_visual_layer_render( $layer, $pb ) if $pb;
-	    Geo::Vector::ral_visual_layer_destroy($layer);
-	}
+        if ( not $self->{RENDERER} ) {
+            my $layer = Geo::Vector::ral_visual_layer_create( $self, Geo::Vector::OGRLayerH($self->{OGR}->{Layer}) );
+            if ($layer) {
+                Geo::Vector::ral_visual_layer_render( $layer, $pb ) if $pb;
+                Geo::Vector::ral_visual_layer_destroy($layer);
+            }
+        }
 	
 	if ( @{$self->{BORDER_COLOR}} and ($self->{RENDER_AS} eq 'Native' or $self->{RENDER_AS} eq 'Polygons')) {
 	    
@@ -355,28 +358,36 @@ sub render {
 	my $labeling = $self->labeling;
 	if ($labeling->{field} ne 'No Labels') {
 
-	    my @color = @{$labeling->{color}};
-	    $color[3] = int($self->{ALPHA}*$color[3]/255);
-	    for (@color) {
+	    my @label_color = @{$labeling->{color}};
+	    $label_color[3] = int($self->{ALPHA}*$label_color[3]/255);
+	    for (@label_color) {
 		$_ /= 255;
 	    }
-	    $cr->set_source_rgba(@color);
 
 	    my $wc = -0.5;
 	    my $hc = -0.5;
 	    my $dw = 0;
 	    for ($labeling->{placement}) {
-		$hc = -1.5 if /Top/;
-		$hc = 0.5 if /Bottom/;
-		if (/left/) {$wc = -1; $dw = -6};
-		if (/right/) {$wc = 0; $dw = 10};
+		$hc = -1 - $self->{LABEL_VERT_NUDGE} if /Top/;
+		$hc = $self->{LABEL_VERT_NUDGE} if /Bottom/;
+		if (/left/) {$wc = -1; $dw = -1*$self->{LABEL_HORIZ_NUDGE_LEFT}};
+		if (/right/) {$wc = 0; $dw = $self->{LABEL_HORIZ_NUDGE_RIGHT}};
 	    }
 	    my $font_desc = Gtk2::Pango::FontDescription->from_string($labeling->{font});
 	    
 	    $self->{OGR}->{Layer}->SetSpatialFilterRect(@$viewport);
 	    $self->{OGR}->{Layer}->ResetReading();
 
+            my %geohash;
 	    my $f;
+
+            # later this should be as in libral, color may be a function
+            my @color = @{$self->{SINGLE_COLOR}};
+            $label_color[3] = int($self->{ALPHA}*$color[3]/255);
+            for (@color) {
+                $_ /= 255;
+            }
+
 	    while ($f = $self->{OGR}->{Layer}->GetNextFeature()) {
 	
 		my $geometry = $f->GetGeometryRef();
@@ -398,6 +409,26 @@ sub render {
 			$point[1] > $viewport->[3];
 		    
 		    my @pixel = $overlay->point2pixmap_pixel(@point);
+                    if ($self->{INCREMENTAL_LABELS}) {
+                        # this is fast but not very good
+                        my $geokey = int($pixel[0]/120) .'-'. int($pixel[1]/50);
+                        next if $geohash{$geokey};
+                        $geohash{$geokey} = 1;
+                    }
+
+                    if ($self->{RENDERER} eq 'Cairo') {
+                        my $points = $geometry->Points;
+                        # now only for points
+                        my @p = $overlay->point2pixmap_pixel(@{$points->[0]});
+                        my $d = $self->{SYMBOL_SIZE}/2;
+                        $cr->move_to($p[0]-$d, $p[1]);
+                        $cr->line_to($p[0]+$d, $p[1]);
+                        $cr->move_to($p[0], $p[1]-$d);
+                        $cr->line_to($p[0], $p[1]+$d);
+                        $cr->set_line_width($self->{LINE_WIDTH});
+                        $cr->set_source_rgba(@color);
+                        $cr->stroke();
+                    }
 		    
 		    my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
 		    next unless defined $str or $str eq '';
@@ -408,6 +439,7 @@ sub render {
 		    $layout->set_text($str);
 		    my($width, $height) = $layout->get_pixel_size;
 		    $cr->move_to($pixel[0]+$wc*$width+$dw, $pixel[1]+$hc*$height);
+                    $cr->set_source_rgba(@label_color);
 		    Gtk2::Pango::Cairo::show_layout($cr, $layout);
 
 		}
