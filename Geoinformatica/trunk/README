@@ -4,3 +4,81 @@ Copyright (C) 2008 Ari Jolma
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of Artistic License 2.0 (included as LICENCE).
+
+MANIFEST
+
+The Geoinformatica builds on and packages GTK+, Perl, Gnuplot, GDAL
+and several other free and open source software. See the
+subdirectories in share/doc for more information.
+
+GTK+ is 2.12.9
+Perl is 5.10.0
+Gnuplot is 4.2
+GDAL is post 1.6.0 (r15985)
+GEOS is 3.0.0 RC4
+Proj4 is 4.6.1
+Geoinformatica itself is r170
+
+Geoinformatica package contains following Perl modules.
+
+Archive-Zip-1.24
+AutoLoader-5.67
+Bit-Vector-6.4
+Cairo-1.060
+Carp-Clan-5.9
+DBD-Pg-2.8.0
+DBD-XBase-0.241
+Data-TreeDumper-0.33
+Data-TreeDumper-Renderer-GTK-0.01
+Date-Calc-5.4
+Devel-Size-0.67
+Devel-StackTrace-1.15
+Devel-Symdump-2.07
+ExtUtils-Depends-0.301
+ExtUtils-MakeMaker-6.42
+ExtUtils-PkgConfig-1.11
+File-Type-0.22
+Font-FreeType-0.03
+Geo-Constants-0.06
+Geo-Distance-0.11
+Geo-Ellipsoid-0.904
+Geo-Ellipsoids-0.14
+Geo-Forward-0.11
+Geo-Functions-0.07
+Geo-Inverse-0.05
+Geo-Proj4-1.00
+Geo-Shapelib-0.20
+Getopt-ArgvFile-1.11
+Getopt-Long-2.36
+Glib-1.183
+Gnome2-Rsvg-0.10
+Graph-0.81
+Graphics-ColorUtils-0.17
+Gtk2-1.183
+Gtk2-Ex-Dialogs-0.11
+Gtk2-Ex-Simple-List-0.50
+Gtk2-Ex-Simple-Tree-0.50
+Gtk2-Ex-Utils-0.09
+Gtk2-GladeXML-1.007
+HTML-Parser-3.59
+HTML-Tagset-3.10
+Heap-0.71
+Log-Report-0.17
+Math-ConvexHull-1.01
+Module-ScanDeps-0.84
+Object-Deadly-0.09
+PAR-0.983
+PAR-Dist-0.32
+PAR-Packer-0.982
+PDL-NetCDF-0.93
+Parse-Binary-0.10
+Parse-RecDescent-1.94
+Sort-Naturally-1.02
+Statistics-Descriptive-2.6
+Sub-Uplevel-0.14
+Term-ReadLine-Perl-1.0302
+TermReadKey-2.30
+Tree-R-0.05
+Win32-API-0.55
+Win32-Exe-0.11
+Win32-TieRegistry-0.25

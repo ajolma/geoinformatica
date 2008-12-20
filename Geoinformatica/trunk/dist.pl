@@ -29,6 +29,8 @@ my %copy;
 my %to;
 
 copy('G-shell.bat', "$DIST/G-shell.bat");
+copy('README', "$DIST/README");
+copy('LICENCE', "$DIST/LICENCE");
 
 copy($PERL_MOD_DOC, "$DIST/doc/Perl modules");
 copy($LIBRAL_DOC, "$DIST/doc/libral");
