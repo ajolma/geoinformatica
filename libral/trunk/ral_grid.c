@@ -2881,13 +2881,12 @@ void RAL_CALL ral_grid_random(ral_grid *gd)
 }
 
 
-int ral_cmp_int(const void *a, const void *b)
+int ral_cmp_integer(const void *a, const void *b)
 {
-    if (*(int *)a < *(int *)b) return -1;
-    if (*(int *)a > *(int *)b) return 1;
+    if (*(RAL_INTEGER *)a < *(RAL_INTEGER *)b) return -1;
+    if (*(RAL_INTEGER *)a > *(RAL_INTEGER *)b) return 1;
     return 0;
 }
-
 
 ral_grid *ral_grid_cross(ral_grid *a, ral_grid *b)
 {
@@ -2904,8 +2903,8 @@ ral_grid *ral_grid_cross(ral_grid *a, ral_grid *b)
     RAL_CHECK(ca = ral_hash_keys(atable, &na));
     RAL_CHECK(cb = ral_hash_keys(btable, &nb));
     RAL_CHECK(c = ral_grid_create_like(a, RAL_INTEGER_GRID));
-    qsort(ca, na, sizeof(int), &ral_cmp_int);
-    qsort(cb, nb, sizeof(int), &ral_cmp_int);
+    qsort(ca, na, sizeof(RAL_INTEGER), &ral_cmp_integer);
+    qsort(cb, nb, sizeof(RAL_INTEGER), &ral_cmp_integer);
     RAL_FOR(p, a) {
 	if (RAL_INTEGER_GRID_DATACELL(a, p) AND RAL_INTEGER_GRID_DATACELL(b, p)) {
 	    int ia = 0, ib = 0;
