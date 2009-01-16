@@ -950,31 +950,24 @@ sub random {
 # 
 # @brief Cross product of rasters.
 #
-# Example of usage: Creates a new Geo::Raster with cross product values 
-# (c = a x b).
+# Creates a new Geo::Raster whose values represent distinct
+# combinations of values of the two operand rasters. May be used as
+# lvalue or in-place. The operand rasters must be integer rasters and
+# the rasters must be overlayable.
 # @code
 # $c = $a->cross($b);
-# @endcode
-# Example of usage: Changes values to cross product values (a = a x b).
-# @code
 # $a->cross($b);
 # @endcode
 #
-# If a has values a1, ..., ana (ai < aj, na distinct values) and b has values 
-# b1, ..., bnb (bi < bj, nb distinct values) then c will have nc = na * nb
-# distinct values 1, ..., nc. The c will have value 1 where a = a1 and b
-# = b1, 2 where a = a1 and b = b2, etc.
-# - The operation results are given to this raster, if no resulting new 
-# raster is needed, else a new raster with the cross product values is 
-# returned.
-# - The rasters datatypes must be integer.
-# - The second rasters real world boundaries must be the same as this 
-# rasters. The cell sizes and amounts in both directions must also be equal.
-# - If the other or both raster cells have an \a nodata value, then 
-# also the resulting cell will have that value.
+# If a has values A = a(1), ..., a(n) (a(i) < a(j) if i < j) and b has
+# values B = b(1), ..., b(m) (b(i) < b(j) if i < j) then c will have
+# max n * m distinct values. The values in c are i(b) + i(a)*n + 1,
+# where i(a) is the index of the value of a in array A minus 1 and
+# i(b) is the index of the value of b in array B minus 1. c will be
+# nodata if either a or b is nodata.
 #
 # @param[in] b A reference to an another Geo::Raster object.
-# @return A new raster with the calculated cross product values.
+# @return A new raster if requested.
 sub cross {
     my($a, $b) = @_;
     my $c = ral_grid_cross($a->{GRID}, $b->{GRID}); 
