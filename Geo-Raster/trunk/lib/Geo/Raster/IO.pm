@@ -188,13 +188,13 @@ sub exists {
 #
 # @brief Save libral raster into a pair of hdr and bil files.
 #
-
-# Only genuine libral rasters are saved. Typically the extension is
-# chopped of from the filename, but if it is .asc, the format is set
-# to Arc/Info ASCII.
-# @param[in] filename (optional) Filename for the data files, without the 
-# extension. If not given then the method tries to use the name attribute of the 
-# grid.
+# Only genuine libral rasters are saved, i.e, rasters, which are GDAL
+# raster caches are not saved. Extensions .bil and .asc are chopped of
+# from the filename, but the extension .asc may be used to force
+# saving the raster as Arc/Info ASCII.
+#
+# @param[in] filename (optional) Filename for the data files. If not
+# given then the method tries to use the name attribute of the grid.
 # @param[in] format (optional). If given and contains Arc/Info ASCII, the grid 
 # is saved as such.
 # @exception The given filename is not valid, or the file does not open with 
@@ -207,10 +207,9 @@ sub save {
     $filename = $self->name() unless defined $filename;
     croak "usage: \$grid->save(\$filename)" unless defined $filename;
 
-    my $ext;
+    my $ext = '';
     $ext = $1 if $filename =~ /\.(\w+)$/;
-    $ext = '' unless defined $ext;
-    $filename =~ s/\.(\w+)$//;
+    $filename =~ s/\.\w+$// if $ext eq 'bil' or $ext eq 'asc';
 
     if ($ext eq 'asc' or ($format and $format =~ /arc\/info ascii/i)) {
 	ral_grid_save_ascii($self->{GRID}, "$filename.asc");
