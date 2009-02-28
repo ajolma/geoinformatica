@@ -26,11 +26,15 @@ my($inc,$libs,$cflags) = ('','','');
 for $package ('gdal','gdk-pixbuf-2.0','libral') {
     print "Checking for $package: ";
     my($c, $l);
-    if ($package eq 'gdal' and $^O ne 'MSWin32') {
-	$c = `gdal-config --cflags`;
-	chomp $c;
-	$l = `gdal-config --libs`;
-	chomp $l;
+    if ($package eq 'gdal') {
+	if ($^O ne 'MSWin32') {
+	    $c = `gdal-config --cflags`;
+	    chomp $c;
+	    $l = `gdal-config --libs`;
+	    chomp $l;
+	} else {
+	    ($l, $c) = gdal_config("c:/msys/1.0/local/bin/gdal-config");
+	}
     } else {
 	%pkg_info = ExtUtils::PkgConfig->find ($package);
 	$c = $pkg_info{cflags};
@@ -104,6 +108,34 @@ sub chk_module {
 	print " ok\n";
 	return '';
     }
+}
+
+sub gdal_config {
+    my $fh = shift;
+    open $fh, $fh or die "$fh not found!";
+    my $LIB = '';
+    my $INC = '';
+    if ($fh) {
+	my @config = <$fh>;
+	close $fh;
+	for (@config) {
+	    if (/^CONFIG_DEP_LIBS/) {
+		s/^CONFIG_DEP_LIBS="//;
+		s/"\s*$//;
+		$LIB .= $_;
+	    }
+	    if (/^CONFIG_CFLAGS/) {
+		s/^CONFIG_CFLAGS="//;
+		s/"\s*$//;
+		$INC .= $_;
+	    }
+	}
+    }
+    $usr_local = "/usr/local";
+    $msys_local = "c:/msys/1.0/local";
+    $LIB =~ s/$usr_local/$msys_local/;
+    $INC =~ s/$usr_local/$msys_local/;
+    return ("$LIB -lgdal", $INC);
 }
 
 # -o on the compiler command line...
