@@ -2,6 +2,7 @@
 # @brief Adds graphics, image analysis etc. methods to Geo::Raster.
 package Geo::Raster;
 
+use strict;
 use UNIVERSAL qw(isa);
 
 ## @method Geo::Raster frame($with)

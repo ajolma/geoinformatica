@@ -7,6 +7,7 @@
 #
 package Geo::Raster;
 
+use strict;
 use UNIVERSAL qw(isa);
 
 ## @method @fit_surface($z_factor)
@@ -888,7 +889,7 @@ sub save_catchment_structure {
     my ($minX, $minY, $maxX, $maxY) = $self->world();
 
     my $datasource = Geo::OGR::Open($datasource_string, 1) or 
-	croak "can't open '$datasource' as an OGR datasource";
+	croak "can't open '$datasource_string' as an OGR datasource";
 
     my $osr;
     #$osr = new osr::SpatialReference;

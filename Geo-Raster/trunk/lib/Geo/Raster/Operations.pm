@@ -6,6 +6,7 @@
 # that the rasters are overlayable.
 package Geo::Raster;
 
+use strict;
 use overload (
 	      'fallback' => undef,
               # not having "" overloaded makes print "$raster" to print "1"
@@ -76,10 +77,10 @@ sub _typeconversion {
     my $type = ral_grid_get_datatype($self->{GRID});
     if (ref($other)) {
 	if (isa($other, 'Geo::Raster')) {
-	    return $REAL_GRID if 
-		ral_grid_get_datatype($other->{GRID}) == $REAL_GRID or 
-		$type == $REAL_GRID;
-	    return $INTEGER_GRID;
+	    return $Geo::Raster::REAL_GRID if 
+		ral_grid_get_datatype($other->{GRID}) == $Geo::Raster::REAL_GRID or 
+		$type == $Geo::Raster::REAL_GRID;
+	    return $Geo::Raster::INTEGER_GRID;
 	} else {
 	    croak "$other is not a grid\n";
 	}
@@ -89,7 +90,7 @@ sub _typeconversion {
 	
 	# perlfaq4: is scalar a C float ?
 	if ($other =~ /^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$/) {
-	    return $REAL_GRID if $type == $INTEGER_GRID;
+	    return $Geo::Raster::REAL_GRID if $type == $Geo::Raster::INTEGER_GRID;
 	    return $type;
 	}
 	croak "$other is not numeric\n";
@@ -137,7 +138,7 @@ sub plus {
 	ral_grid_add_grid($copy->{GRID}, $second->{GRID});
     } else {
 	my $dt = ral_grid_get_datatype($copy->{GRID});
-	if ($dt == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if ($dt == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_add_integer($copy->{GRID}, $second);
 	} else {
 	    ral_grid_add_real($copy->{GRID}, $second);
@@ -197,7 +198,7 @@ sub minus {
 	    $second *= -1;
 	}
 	
-	if (ral_grid_get_datatype($copy->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($copy->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    # Second parameter is an integer.
 	    ral_grid_add_integer($copy->{GRID}, $second);
 	} else {
@@ -251,7 +252,7 @@ sub times {
     if (ref($second)) {
 	ral_grid_mult_grid($copy->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($copy->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($copy->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_mult_integer($copy->{GRID},$second);
 	} else {
 	    ral_grid_mult_real($copy->{GRID},$second);
@@ -303,19 +304,19 @@ sub times {
 # @return the resulting raster.
 sub over {
     my($self, $second, $reversed) = @_;
-    my $copy = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
+    my $copy = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
     if (ref($second)) {
 	($copy, $second) = ($second, $copy) if $reversed;
 	ral_grid_div_grid($copy->{GRID}, $second->{GRID});
     } else {
 	if ($reversed) {
-	    if (ral_grid_get_datatype($copy->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($copy->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_integer_div_grid($second, $copy->{GRID});
 	    } else {
 		ral_real_div_grid($second, $copy->{GRID});
 	    }
 	} else {
-	    if (ral_grid_get_datatype($copy->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($copy->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_div_integer($copy->{GRID}, $second);
 	    } else {
 		ral_grid_div_real($copy->{GRID}, $second);
@@ -330,9 +331,9 @@ sub over2 {
     my($self, $second, $reversed) = @_;
     my $copy;
     if($reversed) {
-        $copy = new Geo::Raster datatype=>$REAL_GRID, copy=>$second;
+        $copy = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$second;
     } else {
-        $copy = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
+        $copy = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
     }
     
     if (ref($second)) {
@@ -344,13 +345,13 @@ sub over2 {
 	}
     } else {
 	if ($reversed) {
-	    if (ral_grid_get_datatype($copy->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($copy->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_integer_div_grid($second, $copy->{GRID});
 	    } else {
 		ral_real_div_grid($second, $copy->{GRID});
 	    }
 	} else {
-	    if (ral_grid_get_datatype($copy->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($copy->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_div_integer($copy->{GRID}, $second);
 	    } else {
 		ral_grid_div_real($copy->{GRID}, $second);
@@ -512,7 +513,7 @@ sub add {
     if (ref($second)) {
 	ral_grid_add_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_add_integer($self->{GRID}, $second);
 	} else {
 	    ral_grid_add_real($self->{GRID}, $second);
@@ -559,7 +560,7 @@ sub subtract {
     if (ref($second)) {
 	ral_grid_sub_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_add_integer($self->{GRID}, -$second);
 	} else {
 	    ral_grid_add_real($self->{GRID}, -$second);
@@ -606,7 +607,7 @@ sub multiply_by {
     if (ref($second)) {
 	ral_grid_mult_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_mult_integer($self->{GRID}, $second);
 	} else {
 	    ral_grid_mult_real($self->{GRID}, $second);
@@ -647,11 +648,11 @@ sub multiply_by {
 # @param[in] second A raster.
 sub divide_by {
     my($self, $second) = @_;
-    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     if (ref($second)) {
 	ral_grid_div_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_div_integer($self->{GRID}, $second);
 	} else {
 	    ral_grid_div_real($self->{GRID}, $second);
@@ -757,9 +758,9 @@ sub atan2 {
     my($self, $second) = @_;
     if (ref($self) and ref($second)) {
 	if (defined wantarray) {
-	    $self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-	} elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	    $self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+	} elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	    $self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
 	}
 	ral_grid_atan2($self->{GRID}, $second->{GRID});
 	return $self;
@@ -777,9 +778,9 @@ sub atan2 {
 sub cos {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_cos($self->{GRID});
     return $self;
@@ -793,9 +794,9 @@ sub cos {
 sub sin {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_sin($self->{GRID});
     return $self;
@@ -809,9 +810,9 @@ sub sin {
 sub exp {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_exp($self->{GRID});
     return $self;
@@ -841,9 +842,9 @@ sub abs {
 sub sqrt {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_sqrt($self->{GRID});
     return $self;
@@ -881,9 +882,9 @@ sub round {
 sub acos {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_acos($self->{GRID});
     return $self;
@@ -897,9 +898,9 @@ sub acos {
 sub atan {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_atan($self->{GRID});
     return $self;
@@ -930,9 +931,9 @@ sub ceil {
 sub cosh {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_cosh($self->{GRID});
     return $self;
@@ -963,9 +964,9 @@ sub floor {
 sub log {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_log($self->{GRID});
     return $self;
@@ -979,9 +980,9 @@ sub log {
 sub log10 {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_log10($self->{GRID});
     return $self;
@@ -1006,9 +1007,9 @@ sub log_base {
 sub sinh {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_sinh($self->{GRID});
     return $self;
@@ -1022,9 +1023,9 @@ sub sinh {
 sub tan {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_tan($self->{GRID});
     return $self;
@@ -1038,9 +1039,9 @@ sub tan {
 sub tanh {
     my $self = shift;
     if (defined wantarray) {
-	$self = new Geo::Raster datatype=>$REAL_GRID, copy=>$self;
-    } elsif (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID) {
-	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $REAL_GRID));
+	$self = new Geo::Raster datatype=>$Geo::Raster::REAL_GRID, copy=>$self;
+    } elsif (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID) {
+	$self->_new_grid(ral_grid_create_copy($self->{GRID}, $Geo::Raster::REAL_GRID));
     }
     ral_grid_tanh($self->{GRID});
     return $self;
@@ -1097,13 +1098,13 @@ sub lt {
 	ral_grid_lt_grid($self->{GRID}, $second->{GRID});
     } else {
 	if ($reversed) {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_gt_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_gt_real($self->{GRID}, $second);
 	    }
 	} else {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_lt_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_lt_real($self->{GRID}, $second);
@@ -1163,13 +1164,13 @@ sub gt {
 	ral_grid_gt_grid($self->{GRID}, $second->{GRID});
     } else {
 	if ($reversed) {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_lt_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_lt_real($self->{GRID}, $second);
 	    }
 	} else {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_gt_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_gt_real($self->{GRID}, $second);
@@ -1229,13 +1230,13 @@ sub le {
 	ral_grid_le_grid($self->{GRID}, $second->{GRID});
     } else {
 	if ($reversed) {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_ge_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_ge_real($self->{GRID}, $second);
 	    }
 	} else {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_le_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_le_real($self->{GRID}, $second);
@@ -1295,13 +1296,13 @@ sub ge {
 	ral_grid_ge_grid($self->{GRID}, $second->{GRID});
     } else {
 	if ($reversed) {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_le_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_le_real($self->{GRID}, $second);
 	    }
 	} else {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_ge_integer($self->{GRID}, $second);
 	    } else {
 		ral_grid_ge_real($self->{GRID}, $second);
@@ -1355,7 +1356,7 @@ sub eq {
     if (ref($second)) {
 	ral_grid_eq_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_eq_integer($self->{GRID}, $second);
 	} else {
 	    ral_grid_eq_real($self->{GRID}, $second);
@@ -1408,7 +1409,7 @@ sub ne {
     if (ref($second)) {
 	ral_grid_ne_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_ne_integer($self->{GRID}, $second);
 	} else {
 	    ral_grid_ne_real($self->{GRID}, $second);
@@ -1466,13 +1467,13 @@ sub cmp {
     if (ref($second)) {
 	ral_grid_cmp_grid($self->{GRID}, $second->{GRID});
     } else {
-	if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 	    ral_grid_cmp_integer($self->{GRID}, $second);
 	} else {
 	    ral_grid_cmp_real($self->{GRID}, $second);
 	}
 	if ($reversed) {
-	    if (ral_grid_get_datatype($self->{GRID}) == $INTEGER_GRID and $second =~ /^-?\d+$/) {
+	    if (ral_grid_get_datatype($self->{GRID}) == $Geo::Raster::INTEGER_GRID and $second =~ /^-?\d+$/) {
 		ral_grid_mult_integer($self->{GRID}, -1);
 	    } else {
 		ral_grid_mult_real($self->{GRID}, -1);

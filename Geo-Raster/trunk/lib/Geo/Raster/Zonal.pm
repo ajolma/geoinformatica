@@ -2,6 +2,7 @@
 # @brief Adds zonal operations into Geo::Raster.
 package Geo::Raster;
 
+use strict;
 use Statistics::Descriptive;
 
 ## @method hashref zones(Geo::Raster zones)

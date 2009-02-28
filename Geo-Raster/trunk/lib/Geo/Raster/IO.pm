@@ -2,6 +2,8 @@
 # @brief Adds input/output methods into Geo::Raster
 package Geo::Raster;
 
+use strict;
+
 ## @ignore
 # internal
 sub gdal_open {
@@ -223,8 +225,8 @@ sub save {
 	$self->_attributes();
 
     # these depend on how libral is configured! lookup needed
-    my $nbits = $datatype == $REAL_GRID ? 32 : 16;
-    my $pt = $datatype == $REAL_GRID ? 'F' : 'S';
+    my $nbits = $datatype == $Geo::Raster::REAL_GRID ? 32 : 16;
+    my $pt = $datatype == $Geo::Raster::REAL_GRID ? 'F' : 'S';
     my $byteorder = $Config{byteorder} == 4321 ? 'M' : 'I';
 
     print $fh "BYTEORDER     $byteorder\n";

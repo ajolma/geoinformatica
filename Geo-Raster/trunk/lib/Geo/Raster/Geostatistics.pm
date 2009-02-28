@@ -2,6 +2,8 @@
 # @brief Adds geostatistical methods into Geo::Raster
 package Geo::Raster;
 
+use strict;
+
 ## @method array variogram($max_lag, $lags)
 #
 # @brief Computes a variogram from the raster.

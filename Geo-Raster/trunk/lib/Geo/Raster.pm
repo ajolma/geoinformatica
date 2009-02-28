@@ -263,7 +263,7 @@ sub width {
 sub DESTROY {
     my $self = shift;
     return unless $self;
-    ral_grid_destroy($self->{GRID}) if $self->{GRID};
+    ral_grid_destroy($self->{GRID}) if $self->{GRID} and ref($self->{GRID}) eq 'ral_gridPtr';
     delete($self->{GRID});
 }
 

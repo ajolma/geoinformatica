@@ -2,6 +2,8 @@
 # @brief Adds global operations into Geo::Raster
 package Geo::Raster;
 
+use strict;
+
 ## @method void set($value)
 #
 # @brief Global set to a value.

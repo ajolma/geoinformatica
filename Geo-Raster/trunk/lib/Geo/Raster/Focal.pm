@@ -4,6 +4,8 @@
 # are really Geo::Raster methods.
 package Geo::Raster;
 
+use strict;
+
 ## @method void set(@cell, $value)
 #
 # @brief A focal set.
