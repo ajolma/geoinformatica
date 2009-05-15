@@ -15,8 +15,6 @@ sub gdal_open {
     unless ($t) {
 		@$t = (0,1,0,0,0,1);
     }
-    croak "Cells are not squares: dx=abs($t->[1]) != dy=abs($t->[5])" 
-	unless CORE::abs($t->[1]) == CORE::abs($t->[5]);
     croak "The raster is not a strict north up image."
 	unless $t->[2] == $t->[4] and $t->[2] == 0;
     my $band = $params{band} || 1;

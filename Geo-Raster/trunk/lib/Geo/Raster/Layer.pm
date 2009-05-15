@@ -411,7 +411,8 @@ sub open_gdal_properties_dialog {
     $dialog->get_widget('gdal_max_x_label')->set_text($size[2]);
     $dialog->get_widget('gdal_max_y_label')->set_text($size[3]);
 
-    $dialog->get_widget('gdal_cellsize_label')->set_text($self->cell_size(of_GDAL=>1));
+    @size = $self->cell_size(of_GDAL=>1);
+    $dialog->get_widget('gdal_cellsize_label')->set_text("@size");
 
     my $nodata = $self->nodata_value();
     $nodata = '' unless defined $nodata;
