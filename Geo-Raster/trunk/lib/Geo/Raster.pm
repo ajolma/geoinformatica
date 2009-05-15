@@ -821,14 +821,14 @@ sub size {
 # 
 # @brief Returns the cell size.
 # @param[in] params Named parameters:
-# - \a of_GDAL=>boolean (optional) Force the method to return the
-# cell size of the underlying GDAL raster if there is one.
+# - \a of_GDAL=>boolean (optional) Force the method to return the cell
+# size (width, height) of the underlying GDAL raster if there is one.
 # @return Cell size, i.e., the length of the cell edge in raster scale.
 sub cell_size {
     my($self, %o) = @_;
     if ($self->{GDAL} and $o{of_GDAL}) {
 	my @t = $self->{GDAL}->{dataset}->GeoTransform;
-	return CORE::abs($t[1]);
+	return (CORE::abs($t[1]), CORE::abs($t[5]));
     } elsif (!$self->{GRID}) {
 	return undef;
     } else {
