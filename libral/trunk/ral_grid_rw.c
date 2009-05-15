@@ -23,14 +23,11 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
     ral_grid *gd = NULL;
     double t[6] = {0,1,0,0,0,1};
     double aspect;
-    double original_cell_size;
     double min_x, max_x, min_y, max_y;
   
     CPLPushErrorHandler(ral_cpl_error);
 
-    GDALGetGeoTransform(dataset, t); /* using default is != CE_None */
-    RAL_CHECKM(t[1] == fabs(t[5]), ral_msg("cells are not squares: %f != %f",t[1],fabs(t[5])));
-    original_cell_size = fabs(t[5]);
+    GDALGetGeoTransform(dataset, t);
 
     RAL_CHECKM(t[2] == t[4] AND t[2] == 0, "the raster is not a strict north up image");
 
@@ -93,25 +90,29 @@ ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int ba
 	RAL_CHECKM(0, "complex data type not supported");
     }
  
-    j0 = floor((clip_region.min.x - min_x)/original_cell_size+0.0000000001);
-    i0 = floor((max_y - clip_region.max.y)/original_cell_size+0.0000000001);
-    w = MIN(ceil((clip_region.max.x - min_x)/original_cell_size) - j0, W - j0);
-    h = MIN(ceil((max_y - clip_region.min.y)/original_cell_size) - i0, H - i0);
+    j0 = floor((clip_region.min.x - min_x)/fabs(t[1])+0.0000000001);
+    i0 = floor((max_y - clip_region.max.y)/fabs(t[5])+0.0000000001);
+    w = MIN(ceil((clip_region.max.x - min_x)/fabs(t[1])) - j0, W - j0);
+    h = MIN(ceil((max_y - clip_region.min.y)/fabs(t[5])) - i0, H - i0);
 
     RAL_CHECK(w > 0 AND h > 0);
 
-    M = ceil((double)h*original_cell_size/cell_size);
-    aspect = (double)w/(double)h;
-    N = aspect*M+0.5;
-    if (H < M) M = H;
-    if (W < N) N = W;
-    cell_size = (double)h*original_cell_size/M;
+    M = ceil((double)h*fabs(t[5])/cell_size);
+    if (H < M) {
+        M = H;
+        cell_size = (double)h*fabs(t[5])/(double)M;
+    }
     
-    /*RAL_CHECKM((long)M*N < 100*1024*1024,"too large grid >100MB");*/
+    N = ceil((double)w*fabs(t[1])/cell_size);
+    if (W < N) {
+        N = W;
+        cell_size = (double)w*fabs(t[1])/(double)N;
+        M = ceil((double)h*fabs(t[5])/cell_size);
+    }
 
     RAL_CHECK(gd = ral_grid_create(gd_datatype, M, N));
 
-    ral_grid_set_bounds_csnx(gd, cell_size, min_x+(double)j0*original_cell_size, max_y-(double)i0*original_cell_size);
+    ral_grid_set_bounds_csnx(gd, cell_size, min_x+(double)j0*fabs(t[1]), max_y-(double)i0*fabs(t[5]));
 
     if (t[1] < 0) {
 	if (j0 > 0 OR w < W) {
