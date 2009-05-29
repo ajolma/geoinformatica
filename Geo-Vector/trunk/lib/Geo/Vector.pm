@@ -163,7 +163,6 @@ sub delete_layer {
 #
 # @param params Named parameters, all are optional: (see also the
 # named parameters of the Geo::Vector::layer method)
-
 # - \a driver => string, used only if data source is not given,
 # default is 'Memory' for layer type objects.
 # - \a driver_options forwarded to Geo::OGR::CreateDataSource.
