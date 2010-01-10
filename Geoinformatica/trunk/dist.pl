@@ -1,10 +1,20 @@
 # run this program to create a distribution tree
+# before running this make sure
+# - sources (see below) exist
+# - GDAL is compiled and works (both GDAL and Geo::GDAL modules)
+# - libral is compiled and works
+# - other Geo:: modules are compiled and work
+# - GDAL docs are made (make docs)
+# - libral docs are made (doxygen in libral)
+# - Geoinformatica docs are made (doxygen in Geo-Raster)
 
 use strict;
 use Cwd;
 use File::Spec;
 
 my $DIST = getcwd() . "/Geoinformatica";
+
+# sources:
 my $PERL = "c:/Geoinformatica"; # Perl with needed modules
 my $GTK_RUNTIME = "c:/GTK-runtime"; # GTK runtime
 my $GTK = "c:/GTK";
@@ -13,9 +23,7 @@ my $EXPAT = "c:/Program Files/Expat 2.0.1";
 my $LOCAL = "c:/msys/1.0/local";
 my $GNUPLOT = "c:/Program Files/gnuplot";
 my $GDAL = "c:/dev/gdal";
-
 my $LIBRAL = "c:/dev/geoinformatica/libral/trunk";
-
 my $PERL_MOD_DOC = "c:/dev/geoinformatica/Geo-Raster/trunk/html";
 my $LIBRAL_DOC = "$LIBRAL/html";
 my $PERL_GDAL_DOC = "$GDAL/swig/perl/html";
@@ -30,8 +38,9 @@ my %to;
 
 copy('G-shell.bat', "$DIST/G-shell.bat");
 copy('README', "$DIST/README");
-copy('LICENCE', "$DIST/LICENCE");
+#copy('LICENCE', "$DIST/LICENCE");
 
+copy($GDAL."/html", "$DIST/doc/GDAL");
 copy($PERL_MOD_DOC, "$DIST/doc/Perl modules");
 copy($LIBRAL_DOC, "$DIST/doc/libral");
 copy($PERL_GDAL_DOC, "$DIST/doc/Perl GDAL");
@@ -154,6 +163,7 @@ for (keys %copy) {
 sub copy {
     my($from, $to) = @_;
     if (-d $from) {
+	return if $from eq '.svn';
 	$to{$to} = 1;
 	opendir DIR, $from;
 	my @dir = readdir(DIR);
@@ -210,8 +220,11 @@ sub simple_copy {
 
 	return if $age_from <= $age_to;
     }
+
+    $to = File::Spec->catpath( $vol, $dirs, '' );
+    $to = dossify($to);
     
-    my $x = "copy \"$from\" \"$to\"";
+    my $x = "xcopy \"$from\" \"$to\" /H /Y";
     print "$x\n";
     system $x;
     if ($to=~/\.dll$/ and ($to=~/libgdal/ or $to=~/libgeos/ or $to=~/libxerces/)) {

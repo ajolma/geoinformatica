@@ -1,4 +1,5 @@
 # use this program to create the [Files] list for Geoinformatica.iss
+# the run Geoinformatica.iss with Inno Setup 
 
 use Cwd;
 use File::Find;
