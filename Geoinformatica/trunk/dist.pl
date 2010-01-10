@@ -163,7 +163,7 @@ for (keys %copy) {
 sub copy {
     my($from, $to) = @_;
     if (-d $from) {
-	return if $from eq '.svn';
+	return if $from =~ /.svn$/;
 	$to{$to} = 1;
 	opendir DIR, $from;
 	my @dir = readdir(DIR);
