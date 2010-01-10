@@ -210,6 +210,7 @@ sub simple_copy {
 
     $from = dossify($from);
     $to = dossify($to);
+    my $complete_to = $to;
     
     if (-r $to) {
 	my @f = stat($from);
@@ -227,7 +228,10 @@ sub simple_copy {
     my $x = "xcopy \"$from\" \"$to\" /H /Y";
     print "$x\n";
     system $x;
+
+    $to = $complete_to;
     if ($to=~/\.dll$/ and ($to=~/libgdal/ or $to=~/libgeos/ or $to=~/libxerces/)) {
+	print "strip $to\n";
 	system "strip --strip-debug $to";
     }
 }
