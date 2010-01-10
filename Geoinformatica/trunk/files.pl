@@ -41,6 +41,7 @@ sub wanted {
     closedir DIR;
     #print scalar(@files),"\n";
     next if @files == 0;
+    next if @files == 1 and $files[0] eq '.packlist';
     my $dest = $d;
     $dest =~ s/^$sub//;
     print FILES "Source: \"$d\\*\"; DestDir: \"{app}\\$dest\"\n";
