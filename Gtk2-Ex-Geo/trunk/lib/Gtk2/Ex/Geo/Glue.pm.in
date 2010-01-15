@@ -307,9 +307,7 @@ sub close {
 	    croak "$!: $self->{resources_file}";
 	}
     }
-    for my $layer (@{$self->{overlay}->{layers}}) {
-	$layer->destroy_dialogs;
-    }
+    while ($self->delete_selected(1)) {};
     delete $self->{dialogs};
     $self->{overlay}->close;
     for ('inspect_dialog', 'statusbar', 'toolbar', 'entry', 'tree_view', 'overlay') {
@@ -964,11 +962,12 @@ sub remove_layer {
 ## @method delete_selected
 # @brief Removes the selected layer and destroys it.
 sub delete_selected {
-    my($self) = @_;
+    my($self, $do_not_render) = @_;
+    my $n = $#{$self->{overlay}->{layers}};
+    return 0 if $n < 0;
     my ($path, $focus_column) = $self->{tree_view}->get_cursor;
     return unless $path;
     my $index = $path->to_string;
-    my $n = $#{$self->{overlay}->{layers}};
     if ($index >= 0 and $index <= $n) {
 	my($layer) = splice(@{$self->{overlay}->{layers}},$n-$index,1);
 	$self->{model}->remove($layer->{_tree_index});
@@ -976,9 +975,10 @@ sub delete_selected {
 	    $index-- if $index == $n;
 	    $self->{tree_view}->set_cursor(Gtk2::TreePath->new($index));
 	}
-	$layer->destroy_dialogs;
-	$self->{overlay}->render;
+	$layer->close;
+	$self->{overlay}->render unless $do_not_render;
     }
+    return 1;
 }
 
 ## @method get_selected

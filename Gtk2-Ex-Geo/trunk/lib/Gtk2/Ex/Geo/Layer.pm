@@ -21,6 +21,7 @@ use strict;
 use warnings;
 use Carp;
 use FileHandle;
+use UNIVERSAL;
 use Glib qw /TRUE FALSE/;
 use Graphics::ColorUtils qw /:all/;
 use Gtk2::Ex::Geo::Dialogs;
@@ -248,16 +249,14 @@ sub DESTROY {
 
 ##@ignore
 # this should not be necessary
-sub destroy_dialogs {
+sub close {
     my $self = shift;
     for (keys %$self) {
-	next unless /_dialog$/;
-	my $dialog = $self->{$_};
-	next unless $dialog;
-	$dialog = $dialog->get_widget($_);
-	next unless $dialog;
-	$dialog->hide();
-	$dialog->destroy();
+	next unless UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
+	$self->{$_}->destroy;
+	delete $self->{$_};
+    }
+    for (keys %$self) {
 	delete $self->{$_};
     }
 }
