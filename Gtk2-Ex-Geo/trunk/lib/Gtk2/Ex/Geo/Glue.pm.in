@@ -227,6 +227,7 @@ sub register_commands {
 	$self->{toolbar}->insert($button, $commands->{$_}{pos});
 	$button->signal_connect('clicked', $commands->{$_}{sub}, $self);
 	$self->{commands}{$_} = $commands->{$_}{sub};
+	$label->show;
 	$button->show;
     }
 }
