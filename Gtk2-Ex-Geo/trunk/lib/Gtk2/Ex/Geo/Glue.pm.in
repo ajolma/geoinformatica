@@ -217,7 +217,8 @@ sub register_dialogs {
 sub register_commands {
     my($self, $commands) = @_;
     for (sort {$commands->{$a}{nr} <=> $commands->{$b}{nr}} keys %$commands) {
-	my $button = Gtk2::ToolButton->new(undef, $commands->{$_}{text});
+	my $label = Gtk2::Label->new($commands->{$_}{text});
+	my $button = Gtk2::ToolButton->new($label, '');
 	my $tooltips = Gtk2::Tooltips->new;
 	my $tip = $commands->{$_}{tip} || '';
 	$button->set_tooltip($tooltips, $tip, '');

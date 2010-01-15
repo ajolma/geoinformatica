@@ -1,4 +1,5 @@
 use Test::More tests => 1;
+use Glib qw/TRUE FALSE/;
 use Gtk2;
 
 eval {
