@@ -244,7 +244,6 @@ sub defaults {
 ##@ignore
 sub DESTROY {
     my $self = shift;
-    $self->destroy_dialogs;
 }
 
 ##@ignore
@@ -252,11 +251,7 @@ sub DESTROY {
 sub close {
     my $self = shift;
     for (keys %$self) {
-	next unless UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
-	$self->{$_}->destroy;
-	delete $self->{$_};
-    }
-    for (keys %$self) {
+	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
 	delete $self->{$_};
     }
 }

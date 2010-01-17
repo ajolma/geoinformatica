@@ -99,13 +99,10 @@ sub INIT_INSTANCE {
 # @brief Attempt to delete all widgets within this widget.
 sub close {
     my $self = shift;
-    delete $self->{image};
-    delete $self->{event_box};
-    delete $self->{pixmap};
-    delete $self->{pixbuf};
-    delete $self->{old_hadj};
-    delete $self->{old_vadj};
-    delete $self->{rubberband_gc};
+    for (keys %$self) {
+	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
+	delete $self->{$_};
+    }
 }
 
 ## @ignore

@@ -22,6 +22,7 @@ documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
+use Glib qw/TRUE FALSE/;
 
 use Gtk2::Ex::Geo::Overlay;
 use Gtk2::Ex::Geo::Layer;
@@ -310,8 +311,8 @@ sub close {
     while ($self->delete_selected(1)) {};
     delete $self->{dialogs};
     $self->{overlay}->close;
-    for ('inspect_dialog', 'statusbar', 'toolbar', 'entry', 'tree_view', 'overlay') {
-	#$self->{$_}->destroy if $self->{$_}; there is no GladeXML->destroy
+    for (keys %$self) {
+	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
 	delete $self->{$_};
     }
 }
