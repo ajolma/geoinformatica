@@ -310,6 +310,8 @@ sub close {
     }
     while ($self->delete_selected(1)) {};
     delete $self->{dialogs};
+    delete $self->{commands};
+    delete $self->{functions};
     $self->{overlay}->close;
     for (keys %$self) {
 	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
@@ -332,8 +334,11 @@ sub get_dialog {
 # @brief Display a short information message to the user.
 sub message {
     my($self, $message) = @_;
-    my $parent = $self->{main_window} if $self->{main_window};
-    my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent','info','close',$message);
+    my $dialog = Gtk2::MessageDialog->new(undef,
+					  'destroy-with-parent',
+					  'info',
+					  'close',
+					  $message);
     $dialog->signal_connect(response => sub {$_[0]->destroy});
     $dialog->show_all;
 }
