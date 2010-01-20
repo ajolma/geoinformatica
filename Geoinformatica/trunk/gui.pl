@@ -18,7 +18,8 @@ my $OS = $Config::Config{'osname'};
 
 require Win32::TieRegistry if $OS eq 'MSWin32';
 
-my $icon;
+# the four top level objects
+my($window, $gis, $log, $icon);
 
 if ($OS eq 'MSWin32') {
 
@@ -55,9 +56,8 @@ if ($OS eq 'MSWin32') {
 #$Geo::Vector::Layer::BORDER_COLOR = [255, 255, 255];
 #$Gtk2::Ex::Geo::Layer::SINGLE_COLOR = [0, 0, 0, 255];
 
-my($window, $gis) = setup(
-    classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer Geo::Raster::Layer/], 
-    icon => $icon,
+setup (
+    classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer Geo::Raster::Layer/],
     title => 'Geoinformatica',
     );
 
@@ -78,20 +78,16 @@ sub setup{
 
     my($home, $docs) = homedir();
 
-    my $window = Gtk2::Window->new;
+    $window = Gtk2::Window->new;
     
-    $window->set_title($params{title})
-	if $params{title};
+    $window->set_title($params{title})if $params{title};    
+    $window->set_default_icon_from_file($icon) if $icon and -f $icon;
     
-    $window->set_default_icon_from_file($params{icon}) 
-	if $params{icon} and -f $params{icon};
-    
-    my $gis = Gtk2::Ex::Geo::Glue->new
+    $gis = Gtk2::Ex::Geo::Glue->new
 	( 
 	  first_file_open_folder => $docs,
 	  history => "$home.rash_history", 
-	  resources => "$home.rashrc", 
-	  main_window => $window,
+	  resources => "$home.rashrc",
 	  'overlay:bg_color' => [200, 200, 200, 255],
 	  );
     
@@ -112,20 +108,19 @@ sub setup{
     # the stack
     my $vbox = Gtk2::VBox->new(FALSE, 0);
     $vbox->pack_start($gis->{toolbar}, FALSE, FALSE, 0);
-    #$vbox->add($hbox);
     $vbox->pack_start($hbox, TRUE, TRUE, 0);
     $vbox->pack_start($gis->{entry}, FALSE, FALSE, 0);
     $vbox->pack_start($gis->{statusbar}, FALSE, FALSE, 0);
 
     $window->add($vbox);
-    $window->signal_connect("destroy", \&close_the_app, [$window, $gis]);
+    $window->signal_connect("destroy", \&close_the_app);
     $window->set_default_size(600,600);
     $window->show_all;
 
     # add logger and redirect STDOUT to it
     # thanks to http://www.perlcircus.org/files.shtml
 
-    my $log = Gtk2::Window->new;
+    $log = Gtk2::Window->new;
     $log->set_title($params{title}.' output');
     my $sc = Gtk2::ScrolledWindow->new;
     my $view = Gtk2::TextView->new;
@@ -156,8 +151,7 @@ sub setup{
 		   pos => 0,
 		   sub => sub { $log->show_all } },
 	});
-    
-    return ($window, $gis);
+
 }
 
 sub exception_handler {
@@ -166,7 +160,11 @@ sub exception_handler {
 	$_[0] =~ s/\(\@INC contains.*?\)//;
     }
     $_[0] =~ s/\s+at [\/\w\.]gui\.pl line \d+//;
-    my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent','info','close',$_[0]);
+    my $dialog = Gtk2::MessageDialog->new(undef,
+					  'destroy-with-parent',
+					  'info',
+					  'close',
+					  $_[0]);
     $dialog->signal_connect(response => \&destroy_dialog);
     $dialog->show_all;
     
@@ -179,9 +177,15 @@ sub destroy_dialog {
 }
 
 sub close_the_app {
-    my($window, $gis) = @{$_[1]};
+    untie *STDOUT;
     $gis->close();
+    $log->destroy;
+    $window->destroy;
+    undef $log;
+    undef $gis;
+    undef $window;
     Gtk2->main_quit;
+    #print STDERR "exiting\n";
     exit(0);
 }
 
