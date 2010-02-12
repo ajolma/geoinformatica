@@ -314,6 +314,7 @@ sub close {
     delete $self->{functions};
     $self->{overlay}->close;
     for (keys %$self) {
+	next if $_ eq 'treedumper';
 	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
 	delete $self->{$_};
     }
