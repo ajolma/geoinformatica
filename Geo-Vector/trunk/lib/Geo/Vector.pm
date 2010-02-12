@@ -1602,6 +1602,13 @@ sub clip {
 	next unless $f; # should not happen
 	
 	my $geometry = $f->GetGeometryRef();
+
+	# transformation if that is wished
+	if ($params{transformation}) {
+	    my $points = $geometry->Points;
+	    transform_points($points, $params{transformation});
+	    $geometry->Points($points);
+	}
 	
 	# make copies of the features and add them to clip
 	
@@ -1618,9 +1625,19 @@ sub clip {
     }
     
     $clip->{OGR}->{Layer}->SyncToDisk;
+    return $clip;
+
     $params{layer} = $params{create};
     delete $params{create};
     return Geo::Vector->new(%params);
+}
+
+sub transform_points {
+    my($points, $ct) = @_;
+    $ct->TransformPoints($points), return unless ref($points->[0]);
+    for my $p (@$points) {
+	transform_points($p, $ct);
+    }
 }
 
 ## @method void add_layer(Geo::Vector another)
