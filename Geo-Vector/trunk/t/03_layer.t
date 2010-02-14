@@ -6,6 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 2;
+use Glib qw/TRUE FALSE/;
 BEGIN { 
     use_ok('Geo::Vector');
     use_ok('Gtk2::Ex::Geo');
