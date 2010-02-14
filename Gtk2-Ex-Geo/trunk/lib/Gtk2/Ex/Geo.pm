@@ -110,4 +110,9 @@ BEGIN {
     XSLoader::load( 'Gtk2::Ex::Geo', $VERSION );
 }
 
+sub exception_handler {
+    my($msg) = @_;
+    print STDERR "$msg\n";
+}
+
 1;
