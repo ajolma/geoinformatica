@@ -104,7 +104,7 @@ sub layers {
     $driver = '' unless $driver;
     $data_source = '' unless $data_source;
     my $self = { update => 0 };
-    set_driver($self, $driver, $data_source);
+    set_driver($self, $driver, $data_source, undef, 'open');
     return unless $self->{OGR}->{DataSource};
     my %layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
@@ -126,7 +126,7 @@ sub layers {
 sub delete_layer {
     my($driver, $data_source, $layer) = @_;
     my $self = { update => 1 };
-    set_driver($self, $driver, $data_source);
+    set_driver($self, $driver, $data_source, undef, 'open');
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
 	my $l = $self->{OGR}->{DataSource}->GetLayerByIndex($i);
 	$self->{OGR}->{DataSource}->DeleteLayer($i), last
@@ -163,8 +163,11 @@ sub delete_layer {
 #
 # @param params Named parameters, all are optional: (see also the
 # named parameters of the Geo::Vector::layer method)
-# - \a driver => string, used only if data source is not given,
+# - \a driver => string, name of the driver for create or open
 # default is 'Memory' for layer type objects.
+# - \a data_source_method => string, create or open
+# Used only if driver is given.
+# default is create.
 # - \a driver_options forwarded to Geo::OGR::CreateDataSource.
 # - \a data_source => string, OGR data source string, required for
 # other layer type objects than in-memory vectors.
@@ -209,6 +212,7 @@ sub new {
     $params{geometry_type} = $params{schema}{'.GeometryType'}{TypeName} if ref $params{schema};
 
     my %defaults = ( driver => '',
+		     data_source_method => 'create',
 		     driver_options => [],
 		     filename => '',
 		     data_source => '',
@@ -247,11 +251,11 @@ sub new {
     bless $self => (ref($package) or $package);
     
     if ($params{data_source}) {
-	set_driver($self, $params{driver}, $params{data_source}, $params{driver_options});
+	set_driver($self, $params{driver}, $params{data_source}, $params{driver_options}, $params{data_source_method});
     }
     elsif ($params{layer} or $params{schema}) {
 	$self->{update} = 1;
-	set_driver($self, 'Memory', '');
+	set_driver($self, 'Memory', '', 'create');
 	$params{layer} = 'x' unless $params{layer};
     }
     else {
@@ -330,20 +334,33 @@ sub new {
 
 ## @ignore
 sub set_driver {
-    my($self, $driver, $data_source, $options) = @_;
+    my($self, $driver, $data_source, $options, $data_source_method) = @_;
     $options = [] unless $options;
     if ($driver) {
 	if (isa($driver, 'Geo::OGR::Driver')) {
 	    $self->{OGR}->{Driver} = $driver;
 	} else {
 	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
+	    croak "Can't find driver: $driver" unless $self->{OGR}->{Driver};
 	}
-	croak "Can't find driver: $driver" unless $self->{OGR}->{Driver};
-	eval {
-	    $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $options);
-	};
-        $@ = "no reason given" unless $@;
-	croak "Can't create data source: $@" unless $self->{OGR}->{DataSource};
+	
+	if ($data_source_method eq 'open') {
+
+	    eval {
+		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->Open($data_source, $self->{update});
+	    };
+	    $@ = "no reason given" unless $@;
+	    croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
+
+	} else { # copy not implemented
+	
+	    eval {
+		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $options);
+	    };
+	    $@ = "no reason given" unless $@;
+	    croak "Can't create data source: $@" unless $self->{OGR}->{DataSource};
+	}
+
     } else {
 	eval {
 	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $self->{update});
