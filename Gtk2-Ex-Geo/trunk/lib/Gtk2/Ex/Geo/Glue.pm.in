@@ -159,6 +159,8 @@ sub new {
 	  }, $self);
     
     if ($params{history}) {
+	my $mode = 0600;
+	chmod $mode, $params{history} if -e $params{history};
 	if (open TMP, $params{history}) {
 	    my @history = <TMP>;
 	    CORE::close TMP;
@@ -174,6 +176,8 @@ sub new {
     }
     $self->{history} = new Gtk2::Ex::Geo::History(['']) unless $self->{history};
     if ($params{resources}) {
+	my $mode = 0600;
+	chmod $mode, $params{resources} if -e $params{resources};
 	if (open TMP, $params{resources}) {
 	    my $key = '';
 	    while (<TMP>) {
@@ -181,7 +185,9 @@ sub new {
 		s/\r//;
 		if (/^  /) {
 		    s/^  //;
-		    $self->{resources}{$key}{$_} = 1;
+		    my @value = split /\t/;
+		    my $k = shift @value;
+		    $self->{resources}{$key}{$k} = [@value] if $k;
 		} else {
 		    $key = $_;
 		}
@@ -300,7 +306,7 @@ sub close {
 	    for my $key (keys %$resources) {
 		print TMP "$key\n";
 		for my $value (keys %{$resources->{$key}}) {
-		    print TMP "  $value\n";
+		    print TMP "  $value\t",join("\t",@{$resources->{$key}{$value}}),"\n";
 		}
 	    }
 	    close TMP;
