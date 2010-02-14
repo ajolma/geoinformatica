@@ -2414,7 +2414,6 @@ sub delete_data_source {
 
     $model->remove($iter);
     delete $self->{gui}{resources}{datasources}{$name};
-    fill_named_data_sources_combobox($self);
 }
 
 sub connect_data_source {
