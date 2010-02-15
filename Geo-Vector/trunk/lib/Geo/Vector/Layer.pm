@@ -735,16 +735,16 @@ sub open_features_dialog {
 	$selection->set_mode('multiple');
 	$selection->signal_connect(changed => \&feature_activated, [$self, $gui]);
 	
-	$dialog->get_widget('spinbutton1')->signal_connect(value_changed => \&fill_ftv, [$self, $gui]);
-	$dialog->get_widget('spinbutton2')->signal_connect(value_changed => \&fill_ftv, [$self, $gui]);
+	$dialog->get_widget('from_feature_spinbutton')->signal_connect(value_changed => \&fill_features_table, [$self, $gui]);
+	$dialog->get_widget('max_features_spinbutton')->signal_connect(value_changed => \&fill_features_table, [$self, $gui]);
 
-	$dialog->get_widget('features_limit_checkbutton')->signal_connect(toggled => \&fill_ftv, [$self, $gui]);
+	$dialog->get_widget('features_limit_checkbutton')->signal_connect(toggled => \&fill_features_table, [$self, $gui]);
 	
 	$dialog->get_widget('features_vertices_button')->signal_connect(clicked => \&vertices_of_selected_features, [$self, $gui]);
-	$dialog->get_widget('make_selection-button')->signal_connect(clicked => \&make_selection, [$self, $gui]);
-	$dialog->get_widget('clip_selected-button')->signal_connect(clicked => \&clip_selected_features, [$self, $gui]);
-	$dialog->get_widget('zoom-to-button')->signal_connect(clicked => \&zoom_to_selected_features, [$self, $gui]);
-	$dialog->get_widget('close-button')->signal_connect(clicked => \&close_features_dialog, [$self, $gui]);
+	$dialog->get_widget('make_selection_button')->signal_connect(clicked => \&make_selection, [$self, $gui]);
+	$dialog->get_widget('clip_selected_button')->signal_connect(clicked => \&clip_selected_features, [$self, $gui]);
+	$dialog->get_widget('zoom_to_button')->signal_connect(clicked => \&zoom_to_selected_features, [$self, $gui]);
+	$dialog->get_widget('close_features_button')->signal_connect(clicked => \&close_features_dialog, [$self, $gui]);
 
     } elsif (!$dialog->get_widget('features_dialog')->get('visible')) {
 	$dialog->get_widget('features_dialog')->move(@{$self->{features_dialog_position}}) if $self->{features_dialog_position};
@@ -803,11 +803,11 @@ sub open_features_dialog {
 	$_->signal_connect(clicked => sub {
 	    shift;
 	    my($self, $tv) = @{$_[0]};
-	    fill_ftv(undef, [$self, $gui]);
+	    fill_features_table(undef, [$self, $gui]);
 	}, [$self, $tv]);
     }
     
-    fill_ftv(undef, [$self, $gui]);
+    fill_features_table(undef, [$self, $gui]);
     
     $dialog->get_widget('features_dialog')->show_all;
     $dialog->get_widget('features_dialog')->present;
@@ -836,15 +836,15 @@ sub in_field_order {
 
 
 ##@ignore
-sub fill_ftv {
+sub fill_features_table {
     my($self, $gui) = @{$_[1]};
 
     my $dialog = $self->{features_dialog};
     my $treeview = $dialog->get_widget('feature_treeview');
     my $overlay = $gui->{overlay};
 
-    my $from = $dialog->get_widget('spinbutton1')->get_value_as_int;
-    my $count = $dialog->get_widget('spinbutton2')->get_value_as_int;
+    my $from = $dialog->get_widget('from_feature_spinbutton')->get_value_as_int;
+    my $count = $dialog->get_widget('max_features_spinbutton')->get_value_as_int;
     my $limit = $dialog->get_widget('features_limit_checkbutton')->get_active;
 
     my $schema = $self->schema;
@@ -1074,8 +1074,8 @@ sub open_feature_list_dialog {
 	$selection->set_mode('multiple');
 	$selection->signal_connect(changed => \&feature_activated2, [$self, $gui]);
 	
-	$dialog->get_widget('feature_list_from_spinbutton')->signal_connect(value_changed => \&fill_ftv2, [$self, $gui]);
-	$dialog->get_widget('feature_list_max_spinbutton')->signal_connect(value_changed => \&fill_ftv2, [$self, $gui]);
+	$dialog->get_widget('feature_list_from_spinbutton')->signal_connect(value_changed => \&fill_features_table2, [$self, $gui]);
+	$dialog->get_widget('feature_list_max_spinbutton')->signal_connect(value_changed => \&fill_features_table2, [$self, $gui]);
 	
 	$dialog->get_widget('feature_list_zoom_to_button')->signal_connect(clicked => \&zoom_to_selected_feature_list, [$self, $gui]);
 	$dialog->get_widget('feature_list_close_button')->signal_connect(clicked => \&close_feature_list_dialog, [$self, $gui]);
@@ -1106,11 +1106,11 @@ sub open_feature_list_dialog {
 	$_->signal_connect(clicked => sub {
 	    shift;
 	    my($self, $gui) = @{$_[0]};
-	    fill_ftv2(undef, [$self, $gui]);
+	    fill_features_table2(undef, [$self, $gui]);
 	}, [$self, $gui]);
     }
 
-    fill_ftv2(undef, [$self, $gui]);
+    fill_features_table2(undef, [$self, $gui]);
 
     $treeview = $dialog->get_widget('feature_list_attributes_treeview');
 
@@ -1148,7 +1148,7 @@ sub close_feature_list_dialog {
     1;
 }
 
-sub fill_ftv2 {
+sub fill_features_table2 {
     shift;
     my($self, $gui) = @{$_[0]};
 
