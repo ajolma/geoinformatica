@@ -1886,37 +1886,29 @@ sub open_open_vector_dialog {
     
     my $treeview = $d->get_widget('open_vector_directory_treeview');
     $treeview->set_model(Gtk2::TreeStore->new('Glib::String'));
-    my $i = 0;
-    foreach my $column ('directory') {
-	my $cell = Gtk2::CellRendererText->new;
-	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, markup => $i++);
-	$treeview->append_column($col);
-    }
-    $treeview->signal_connect(button_press_event => sub 
-			      {
-                                  if ($combo->get_active) {
-                                      $combo->set_active(0);
-                                      $d->get_widget('open_vector_layer_treeview')->get_model->clear;
-                                  }
-				  my($treeview, $event, $oneself) = @_;
-				  select_directory($oneself, $treeview) if $event->type =~ /^2button/;
-				  return 0;
-			      }, $oneself);
-    $treeview->signal_connect(key_press_event => sub
-			      {
-                                  if ($combo->get_active) {
-                                      $combo->set_active(0);
-                                      $d->get_widget('open_vector_layer_treeview')->get_model->clear;
-                                  }
-				  my($treeview, $event, $oneself) = @_;
-				  select_directory($oneself, $treeview) if $event->keyval == $Gtk2::Gdk::Keysyms{Return};
-				  return 0;
-			      }, $oneself);
+    my $cell = Gtk2::CellRendererText->new;
+    my $col = Gtk2::TreeViewColumn->new_with_attributes('', $cell, markup => 0);
+    $treeview->append_column($col);
+    $treeview->signal_connect(
+	button_press_event => sub 
+	{
+	    my($treeview, $event, $self) = @_;
+	    select_directory($self, $treeview) if $event->type =~ /^2button/;
+	    return 0;
+	}, $oneself);
+
+    $treeview->signal_connect(
+	key_press_event => sub
+	{
+	    my($treeview, $event, $self) = @_;
+	    select_directory($self, $treeview) if $event->keyval == $Gtk2::Gdk::Keysyms{Return};
+	    return 0;
+	}, $oneself);
     
     $treeview = $d->get_widget('open_vector_layer_treeview');
     $treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
     $treeview->get_selection->set_mode('multiple');
-    $i = 0;
+    my $i = 0;
     for my $column ('layer', 'geometry') {
 	my $cell = Gtk2::CellRendererText->new;
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
@@ -2122,31 +2114,32 @@ sub fill_directory_treeview {
     
     for (reverse @dirs) {
 	next if /^\s*$/;
-	my $label = Gtk2::Label->new($_);
-	my $b = Gtk2::ToolButton->new($label,$_);
-	$b->signal_connect("clicked", 
-			   sub {
-			       my($button, $self) = @_;
-                               $self->{dialog}->get_widget('open_vector_datasource_combobox')->set_active(0);
-			       my $n = $button->get_label;
-			       if ($n eq $self->{volume}) {
-				   $self->{path} = '';
-			       } else {
-				   my @directories;
-				   for (reverse @{$self->{directory_toolbar}}) {
-				       push @directories, $_->get_label;
-				       last if $_ == $_[0];
-				   }
-				   if ($^O eq 'MSWin32') {
-				       shift @directories; # remove volume
-				   }
-				   my $directory = File::Spec->catdir(@directories);
-				   $self->{path} = File::Spec->catpath($self->{volume}, $directory, '');
-			       }
-			       fill_directory_treeview($self);
-			       fill_layer_treeview($self);
-			   },
-			   $self);
+	my $filename = Glib->filename_to_unicode($_);
+	my $label = Gtk2::Label->new($filename);
+	my $b = Gtk2::ToolButton->new($label, $filename);
+	$b->signal_connect(
+	    clicked => sub {
+		my($button, $self) = @_;
+		$self->{dialog}->get_widget('open_vector_datasource_combobox')->set_active(0);
+		my $n = $button->get_label;
+		if ($n eq $self->{volume}) {
+		    $self->{path} = '';
+		} else {
+		    my @directories;
+		    for (reverse @{$self->{directory_toolbar}}) {
+			push @directories, $_->get_label;
+			last if $_ == $_[0];
+		    }
+		    if ($^O eq 'MSWin32') {
+			shift @directories; # remove volume
+		    }
+		    my $directory = File::Spec->catdir(@directories);
+		    $self->{path} = File::Spec->catpath($self->{volume}, $directory, '');
+		}
+		fill_directory_treeview($self);
+		fill_layer_treeview($self);
+	    },
+	    $self);
 	$label->show;
 	$b->show;
 	$toolbar->insert($b,0);
@@ -2166,6 +2159,7 @@ sub fill_directory_treeview {
 	    next if (/^\./ and not $_ eq File::Spec->updir);
 	    #next unless -d $test;
 	    my $dir = 1 if -d $test;
+	    #print STDERR "$test -> $dir\n";
 	    next if $_ eq File::Spec->curdir;
 	    s/&/&amp;/g;
 	    s/</&lt;/g;
@@ -2182,16 +2176,20 @@ sub fill_directory_treeview {
 	for (@dirs) {
 	    push @{$self->{dir_list}}, $_;
 	}
-	
-	for my $i (0..$#{$self->{dir_list}}) {
-	    my $iter = $model->insert (undef, 0);
-	    $model->set ($iter, 0, $self->{dir_list}->[$i] );
-	}
-	
-	$treeview->set_cursor(Gtk2::TreePath->new(0));
-	
+
     }
-    @{$self->{dir_list}} = reverse @{$self->{dir_list}} if $self->{dir_list};
+
+    # in a file
+    push @{$self->{dir_list}},'..' unless @{$self->{dir_list}};
+	
+    for (@{$self->{dir_list}}) {
+	my $iter = $model->insert(undef, 0);
+	$model->set($iter, 0, Glib->filename_to_unicode($_) );
+    }
+	
+    $treeview->set_cursor(Gtk2::TreePath->new(0));
+
+    @{$self->{dir_list}} = reverse @{$self->{dir_list}};
 }
 
 sub empty_layer_data {
@@ -2427,6 +2425,11 @@ sub connect_data_source {
 
 sub select_directory {
     my($self, $treeview) = @_;
+
+    my $combo = $self->{dialog}->get_widget('open_vector_driver_combobox');
+    $combo->set_active(0) if $combo->get_active;
+    $self->{dialog}->get_widget('open_vector_layer_treeview')->get_model->clear;
+
     my($path, $focus_column) = $treeview->get_cursor;
     my $index = $path->to_string if $path;
     if (defined $index) {
