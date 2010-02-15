@@ -1605,7 +1605,7 @@ sub clip {
     $params{data_source} = $self->{data_source} unless $params{data_source};
     $params{driver} = $self->driver unless $params{driver};
 
-    my $clip = new Geo::Vector(%params);
+    my $clip = Geo::Vector->new(%params);
 
     my $schema = $self->{OGR}->{Layer}->GetLayerDefn();
 
@@ -1614,9 +1614,21 @@ sub clip {
 	$clip->{OGR}->{Layer}->CreateField($fd);
     }
 
-    for my $f (@{$params{selected_features}}) {
-	
-	next unless $f; # should not happen
+    $self->{OGR}->{Layer}->ResetReading() if $params{copy_all};
+    
+    my $i = 0;
+    while (1) {
+
+	my $f;
+
+	if ($params{copy_all}) {
+	    $f = $self->{OGR}->{Layer}->GetNextFeature();
+	    last unless $f;
+	} else {
+	    last if $i > $#{$params{selected_features}};
+	    $f = $params{selected_features}[$i++];
+	    next unless $f; # should not happen
+	}	
 	
 	my $geometry = $f->GetGeometryRef();
 
@@ -1629,7 +1641,7 @@ sub clip {
 	
 	# make copies of the features and add them to clip
 	
-	my $feature = new Geo::OGR::Feature($schema);
+	my $feature = Geo::OGR::Feature->new($schema);
 	$feature->SetGeometry($geometry); # makes a copy
 	
 	for my $i (0..$schema->GetFieldCount-1) {
@@ -1643,15 +1655,18 @@ sub clip {
     
     $clip->{OGR}->{Layer}->SyncToDisk;
     return $clip;
-
-    $params{layer} = $params{create};
-    delete $params{create};
-    return Geo::Vector->new(%params);
 }
 
 sub transform_points {
     my($points, $ct) = @_;
-    $ct->TransformPoints($points), return unless ref($points->[0]);
+    unless (ref($points->[0])) { # single point [x,y,z]
+	@$points = $ct->TransformPoint(@$points);
+	return;
+    }
+    $ct->TransformPoints($points), return 
+	unless ref($points->[0]->[0]); # list of points [[x,y,z],[x,y,z],...]
+
+    # list of list of points [[[x,y,z],[x,y,z],...],...]
     for my $p (@$points) {
 	transform_points($p, $ct);
     }
