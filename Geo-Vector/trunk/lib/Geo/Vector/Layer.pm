@@ -31,7 +31,7 @@ BEGIN {
 }
 
 use vars qw/%RENDER_AS2INDEX %INDEX2RENDER_AS $oneself $dialog_folder
-            $BORDER_COLOR/;
+            $BORDER_COLOR %EPSG/;
 
 require Exporter;
 our @ISA = qw(Exporter Geo::Vector Gtk2::Ex::Geo::Layer);
@@ -1494,45 +1494,95 @@ sub open_clip_dialog {
 
     my $dialog = $self->{clip_dialog};
     unless ($dialog) {
-	$self->{clip_dialog} = $dialog = $gui->get_dialog('vector_clip_dialog');
+	$self->{clip_dialog} = $dialog = $gui->get_dialog('clip_vector_dialog');
 	croak "clip_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('vector_clip_dialog')->signal_connect(delete_event => \&close_clip_dialog, [$self, $gui]);
+	$dialog->get_widget('clip_vector_dialog')
+	    ->signal_connect( delete_event => \&cancel_clip, [$self, $gui]);
 
-	my $entry = $dialog->get_widget('clip_datasource_entry');
-	$dialog->get_widget('clip_datasource_button')->signal_connect
-	    ( clicked=>\&select_directory2, [$self, $entry] );
+	my $label = $dialog->get_widget('clip_datasource_label');
+	$dialog->get_widget('clip_datasource_button')
+	    ->signal_connect( clicked=>\&select_directory2, [$self, $label]);
 
-	$dialog->get_widget('clip_cancel_button')->signal_connect(clicked => \&cancel_clip, [$self, $gui]);
-	$dialog->get_widget('clip_ok_button')->signal_connect(clicked => \&do_clip, [$self, $gui, 1]);
+	$dialog->get_widget('clip_cancel_button')
+	    ->signal_connect(clicked => \&cancel_clip, [$self, $gui]);
+	$dialog->get_widget('clip_ok_button')
+	    ->signal_connect(clicked => \&do_clip, [$self, $gui, 1]);
 	#$entry->signal_connect(changed => \&clip_data_source_changed, [$self, $gui]);
-	
-    } elsif (!$dialog->get_widget('vector_clip_dialog')->get('visible')) {
-	$dialog->get_widget('vector_clip_dialog')->move(@{$self->{clip_dialog_position}}) if $self->{clip_dialog_position};
-    }
-    $dialog->get_widget('vector_clip_dialog')->set_title("Clip from ".$self->name);
-	
-    my $combo = $dialog->get_widget('clip_driver_combobox');
-    my $model = $combo->get_model;
-    $model->clear;
 
+	$dialog->get_widget('from_EPSG_entry')
+	    ->signal_connect(changed => \&update_srs_labels, [$self, $gui]);
+	$dialog->get_widget('to_EPSG_entry')
+	    ->signal_connect(changed => \&update_srs_labels, [$self, $gui]);
+
+	my $combo = $dialog->get_widget('clip_driver_combobox');
+	my $renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start ($renderer, TRUE);
+	$combo->add_attribute ($renderer, text => 0);
+	$combo->signal_connect(changed => \&clip_driver_changed, $self);
+
+	$combo = $dialog->get_widget('clip_datasource_combobox');
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start ($renderer, TRUE);
+	$combo->add_attribute ($renderer, text => 0);
+	
+    } elsif (!$dialog->get_widget('clip_vector_dialog')->get('visible')) {
+	$dialog->get_widget('clip_vector_dialog')
+	    ->move(@{$self->{clip_dialog_position}}) if $self->{clip_dialog_position};
+    }
+
+    $dialog->get_widget('clip_vector_dialog')->set_title("Clip features from layer ".$self->name);
+
+    my $model = Gtk2::ListStore->new('Glib::String');
+    my $i = 0;
+    my $active = 0;
     for my $driver (Geo::OGR::Drivers) {
 	next unless $driver->TestCapability('CreateDataSource');
-	$model->set($model->append, 0, $driver->GetName);
+	my $name = $driver->GetName;
+	$active = $i if $name eq 'Memory';
+	$model->set($model->append, 0, $name);
+	$i++;
     }
+    my $combo = $dialog->get_widget('clip_driver_combobox');
+    $combo->set_model($model);
+    $combo->set_active($active);
+    clip_driver_changed($combo, $self);
 
+    $model = Gtk2::ListStore->new('Glib::String');
+    $model->set ($model->append, 0, '');
+    for my $data_source (sort keys %{$self->{gui}{resources}{datasources}}) {
+	$model->set ($model->append, 0, $data_source);
+    }
+    $combo = $dialog->get_widget('clip_datasource_combobox');
+    $combo->set_model($model);
     $combo->set_active(0);
-    $dialog->get_widget('clip_name_entry')->set_text('clip');
-    $dialog->get_widget('clip_datasource_entry')->set_text('.');
-    my $s = $self->selected_features;
-    $dialog->get_widget('clip_count_label')->set_label(($#$s+1)." features selected");
 
-    $dialog->get_widget('vector_clip_dialog')->show_all;
-    $dialog->get_widget('vector_clip_dialog')->present;
+    $dialog->get_widget('clip_name_entry')->set_text('clip');
+    $dialog->get_widget('clip_datasource_label')->set_text('');
+    my $s = $self->selected_features;
+    $dialog->get_widget('clip_count_label')->set_label($#$s+1);
+
+    $dialog->get_widget('clip_vector_dialog')->show_all;
+    $dialog->get_widget('clip_vector_dialog')->present;
+}
+
+sub clip_driver_changed {
+    my($combo, $self) = @_;
+    my $dialog = $self->{clip_dialog};
+    my $active = $combo->get_active();
+    return if $active < 0;
+    my $model = $combo->get_model;
+    my $iter = $model->get_iter_from_string($active);
+    my $name = $model->get($iter, 0);
+    for my $w ('clip_datasource_combobox','clip_datasource_button',
+	       'clip_file_source_label','clip_non_file_source_label',
+	       'clip_datasource_label') {
+	$dialog->get_widget($w)->set_sensitive($name ne 'Memory');
+    }
 }
 
 sub select_directory2 {
     my $button = shift;
-    my($self, $entry) = @{$_[0]};
+    my($self, $label) = @{$_[0]};
     my $file_chooser =
 	Gtk2::FileChooserDialog->new ("Select a folder",
 				      undef, 'select_folder',
@@ -1547,7 +1597,7 @@ sub select_directory2 {
 	#print "$dialog_folder\n";
 	$uri =~ s/^file:\/\///;
 	$uri =~ s/^\/// if $uri =~ /^\/\w:/; # hack for windows
-	$entry->set_text($uri);
+	$label->set_text($uri);
     }
 
     $file_chooser->destroy;
@@ -1558,35 +1608,77 @@ sub do_clip {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{clip_dialog};
 
+    my $data_source;
+    my $combo = $dialog->get_widget('clip_datasource_combobox');
+    my $active = $combo->get_active();
+    if ($active > 0) {
+	my $model = $combo->get_model;
+	my $iter = $model->get_iter_from_string($active);
+	$data_source = $model->get($iter, 0);
+    } else {
+	$data_source = $dialog->get_widget('clip_datasource_label')->get_text;
+    }
+
     my %ret = (
 	create => $dialog->get_widget('clip_name_entry')->get_text,
-	data_source => $dialog->get_widget('clip_datasource_entry')->get_text,
+	data_source => $data_source,
 	selected_features => $self->selected_features,
-	driver => $dialog->get_widget('clip_driver_combobox')->get_active_text
+	driver => $dialog->get_widget('clip_driver_combobox')->get_active_text,
+	copy_all => $dialog->get_widget('clip_all_checkbutton')->get_active,
 	);
+
+    if (!($ret{create} =~ /^\w+$/) or $gui->layer($ret{create})) {
+	$gui->message("Layer with name '$ret{create}' is already open or the name is not valid.");
+	return;
+    }
     
     my $layers;
 
-    eval {
-	$layers = Geo::Vector::layers($ret{driver}, $ret{data_source});
-    };
+    unless ($ret{driver} ne 'Memory') {
+	eval {
+	    $layers = Geo::Vector::layers($ret{driver}, $ret{data_source});
+	};
+    }
     
     if ($layers and $layers->{$ret{create}}) {
 	
-	$gui->message("Data source '$ret{data_source}' already contains a layer '$ret{layer_name}'.");
+	$gui->message("Data source '$ret{data_source}' already contains a layer with name '$ret{create}'.");
 	return;
 	
     } else {
 
+	my $from = $dialog->get_widget('from_EPSG_entry')->get_text;
+	my $to = $dialog->get_widget('to_EPSG_entry')->get_text;
+	my $ct;
+	my $p = $dialog->get_widget('clip_projection_checkbutton')->get_active;
+	#print STDERR "do proj: $p\n";
+	if ($p) {
+	    if ($EPSG{$from} and $EPSG{$to}) {
+		my $src = Geo::OSR::SpatialReference->create( EPSG => $from );
+		my $dst = Geo::OSR::SpatialReference->create( EPSG => $to );
+		eval {
+		    $ct = Geo::OSR::CoordinateTransformation->new($src, $dst);
+		};
+	    }
+	    #print STDERR "ct=$ct\n";
+	    if ($@ or !$ct) {
+		$@ = '' unless $@;
+		$@ = ": $@";
+		$gui->message("can't create coordinate transformation$@");
+		return;
+	    }
+	    $ret{transformation} = $ct;
+	}
+
 	my $new_layer = $self->clip(%ret);
-	$gui->add_layer($new_layer, $ret{layer_name}, 1);
+	$gui->add_layer($new_layer, $ret{create}, 1);
 	#$gui->set_layer($new_layer);
 	$gui->{overlay}->render;
 	
     }
 
-    $self->{clip_dialog_position} = [$dialog->get_widget('vector_clip_dialog')->get_position];
-    $dialog->get_widget('vector_clip_dialog')->hide();
+    $self->{clip_dialog_position} = [$dialog->get_widget('clip_vector_dialog')->get_position];
+    $dialog->get_widget('clip_vector_dialog')->hide();
     $gui->{overlay}->render;
 }
 
@@ -1597,11 +1689,45 @@ sub cancel_clip {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    my $dialog = $self->{clip_dialog}->get_widget('vector_clip_dialog');
+    my $dialog = $self->{clip_dialog}->get_widget('clip_vector_dialog');
     $self->{clip_dialog_position} = [$dialog->get_position];
     $dialog->hide();
-    $gui->{overlay}->render;
+    #$gui->{overlay}->render;
     1;
+}
+
+##@ignore
+sub update_srs_labels {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{clip_dialog};
+    my $from = $dialog->get_widget('from_EPSG_entry')->get_text;
+    my $to = $dialog->get_widget('to_EPSG_entry')->get_text;
+
+    unless (defined $EPSG{2000}) {
+	my $dir = Geo::GDAL::GetConfigOption('GDAL_DATA');
+	$dir = '/usr/local/share/gdal' unless $dir;
+
+	for my $f ("$dir/gcs.csv","$dir/gcs.override.csv","$dir/pcs.csv","$dir/pcs.override.csv") {
+	    if (open(EPSG, $f)) {
+		while (<EPSG>) {
+		    next unless /^\d/;
+		    my @t = split/,/;
+		    $t[1] =~ s/^"//;
+		    $t[1] =~ s/"$//;
+		    $EPSG{$t[0]} = $t[1];
+		}
+		close EPSG;
+	    }
+	}
+    }
+
+    $from = $EPSG{$from};
+    $from = 'srs not found' unless $from;
+    $to = $EPSG{$to};
+    $to = 'srs not found' unless $to;
+
+    $dialog->get_widget('from_srs_label')->set_text($from);
+    $dialog->get_widget('to_srs_label')->set_text($to);
 }
 
 ##@ignore
