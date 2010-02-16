@@ -475,39 +475,6 @@ sub dump_geom {
     }
 }
 
-## @method $copy(%params)
-#
-# @brief Copy this layer into a new layer.
-# @param[in] params Named parameters (see the named
-# parameters of Geo::Vector::new).
-# @return The new Geo::Vector object.
-sub copy {
-    my $self = shift;
-    my %params = @_ if @_;
-    $params{schema} = $self->schema();
-    my $new = Geo::Vector->new(%params);
-    my $out = $new->{OGR}->{Layer};
-    my $defn = $out->GetLayerDefn() if $out;
-    $self->init_iterate;
-    while (my $feature = $self->next_feature()) {
-	my $geom = $feature->GetGeometryRef();
-	$defn = $feature->GetDefnRef unless $out;
-	my $f = Geo::OGR::Feature->new($defn);
-	for my $name (keys %{$params{schema}}) {
-	    next if $name =~ /^\./;
-	    $f->SetField($name, $feature->GetField($name));
-	}
-	$f->SetGeometry($geom);
-	if ($out) {
-	    $out->CreateFeature($f);
-	} else {
-	    push @{$new->{features}}, $f;
-	}
-    }
-    $out->SyncToDisk unless $new->driver eq 'Memory';
-    return $new;
-}
-
 ## @method $buffer(%params)
 #
 # @brief Create a new Geo::Vector object, whose features are buffer
@@ -1584,35 +1551,39 @@ sub world {
     return ( $extent->[0], $extent->[2], $extent->[1], $extent->[3] );
 }
 
-## @method Geo::Vector clip(%params)
+## @method Geo::Vector copy(%params)
 #
-# @brief Clip selected features from the layer into a new layer.
+# @brief Copy selected or all features from the layer into a new layer.
 #
 # @param[in] params is a list of named parameters:
-# - \a layer_name name for the new layer (default is "clip")
+# - \a copy_all boolean flag to copy all
+# - \a layer_name name for the new layer (default is "copy")
 # - \a driver driver (default is the driver of the layer)
 # - \a data_source data source (default is the data source of the layer)
-# - \a selected_features selected features (a ref to an array)
+# - \a selected_features selected features (a ref to an array), if not
+# defined then copies all
 # The params are forwarded to the constructor of the new layer.
 # @return A Geo::Vector object.
 # @bug If self is a polygon shapefile, the result seems to be linestrings, but
 # the saved shapefile is ok.
-sub clip {
+sub copy {
     my($self, %params) = @_;
 
-    $params{create} = 'clip' unless $params{create};
+    $params{create} = 'copy' unless $params{create};
     $params{data_source} = $params{datasource} if $params{datasource}; 
     $params{data_source} = $self->{data_source} unless $params{data_source};
     $params{driver} = $self->driver unless $params{driver};
 
-    my $clip = Geo::Vector->new(%params);
+    my $copy = Geo::Vector->new(%params);
 
     my $schema = $self->{OGR}->{Layer}->GetLayerDefn();
 
     for my $i (0..$schema->GetFieldCount-1) {
 	my $fd = $schema->GetFieldDefn($i);
-	$clip->{OGR}->{Layer}->CreateField($fd);
+	$copy->{OGR}->{Layer}->CreateField($fd);
     }
+
+    $params{copy_all} = 1 unless exists $params{selected_features};
 
     $self->{OGR}->{Layer}->ResetReading() if $params{copy_all};
     
@@ -1639,7 +1610,7 @@ sub clip {
 	    $geometry->Points($points);
 	}
 	
-	# make copies of the features and add them to clip
+	# make copies of the features and add them to copy
 	
 	my $feature = Geo::OGR::Feature->new($schema);
 	$feature->SetGeometry($geometry); # makes a copy
@@ -1649,12 +1620,12 @@ sub clip {
 	    $feature->SetField($i, $value) if defined $value;
 	}
 	
-	$clip->{OGR}->{Layer}->CreateFeature($feature);
+	$copy->{OGR}->{Layer}->CreateFeature($feature);
 	
     }
     
-    $clip->{OGR}->{Layer}->SyncToDisk;
-    return $clip;
+    $copy->{OGR}->{Layer}->SyncToDisk;
+    return $copy;
 }
 
 sub transform_points {

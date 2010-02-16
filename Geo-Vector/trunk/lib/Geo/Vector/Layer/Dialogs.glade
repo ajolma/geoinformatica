@@ -1381,7 +1381,7 @@ Polygons</property>
       </widget>
     </child>
   </widget>
-  <widget class="GtkDialog" id="clip_vector_dialog">
+  <widget class="GtkDialog" id="copy_vector_dialog">
     <property name="border_width">5</property>
     <property name="type_hint">normal</property>
     <property name="has_separator">False</property>
@@ -1400,7 +1400,7 @@ Polygons</property>
                 <child>
                   <widget class="GtkLabel" id="label1">
                     <property name="visible">True</property>
-                    <property name="label" translatable="yes">Clip </property>
+                    <property name="label" translatable="yes">Copy </property>
                   </widget>
                   <packing>
                     <property name="expand">False</property>
@@ -1408,7 +1408,7 @@ Polygons</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="clip_count_label">
+                  <widget class="GtkLabel" id="copy_count_label">
                     <property name="visible">True</property>
                     <property name="label" translatable="yes">label</property>
                   </widget>
@@ -1428,7 +1428,7 @@ Polygons</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkCheckButton" id="clip_all_checkbutton">
+                  <widget class="GtkCheckButton" id="copy_all_checkbutton">
                     <property name="label" translatable="yes">copy all</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
@@ -1460,7 +1460,7 @@ Polygons</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkEntry" id="clip_name_entry">
+                  <widget class="GtkEntry" id="copy_name_entry">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="invisible_char">&#x25CF;</property>
@@ -1491,7 +1491,7 @@ Polygons</property>
                     <property name="visible">True</property>
                     <property name="orientation">vertical</property>
                     <child>
-                      <widget class="GtkLabel" id="clip_non_file_source_label">
+                      <widget class="GtkLabel" id="copy_non_file_source_label">
                         <property name="visible">True</property>
                         <property name="label" translatable="yes">Use non-file storage:</property>
                       </widget>
@@ -1500,7 +1500,7 @@ Polygons</property>
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkLabel" id="clip_file_source_label">
+                      <widget class="GtkLabel" id="copy_file_source_label">
                         <property name="visible">True</property>
                         <property name="label" translatable="yes">Store in folder:</property>
                       </widget>
@@ -1527,7 +1527,7 @@ Polygons</property>
                     <property name="visible">True</property>
                     <property name="orientation">vertical</property>
                     <child>
-                      <widget class="GtkComboBox" id="clip_datasource_combobox">
+                      <widget class="GtkComboBox" id="copy_datasource_combobox">
                         <property name="visible">True</property>
                       </widget>
                       <packing>
@@ -1540,16 +1540,17 @@ Polygons</property>
                       <widget class="GtkHBox" id="hbox7">
                         <property name="visible">True</property>
                         <child>
-                          <widget class="GtkLabel" id="clip_datasource_label">
+                          <widget class="GtkEntry" id="copy_datasource_entry">
                             <property name="visible">True</property>
-                            <property name="label" translatable="yes">label</property>
+                            <property name="can_focus">True</property>
+                            <property name="invisible_char">&#x25CF;</property>
                           </widget>
                           <packing>
                             <property name="position">0</property>
                           </packing>
                         </child>
                         <child>
-                          <widget class="GtkButton" id="clip_datasource_button">
+                          <widget class="GtkButton" id="copy_datasource_button">
                             <property name="label">gtk-open</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -1566,7 +1567,7 @@ Polygons</property>
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkComboBox" id="clip_driver_combobox">
+                      <widget class="GtkComboBox" id="copy_driver_combobox">
                         <property name="visible">True</property>
                       </widget>
                       <packing>
@@ -1584,7 +1585,7 @@ Polygons</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkCheckButton" id="clip_projection_checkbutton">
+              <widget class="GtkCheckButton" id="copy_projection_checkbutton">
                 <property name="label" translatable="yes">Apply projection transformation:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -1702,7 +1703,7 @@ Polygons</property>
             <property name="visible">True</property>
             <property name="layout_style">end</property>
             <child>
-              <widget class="GtkButton" id="clip_cancel_button">
+              <widget class="GtkButton" id="copy_cancel_button">
                 <property name="label">gtk-cancel</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -1716,7 +1717,7 @@ Polygons</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkButton" id="clip_ok_button">
+              <widget class="GtkButton" id="copy_ok_button">
                 <property name="label">gtk-ok</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -1893,8 +1894,8 @@ Polygons</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkButton" id="clip_selected_button">
-                <property name="label" translatable="yes">Clip selected</property>
+              <widget class="GtkButton" id="copy_selected_button">
+                <property name="label" translatable="yes">Copy selected</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>

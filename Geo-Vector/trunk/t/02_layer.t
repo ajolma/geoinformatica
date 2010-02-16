@@ -1,7 +1,7 @@
 use File::Basename;
 use Geo::Vector;
 use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 12;
+use Gtk2::TestHelper tests => 11;
 
 my($window, $gis) = setup(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer/]);
 ok(1);
@@ -20,15 +20,13 @@ $layer->open_labels_dialog($gis);
 ok(1);
 $layer->properties_dialog($gis);
 ok(1);
-$layer->open_clip_dialog($gis);
+$layer->open_copy_dialog($gis);
 ok(1);
 $layer->open_rasterize_dialog($gis);
 ok(1);
 $layer->open_features_dialog($gis);
 ok(1);
 $layer->open_vertices_dialog($gis);
-ok(1);
-$layer->open_clip_dialog($gis);
 ok(1);
 $layer->open_feature_list_dialog($gis);
 ok(1);
