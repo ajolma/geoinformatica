@@ -183,6 +183,17 @@ for my $datatype1 ('','int','real') {
     my @point = $gd->g2w(3,7);
     my @cell = $gd->w2g(@point);
     ok(($cell[0] == 3 and $cell[1] == 7),"world coordinates <-> grid coordinates");
+    ok(not($gd->cell_in(-1,5) and $gd->cell_in(2,13) and 
+	   $gd->cell_in(7,5) and $gd->cell_in(2,-1)) and $gd->cell_in(2,5), "cell in");
+    ok(not($gd->point_in(10,0) and $gd->point_in(20,4) and 
+	   $gd->point_in(10,12) and $gd->point_in(0,5)) and $gd->point_in(10,3), "point in");
+    $gd->save('t/data/test.bil');
+    $gd = Geo::Raster->new(filename=>'t/data/test.bil',load=>1);
+    ok(($cell[0] == 3 and $cell[1] == 7),"world coordinates <-> grid coordinates");
+    ok(not($gd->cell_in(-1,5) and $gd->cell_in(2,13) and 
+	   $gd->cell_in(7,5) and $gd->cell_in(2,-1)) and $gd->cell_in(2,5), "cell in");
+    ok(not($gd->point_in(10,0) and $gd->point_in(20,4) and 
+	   $gd->point_in(10,12) and $gd->point_in(0,5)) and $gd->point_in(10,3), "point in");
 }
 
 {
