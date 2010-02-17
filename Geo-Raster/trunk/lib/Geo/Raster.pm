@@ -247,7 +247,7 @@ sub new {
 			      maxx=>$params{world}->[2] );
 	}
     }
-    #$self->_attributes() if $self->{GRID};
+    $self->_attributes() if $self->{GRID};
     return $self;
 }
 
