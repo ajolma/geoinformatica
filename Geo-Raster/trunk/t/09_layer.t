@@ -1,7 +1,7 @@
 use strict;
 use Geo::Raster;
 use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 18;
+use Gtk2::TestHelper tests => 16;
 eval {
     require IPC::Gnuplot;
 };
@@ -43,26 +43,22 @@ ok($@ =~ /^no features/);
 $layer = Geo::Raster->new(filename => 't/data/test.png');
 $gis->add_layer($layer, 'test');
 
+$a = Geo::Raster->new(10,10);
+$gis->add_layer($a, 'test2');
+
 $layer->open_symbols_dialog($gis);
 ok(1);
 $layer->open_colors_dialog($gis);
 ok(1);
 $layer->open_labels_dialog($gis);
 ok(1);
-$a = Geo::Raster->new(10,10);
-$gis->add_layer($a, 'test2');
 $a->properties_dialog($gis);
 ok(1);
-$layer->properties_dialog($gis);
+$layer->properties_dialog($gis)->destroy;
 ok(1);
-$layer->open_clip_dialog($gis);
+$layer->open_clip_dialog($gis)->destroy;
 ok(1);
 $layer->open_vectorize_dialog($gis);
-ok(1);
-
-#$gis->run_command('open'); # this is a modal dialog box
-ok(1);
-#$gis->run_command('save_all'); # this is a modal dialog box
 ok(1);
 
 $gis->close();

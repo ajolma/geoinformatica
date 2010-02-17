@@ -424,6 +424,8 @@ sub open_gdal_properties_dialog {
     
     $dialog->get_widget('gdal_properties_dialog')->show_all;
     $dialog->get_widget('gdal_properties_dialog')->present;
+    
+    return $dialog->get_widget('gdal_properties_dialog');
 }
 
 ##@ignore
@@ -624,6 +626,7 @@ sub open_clip_dialog {
 
     $dialog->get_widget('clip_dialog')->show_all;
     $dialog->get_widget('clip_dialog')->present;
+    return $dialog->get_widget('clip_dialog');
 }
 
 ##@ignore
