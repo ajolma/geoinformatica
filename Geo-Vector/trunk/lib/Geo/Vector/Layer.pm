@@ -39,13 +39,12 @@ BEGIN {
     }
 }
 
-use vars qw/%RENDER_AS2INDEX %INDEX2RENDER_AS $oneself $dialog_folder
-            $BORDER_COLOR/;
+use vars qw/%RENDER_AS2INDEX %INDEX2RENDER_AS $BORDER_COLOR/;
 
 require Exporter;
 our @ISA = qw(Exporter Geo::Vector Gtk2::Ex::Geo::Layer);
 our @EXPORT = qw();
-our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw(%RENDER_AS2INDEX %INDEX2RENDER_AS $BORDER_COLOR) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our $VERSION = 0.03;
 
@@ -53,7 +52,6 @@ our $VERSION = 0.03;
 for (keys %RENDER_AS2INDEX) {
     $INDEX2RENDER_AS{$RENDER_AS2INDEX{$_}} = $_;
 }
-$oneself = {};
 
 # default values for new objects:
 

@@ -6,8 +6,6 @@ use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
 
-use vars qw/%RENDER_AS2INDEX %INDEX2RENDER_AS/;
-
 ## @method open_rasterize_dialog($gui)
 # @brief present a rasterize dialog for the user
 sub open {
@@ -93,7 +91,7 @@ sub apply_rasterize {
     }
 
     $ret{render_as} = $dialog->get_widget('rasterize_render_as_combobox')->get_active;
-    $ret{render_as} = $INDEX2RENDER_AS{$ret{render_as}};
+    $ret{render_as} = $Geo::Vector::Layer::INDEX2RENDER_AS{$ret{render_as}};
 
     $ret{feature} = $dialog->get_widget('rasterize_fid_entry')->get_text;
     $ret{feature} = -1 unless $ret{feature} =~ /^\d+$/;

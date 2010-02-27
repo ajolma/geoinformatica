@@ -176,7 +176,7 @@ sub get_geom_data {
 	    my $y = $geom->GetY($i);
 	    next if $y < $rect[1] or $y > $rect[3];
 	    if ($a) {
-		my $point = new Geo::OGR::Geometry($Geo::OGR::wkbPoint);
+		my $point = Geo::OGR::Geometry->create('Point');
 		$point->ACQUIRE;
 		$point->AddPoint($x, $y);
 		next unless $point->Within($s);

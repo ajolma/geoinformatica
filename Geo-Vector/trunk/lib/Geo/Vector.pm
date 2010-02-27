@@ -40,7 +40,7 @@ use Gtk2;
 
 use Geo::Vector::Layer;
 
-use vars qw( @ISA %GEOMETRY_TYPE %GEOMETRY_TYPE_INV %RENDER_AS );
+use vars qw( @ISA @GEOMETRY_TYPES %GEOMETRY_TYPE %GEOMETRY_TYPE_INV %RENDER_AS );
 
 our $VERSION = '0.52';
 
@@ -48,17 +48,19 @@ require Exporter;
 
 @ISA = qw( Exporter );
 
-our %EXPORT_TAGS = ( 'all' => [qw( %GEOMETRY_TYPE %RENDER_AS &drivers )] );
+our %EXPORT_TAGS = ( 'all' => [qw( @GEOMETRY_TYPES %GEOMETRY_TYPE %RENDER_AS &drivers )] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-for my $key ( 'Unknown', 'Point', 'LineString', 'Polygon',
-	      'MultiPoint', 'MultiLineString', 'MultiPolygon',
-	      'GeometryCollection', 'None', 'LinearRing',
-	      'Point25D', 'LineString25D', 'Polygon25D',
-	      'MultiPoint25D', 'MultiLineString25D', 'MultiPolygon25D',
-	      'GeometryCollection25D' ) 
-{
+# these should be in Geo::OGR
+@GEOMETRY_TYPES = ( 'Unknown', 'Point', 'LineString', 'Polygon',
+		    'MultiPoint', 'MultiLineString', 'MultiPolygon',
+		    'GeometryCollection', 'None', 'LinearRing',
+		    'Point25D', 'LineString25D', 'Polygon25D',
+		    'MultiPoint25D', 'MultiLineString25D', 'MultiPolygon25D',
+		    'GeometryCollection25D' );
+    
+for my $key (@GEOMETRY_TYPES) {
     my $val = eval "\$Geo::OGR::wkb$key";
     $GEOMETRY_TYPE{$key} = $val;
     $GEOMETRY_TYPE_INV{ $val } = $key;

@@ -6,9 +6,8 @@ use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Geo::Vector::Layer::Dialogs qw/:all/;
 use Geo::Raster::Layer qw /:all/;
-
-use vars qw/$dialog_folder/;
 
 ## @ignore
 # copy dialog
@@ -116,29 +115,6 @@ sub copy_driver_changed {
 	       'copy_datasource_entry') {
 	$dialog->get_widget($w)->set_sensitive($name ne 'Memory');
     }
-}
-
-## @ignore
-sub select_file_data_source {
-    my $button = shift;
-    my($self, $entry, $action) = @{$_[0]};
-    my $file_chooser =
-	Gtk2::FileChooserDialog->new ("Select a data store file or folder",
-				      undef, $action,
-				      'gtk-cancel' => 'cancel',
-				      'gtk-ok' => 'ok');
-    $file_chooser->set_current_folder($dialog_folder) if $dialog_folder;
-    my $uri;
-    if ($file_chooser->run eq 'ok') {
-	$dialog_folder = $file_chooser->get_current_folder();
-	$uri = $file_chooser->get_uri;
-	#print "$uri\n";
-	#print "$dialog_folder\n";
-	$uri =~ s/^file:\/\///;
-	$uri =~ s/^\/// if $uri =~ /^\/\w:/; # hack for windows
-	$entry->set_text($uri);
-    }
-    $file_chooser->destroy;
 }
 
 ##@ignore

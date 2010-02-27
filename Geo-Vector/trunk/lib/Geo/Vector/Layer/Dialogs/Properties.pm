@@ -4,6 +4,7 @@ package Geo::Vector::Layer::Dialogs::Properties;
 use strict;
 use warnings;
 use Carp;
+use Geo::Vector::Layer qw/:all/;
 
 ## @ignore
 sub open {

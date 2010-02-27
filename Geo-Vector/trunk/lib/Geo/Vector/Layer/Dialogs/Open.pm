@@ -7,17 +7,15 @@ use Carp;
 use Glib qw/TRUE FALSE/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 
-use vars qw/$oneself/;
-
 ## @ignore
 sub open {
     my($gui) = @_;
-
-    $oneself->{gui} = $gui;
-    my $d = $oneself->{dialog} = $gui->get_dialog('open_vector_dialog');
+    my $self = {};
+    $self->{gui} = $gui;
+    my $d = $self->{dialog} = $gui->get_dialog('open_vector_dialog');
     croak "open_vector_dialog for Geo::Vector::Layer does not exist" unless $d;
     $d->get_widget('open_vector_dialog')->set_title("Open a vector layer");
-    $d->get_widget('open_vector_dialog')->signal_connect(delete_event => \&cancel_open_vector, $oneself);
+    $d->get_widget('open_vector_dialog')->signal_connect(delete_event => \&cancel_open_vector, $self);
 
     my $model = Gtk2::ListStore->new('Glib::String');
     for my $driver (Geo::OGR::Drivers()) {
@@ -34,17 +32,17 @@ sub open {
     $combo->set_active(0);
 
     $d->get_widget('open_vector_datasource_combobox')
-	->signal_connect(changed => sub { empty_layer_data($_[1]) }, $oneself);
+	->signal_connect(changed => sub { empty_layer_data($_[1]) }, $self);
 
     $d->get_widget('open_vector_build_connection_button')
-	->signal_connect(clicked => \&build_data_source, $oneself);
+	->signal_connect(clicked => \&build_data_source, $self);
 
-    fill_named_data_sources_combobox($oneself);
+    fill_named_data_sources_combobox($self);
     
     $d->get_widget('open_vector_delete_datasource_button')
-	->signal_connect(clicked => \&delete_data_source, $oneself);
+	->signal_connect(clicked => \&delete_data_source, $self);
     $d->get_widget('open_vector_connect_datasource_button')
-	->signal_connect(clicked => \&connect_data_source, $oneself);
+	->signal_connect(clicked => \&connect_data_source, $self);
     
     my $treeview = $d->get_widget('open_vector_directory_treeview');
     $treeview->set_model(Gtk2::TreeStore->new('Glib::String'));
@@ -57,7 +55,7 @@ sub open {
 	    my($treeview, $event, $self) = @_;
 	    select_directory($self, $treeview) if $event->type =~ /^2button/;
 	    return 0;
-	}, $oneself);
+	}, $self);
 
     $treeview->signal_connect(
 	key_press_event => sub
@@ -65,7 +63,7 @@ sub open {
 	    my($treeview, $event, $self) = @_;
 	    select_directory($self, $treeview) if $event->keyval == $Gtk2::Gdk::Keysyms{Return};
 	    return 0;
-	}, $oneself);
+	}, $self);
     
     $treeview = $d->get_widget('open_vector_layer_treeview');
     $treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
@@ -76,7 +74,7 @@ sub open {
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$treeview->append_column($col);
     }
-    $treeview->signal_connect(cursor_changed => \&on_layer_treeview_cursor_changed, $oneself);
+    $treeview->signal_connect(cursor_changed => \&on_layer_treeview_cursor_changed, $self);
     
     $treeview = $d->get_widget('open_vector_property_treeview');
     $treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
@@ -96,22 +94,22 @@ sub open {
 	$treeview->append_column($col);
     }
     
-    $oneself->{directory_toolbar} = [];
+    $self->{directory_toolbar} = [];
 
     my $entry = $d->get_widget('open_vector_SQL_entry');
-    $entry->signal_connect(key_press_event => \&edit_entry, $oneself);
-    $entry->signal_connect(changed => \&on_SQL_entry_changed, $oneself);
+    $entry->signal_connect(key_press_event => \&edit_entry, $self);
+    $entry->signal_connect(changed => \&on_SQL_entry_changed, $self);
     
-    $d->get_widget('open_vector_remove_button')->signal_connect(clicked => \&remove_layer, $oneself);
-    $d->get_widget('open_vector_schema_button')->signal_connect(clicked => \&show_schema, $oneself);
-    $d->get_widget('open_vector_cancel_button')->signal_connect(clicked => \&cancel_open_vector, $oneself);
-    $d->get_widget('open_vector_ok_button')->signal_connect(clicked => \&open_vector, $oneself);
+    $d->get_widget('open_vector_remove_button')->signal_connect(clicked => \&remove_layer, $self);
+    $d->get_widget('open_vector_schema_button')->signal_connect(clicked => \&show_schema, $self);
+    $d->get_widget('open_vector_cancel_button')->signal_connect(clicked => \&cancel_open_vector, $self);
+    $d->get_widget('open_vector_ok_button')->signal_connect(clicked => \&open_vector, $self);
 
-    $oneself->{path} = $gui->{folder} if $gui->{folder};
-    $oneself->{path} = File::Spec->rel2abs('.') unless $oneself->{path};
+    $self->{path} = $gui->{folder} if $gui->{folder};
+    $self->{path} = File::Spec->rel2abs('.') unless $self->{path};
 
-    fill_directory_treeview($oneself);
-    fill_layer_treeview($oneself);
+    fill_directory_treeview($self);
+    fill_layer_treeview($self);
 
     $d->get_widget('open_vector_update_checkbutton')->set_active(0);
 
@@ -160,7 +158,7 @@ sub get_data_source {
 sub open_vector {
     my($button, $self) = @_;
 
-    $self->{gui}->{folder} = $oneself->{path};
+    $self->{gui}->{folder} = $self->{path};
 
     my($driver, $data_source) = get_data_source($self);
 

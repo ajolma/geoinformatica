@@ -6,9 +6,12 @@ use warnings;
 
 require Exporter;
 
+use vars qw/$folder/;
+
 our @ISA = qw(Exporter Gtk2::Ex::Geo::DialogMaster);
 
-our %EXPORT_TAGS = ( 'all' => [ qw(&edit_entry &value_from_combo &get_selected) ] );
+our %EXPORT_TAGS = ( 
+    'all' => [ qw(&edit_entry &value_from_combo &get_selected &select_file_data_source) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -77,6 +80,29 @@ sub get_selected {
 	$iter = $model->iter_next($iter);
     }
     return \%s;
+}
+
+## @ignore
+sub select_file_data_source {
+    my $button = shift;
+    my($self, $entry, $action) = @{$_[0]};
+    my $file_chooser =
+	Gtk2::FileChooserDialog->new ("Select a data store file or folder",
+				      undef, $action,
+				      'gtk-cancel' => 'cancel',
+				      'gtk-ok' => 'ok');
+    $file_chooser->set_current_folder($folder) if $folder;
+    my $uri;
+    if ($file_chooser->run eq 'ok') {
+	$folder = $file_chooser->get_current_folder();
+	$uri = $file_chooser->get_uri;
+	#print "$uri\n";
+	#print "$dialog_folder\n";
+	$uri =~ s/^file:\/\///;
+	$uri =~ s/^\/// if $uri =~ /^\/\w:/; # hack for windows
+	$entry->set_text($uri);
+    }
+    $file_chooser->destroy;
 }
 
 1;

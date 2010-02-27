@@ -5,18 +5,16 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw/TRUE FALSE/;
-use Geo::Vector::Layer::Dialogs qw/:all/;
-
-use vars qw/$oneself/;
 
 ## @ignore
 sub open {
     my($gui) = @_;
-    $oneself->{gui} = $gui;
-    my $d = $oneself->{new_vector_dialog} = $gui->get_dialog('new_vector_dialog');
+    my $self = {};
+    $self->{gui} = $gui;
+    my $d = $self->{new_vector_dialog} = $gui->get_dialog('new_vector_dialog');
     croak "new_vector_dialog for Geo::Vector::Layer does not exist" unless $d;
     $d->get_widget('new_vector_dialog')->set_title("Create a new OGR vector layer");
-    $d->get_widget('new_vector_dialog')->signal_connect(delete_event => \&cancel_new_vector, $oneself);
+    $d->get_widget('new_vector_dialog')->signal_connect(delete_event => \&cancel_new_vector, $self);
 
     my $model = Gtk2::ListStore->new('Glib::String');
     $model->set ($model->append, 0, '');
@@ -24,7 +22,7 @@ sub open {
     for my $driver (Geo::OGR::Drivers()) {
 	my $n = $driver->FormatName;
 	$n = $driver->GetName unless $n;
-	$oneself->{drivers}{$n} = $driver->GetName;
+	$self->{drivers}{$n} = $driver->GetName;
 	push @drivers, $n;
     }
     for my $n (sort @drivers) {
@@ -39,7 +37,7 @@ sub open {
 
     $model = Gtk2::ListStore->new('Glib::String');
     $model->set ($model->append, 0, '');
-    for my $data_source (sort keys %{$oneself->{gui}{resources}{datasources}}) {
+    for my $data_source (sort keys %{$gui->{resources}{datasources}}) {
 	$model->set ($model->append, 0, $data_source);
     }
     $combo = $d->get_widget('new_vector_data_source_combobox');
@@ -51,11 +49,11 @@ sub open {
 
     my $entry = $d->get_widget('new_vector_folder_entry');
     $d->get_widget('new_vector_open_button')
-	->signal_connect( clicked=>\&select_file_data_source, [$oneself, $entry, 'select_folder']);
+	->signal_connect( clicked=>\&Geo::Vector::Layer::Dialogs::select_file_data_source, [$self, $entry, 'select_folder']);
 
     $model = Gtk2::ListStore->new('Glib::String');
-    for my $type (sort {$a <=> $b} keys %Geo::OGR::Geometry::TYPE_INT2STRING) {
-	$model->set ($model->append, 0, $Geo::OGR::Geometry::TYPE_INT2STRING{$type});
+    for my $type (@Geo::Vector::GEOMETRY_TYPES) {
+	$model->set ($model->append, 0, $type);
     }
     $combo = $d->get_widget('new_vector_geometry_type_combobox');
     $combo->set_model($model);
@@ -77,24 +75,24 @@ sub open {
     $cell = Gtk2::CellRendererCombo->new;
     $cell->set(editable => 1);
     #$model = Gtk2::ListStore->new('Glib::String');
-    for my $type (sort keys %Geo::OGR::FieldDefn::TYPE_STRING2INT) {
+    for my $type (@Geo::Vector::GEOMETRY_TYPES) {
 	#$model->set ($model->append, 0, $type);
     }
     #$cell->set_model($model);
     $column = Gtk2::TreeViewColumn->new_with_attributes('type', $cell, widget => $i++);
     $treeview->append_column($column);
 
-    $oneself->{schema} = $model;
+    $self->{schema} = $model;
 
     $d->get_widget('new_vector_add_button')
-	->signal_connect( clicked=>\&add_field_to_schema, $oneself);
+	->signal_connect( clicked=>\&add_field_to_schema, $self);
     $d->get_widget('new_vector_delete_button')
-	->signal_connect( clicked=>\&delete_field_from_schema, $oneself);
+	->signal_connect( clicked=>\&delete_field_from_schema, $self);
 
     $d->get_widget('new_vector_cancel_button')
-	->signal_connect(clicked => \&cancel_new_vector, $oneself);
+	->signal_connect(clicked => \&cancel_new_vector, $self);
     $d->get_widget('new_vector_ok_button')
-	->signal_connect(clicked => \&ok_new_vector, $oneself);
+	->signal_connect(clicked => \&ok_new_vector, $self);
     
     $d->get_widget('new_vector_dialog')->show_all;
     $d->get_widget('new_vector_dialog')->present;
@@ -111,15 +109,15 @@ sub ok_new_vector {
     my $self = pop;
     my $d = $self->{new_vector_dialog};
     my $layer;
-    my $driver = value_from_combo($d, 'new_vector_driver_combobox');
-    $driver = $oneself->{drivers}{$driver};
+    my $driver = Geo::Vector::Layer::Dialogs::value_from_combo($d, 'new_vector_driver_combobox');
+    $driver = $self->{drivers}{$driver};
     my $create_options = $d->get_widget('new_vector_create_options_entry')->get_text;
     $create_options = {split(/[(=>),]/,$create_options)};
-    my $data_source = value_from_combo($d, 'new_vector_data_source_combobox');
+    my $data_source = Geo::Vector::Layer::Dialogs::value_from_combo($d, 'new_vector_data_source_combobox');
     $data_source = $d->get_widget('new_vector_folder_entry')->get_text unless $data_source;
     my $name = $d->get_widget('new_vector_layer_entry')->get_text;
     my $layer_options = $d->get_widget('new_vector_layer_options_entry')->get_text;
-    my $geometry_type = value_from_combo($d, 'new_vector_geometry_type_combobox');
+    my $geometry_type = Geo::Vector::Layer::Dialogs::value_from_combo($d, 'new_vector_geometry_type_combobox');
     my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;
     my $srs = $d->get_widget('new_vector_srs_entry')->get_text;
     eval {
