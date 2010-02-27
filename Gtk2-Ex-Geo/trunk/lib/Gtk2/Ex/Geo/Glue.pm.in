@@ -717,6 +717,10 @@ sub layer_menu {
 	$self->update;
 	$self->{overlay}->render;
 
+    } else {
+
+	$self->{tree_view}->columns_autosize();
+
     }
 
     return 0;
