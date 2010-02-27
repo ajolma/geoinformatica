@@ -242,7 +242,10 @@ sub zoom_to {
     if (@_ == 1) {
 	my $layer = shift;
 	return unless $self->{layers} and @{$self->{layers}};
-	@bounds = $layer->world(of_GDAL=>1);
+	eval {
+	    @bounds = $layer->world(of_GDAL=>1);
+	};
+	@bounds = (0,0,1,1) unless @bounds;
 	$self->{offset} = [0, 0];
     } elsif (@_ == 5) {
 	my($minX, $maxY, $pixel_size, @offset) = @_;
@@ -328,7 +331,11 @@ sub zoom_to_all {
     return unless $self->{layers} and @{$self->{layers}};
     my @size;
     for my $layer (@{$self->{layers}}) {
-	my @s = $layer->world(of_GDAL=>1);
+	my @s;
+	eval {
+	    @s = $layer->world(of_GDAL=>1);
+	};
+	next unless @s;
 	if (@size) {
 	    $size[0] = min($size[0], $s[0]);
 	    $size[1] = min($size[1], $s[1]);
