@@ -26,7 +26,7 @@ for (keys %Geo::Vector::GEOMETRY_TYPE) {
     next if $_ =~ /None/;
     next if $_ =~ /Ring/;
     eval {
-	$test = Geo::Vector->new(driver=>'ESRI Shapefile', data_source=>'./t', layer=>'test'.$_, geometry_type=>$_);
+	$test = Geo::Vector->new(driver=>'ESRI Shapefile', data_source=>'./t', create=>'test'.$_, geometry_type=>$_);
     };
     my $tt = $test->geometry_type() unless $@;
     ok($_ eq $tt,"Create layer with $_ type: $@");
@@ -36,7 +36,7 @@ for (keys %Geo::Vector::GEOMETRY_TYPE) {
 }
 
 eval {
-    $test = Geo::Vector->new(driver=>'ESRI Shapefile', data_source=>'./t', layer=>'test', geometry_type=>'Point');
+    $test = Geo::Vector->new(driver=>'ESRI Shapefile', data_source=>'./t', create=>'test', geometry_type=>'Point');
 };
 ok($@ eq '', "create a layer into the new dataset: $@");
 
@@ -58,12 +58,12 @@ ok($range[1] == 13, 'value_range with filter_rect');
 undef $test;
 
 eval {
-    $test = new Geo::Vector(datasource=>'./t', layer=>'test');
+    $test = new Geo::Vector(data_source=>'./t', open=>'test');
 };
 ok($@ eq '', "open a layer: $@");
 
-ok ($test->feature_count == 3, 'feature_count');
-ok ($test->field_count == 2, 'field_count');
+ok ($test->feature_count == 3, 'feature_count '.$test->feature_count);
+ok ($test->field_count == 2, 'field_count '.$test->field_count);
 
 @w = $test->world;
 ok (@w == 4, 'world size');
@@ -81,7 +81,7 @@ for ('dbf','prj','shp','shx') {
 }
 
 # test a layer of features with varying schema
-$v = Geo::Vector->new(schema => 'free');
+$v = Geo::Vector->new( features => [] );
 
 $v->add_feature(sfield => 'string',
 		ifield => 1,
@@ -92,7 +92,7 @@ ok($v->feature_count == 1, 'fset: feature count');
 
 my $c = $v->field_count(feature=>0);
 
-ok($c == 3, 'fset: field count');
+ok($c == 3, 'fset: field count '.$c);
 
 $s = $v->schema(0);
 

@@ -1,12 +1,12 @@
 use File::Basename;
 use Geo::Vector;
 use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 11;
+use Gtk2::TestHelper tests => 13;
 
 my($window, $gis) = setup(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer/]);
 ok(1);
 
-my $layer = Geo::Vector::Layer->new(filename => 't/data/test.shp');
+my $layer = Geo::Vector::Layer->new(data_source => 't/data/test.shp');
 $gis->add_layer($layer, 'test');
 
 $window->show;
@@ -18,17 +18,21 @@ $layer->open_colors_dialog($gis);
 ok(1);
 $layer->open_labels_dialog($gis);
 ok(1);
-$layer->properties_dialog($gis);
+Geo::Vector::Layer::Dialogs::Properties::open($layer, $gis);
 ok(1);
-$layer->open_copy_dialog($gis);
+Geo::Vector::Layer::Dialogs::Open::open($gis);
 ok(1);
-$layer->open_rasterize_dialog($gis);
+Geo::Vector::Layer::Dialogs::New::open($gis);
 ok(1);
-$layer->open_features_dialog($gis);
+Geo::Vector::Layer::Dialogs::Copy::open($layer, $gis);
 ok(1);
-$layer->open_vertices_dialog($gis);
+Geo::Vector::Layer::Dialogs::Rasterize::open($layer, $gis);
 ok(1);
-$layer->open_feature_list_dialog($gis);
+Geo::Vector::Layer::Dialogs::Features::open($layer, $gis);
+ok(1);
+Geo::Vector::Layer::Dialogs::Vertices::open($layer, $gis);
+ok(1);
+Geo::Vector::Layer::Dialogs::FeatureCollection::open($layer, $gis);
 ok(1);
 
 #must examine this more...
