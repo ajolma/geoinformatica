@@ -103,8 +103,8 @@ sub layers {
     my($driver, $data_source) = @_;
     $driver = '' unless $driver;
     $data_source = '' unless $data_source;
-    my $self = { update => 0 };
-    set_driver($self, $driver, $data_source, undef, 'open');
+    my $self = {};
+    open_data_source($self, $driver, $data_source, 0);
     return unless $self->{OGR}->{DataSource};
     my %layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
@@ -125,8 +125,8 @@ sub layers {
 # @param[in] layer Name of the layer that should be deleted.
 sub delete_layer {
     my($driver, $data_source, $layer) = @_;
-    my $self = { update => 1 };
-    set_driver($self, $driver, $data_source, undef, 'open');
+    my $self = {};
+    open_data_source($self, $driver, $data_source, 1);
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
 	my $l = $self->{OGR}->{DataSource}->GetLayerByIndex($i);
 	$self->{OGR}->{DataSource}->DeleteLayer($i), last
@@ -151,114 +151,100 @@ sub delete_layer {
 #
 # @brief Create a new Geo::Vector object.
 #
-# A Geo::Vector object is either a Geo::OGR::Layer or an array of
-# Geo::OGR::Feature objects. To create a new Geo::Vector of the first
-# type, you need to specify either a data source or a name or a schema
-# for the layer. The layer type object requires an OGR driver and data
-# source. The default driver is Memory. If no name or SQL is
-# specified, the first layer in the data source is opened. The feature
-# table type object does not have a unique schema. By default (no name
-# or schema for the layer is specified) this method creates an array
-# of Geo::OGR::Feature objects type of object.
+# A Geo::Vector object is either a wrapped Geo::OGR::Layer or a
+# collection of Geo::OGR::Feature objects. Without any parameters an
+# empty OGR memory layer without any attributes is created. A feature
+# collection object does not have a unique schema.
 #
 # @param params Named parameters, all are optional: (see also the
 # named parameters of the Geo::Vector::layer method)
-# - \a driver => string, name of the driver for create or open
-# default is 'Memory' for layer type objects.
-# - \a data_source_method => string, create or open
-# Used only if driver is given.
-# default is create.
-# - \a driver_options forwarded to Geo::OGR::CreateDataSource.
-# - \a data_source => string, OGR data source string, required for
-# other layer type objects than in-memory vectors.
-# - \a update => true/false, data source option, default is false for
-# other than in-memory vectors. Required and must be true to create a
-# new layer.
-# - \a schema, as in method Geo::Vector::schema. Note that the
-# geometry type is also specified within the schema using the pseudo
-# attribute ".GeometryType".
-# - \a encoding => string, the encoding of the attribute values of the
-# features.
-# - \a layer => string, a name of or for the layer. Required for new
-# layers except for in-memory ones. To explicitly require a new layer,
-# use \a create.
-# - \a create => string, a name for a new layer. Implies update => 1.
+# - \a driver => string Name of the OGR driver for creating or opening
+# a data source. If not given, an attempt is made to open the data
+# source using the data source parameter.
+# - \a create_options => reference to a hash of data source creation
+# options. May be empty. Forwarded to
+# Geo::OGR::CreateDataSource. Required to create other than memory
+# data sources.
+# - \a data_source => string OGR data source to create or
+# open. Opening a data source is first attempted unless create_options
+# is given. If open fails, creation is attempted.
+# - \a open => string The layer to open.
+# - \a layer => string [deprecated] Same as \a open.
+# - \a create => string The layer to create.
 # - \a layer_options forwarded to Geo::OGR::DataSource::CreateLayer.
 # - \a SQL => string SQL-string, forwarded to
-# Geo::OGR::DataSource::ExecuteSQL, an alternative to \a layer. If \a
-# SQL is given, \a layer is not consulted.
+# Geo::OGR::DataSource::ExecuteSQL. An alternative to \a open and \a
+# create.
+# - \a geometry_type => string The geometry type for the
+# new layer. Default is 'Unknown'.
+# - \a schema, as in method Geo::Vector::schema. Note that the
+# geometry type may also be specified with the schema using the
+# pseudo attribute ".GeometryType".
+# - \a encoding => string, the encoding of the attribute values of the
+# features.
 # - \a srs => either a string which defines a spatial reference system
-# (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object. Default
-# is 'EPSG:4326'.
-# - \a geometries => a reference to a list of geometries to be
-# inserted into the layer. Assumes a feature table type of an
-# object. Creates features without attributes for the geometries.
+# (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object. The srs
+# for the new layer. Default is 'EPSG:4326'.
 # - \a features => a reference to a list of features to be inserted
-# into the layer. Assumes a feature table type of an object.
+# into the collection. May be empty. If given, the resulting object is
+# a feature collection object, and not an OGR layer.
+# - \a geometries => a reference to a list of geometries to be
+# inserted as new features into the collection. Creates features
+# without attributes for the geometries. May be empty. If given, the
+# resulting object is a feature collection object, and not an OGR
+# layer. Do not mix with \a features.
 # @return A new Geo::Vector object
 sub new {
     my $package = shift;
-    my %params = @_ == 1 ? ( filename => $_[0] ) : @_;
+    my $self = {};
+    bless $self => (ref($package) or $package);
+
+    my %params = @_ == 1 ? ( single => $_[0] ) : @_;
 
     # the single parameter can be a filename, geometry, feature, or a
     # list of geometries or features, which are copied into a new
     # memory layer
 
-    if (isa($params{filename}, 'Geo::OGR::Layer')) {
-	$params{layer} = $params{filename};
-	delete $params{filename};
+    if (ref($params{single})) {
+    } else {
+	$params{data_source} = $params{single} if $params{single};
     }
 
-    $params{geometry_type} = $params{schema}{'.GeometryType'}{TypeName} if ref $params{schema};
+    # complain about unknown / deprecated parameters
+    my %known = (
+	driver => 1,
+	create_options => 1,
+	data_source => 1,
+	open => 1,
+	create => 1,
+	layer_options => 1,
+	SQL => 1,
+	geometry_type => 1,
+	schema => 1,
+	encoding => 1,
+	srs => 1,
+	features => 1,
+	geometries => 1,
+	);
 
-    my %defaults = ( driver => '',
-		     data_source_method => 'create',
-		     driver_options => [],
-		     filename => '',
-		     data_source => '',
-		     update => 0,
-		     srs => 'EPSG:4326',
-		     geometry_type => 'Unknown',
-		     SQL => '',
-		     layer => '',
-		     encoding => '',
-		     features => [],
-		     geometries => [],
-		     );
-	  
-    for my $key (keys %defaults) {
-	next if defined $params{$key};
-	$params{$key} = $defaults{$key};
+    for my $param (keys %params) {
+	unless ($known{$param}) {
+#	    warn("parameter $param is unknown or deprecated in Geo::Vector->new()") 
+	}
     }
+
     # aliases
     $params{data_source} = $params{filename} if $params{filename};
     $params{data_source} = $params{datasource} if $params{datasource};
+    $params{open} = $params{name} if $params{name};
+    $params{open} = $params{layer_name} if $params{layer_name};
+    $params{open} = $params{layer} if $params{layer};
     $params{SQL} = $params{sql} if $params{sql};
-    $params{layer} = $params{name} if $params{name};
-    $params{layer} = $params{layer_name} if $params{layer_name};
     $params{layer_options} = [] unless $params{layer_options};
-    $params{update} = 1 if $params{create};
-    delete $params{schema} if $params{schema} and $params{schema} eq 'free';
-    
-    #for (keys %params) {
-	#print STDERR "create with $_ => $params{$_}\n";
-    #}
-    #print STDERR "end create\n";
+    $params{geometry_type} = $params{schema}{'.GeometryType'}{TypeName} 
+    if ref $params{schema};
 
-    my $self = { encoding => $params{encoding},
-		 update => $params{update},
-    };
-    bless $self => (ref($package) or $package);
-    
-    if ($params{data_source}) {
-	set_driver($self, $params{driver}, $params{data_source}, $params{driver_options}, $params{data_source_method});
-    }
-    elsif ($params{layer} or $params{schema}) {
-	$self->{update} = 1;
-	set_driver($self, 'Memory', '', 'create');
-	$params{layer} = 'x' unless $params{layer};
-    }
-    else {
+    if ($params{features} or $params{geometries}) {
 	$self->{features} = [];
 	for my $g (@{$params{geometries}}) {
 	    $self->geometry($g);
@@ -269,39 +255,13 @@ sub new {
 	return $self;
     }
 
-    if (!$params{create} and $self->{OGR}->{DataSource}->GetLayerCount > 0) {
-	
-	if ( $params{SQL} ) {
-	    
-	    $self->{SQL} = $params{SQL};
-	    eval {
-		$self->{OGR}->{Layer} =
-		    $self->{OGR}->{DataSource}->ExecuteSQL( $self->{SQL} );
-	    };
-	    croak "ExecuteSQL failed: $@" unless $self->{OGR}->{Layer};
+    $params{update} = $params{create} ? 1 : 0;
+    $self->{encoding} = $params{encoding};
 
-	} elsif ($params{layer}) {
+    $self->open_data_source($params{driver}, $params{data_source}, $params{update}, $params{create_options});
 
-	    $self->{OGR}->{Layer} =
-		$self->{OGR}->{DataSource}->GetLayerByName( $params{layer} );
-	    
-	} else {
-	
-	    # open the first layer
-	    $self->{OGR}->{Layer} = $self->{OGR}->{DataSource}->GetLayerByIndex();
-	    croak "Could not open the default layer: $@" unless $self->{OGR}->{Layer};
-	    
-	}
+    if ($params{create} or $self->{OGR}->{Driver}->{name} eq 'Memory') {
 
-    }
-
-    # Create a new
-    unless ($self->{OGR}->{Layer}) {
-
-	$params{layer} = $params{create} if $params{create};
-
-	croak "No name specified for the new layer." unless $params{layer};
-	    
 	my $srs;
 	if (ref($params{srs}) and isa($params{srs}, 'Geo::OSR::SpatialReference')) {
 	    $srs = $params{srs};
@@ -315,61 +275,90 @@ sub new {
 		croak "SRS $params{srs} not yet supported";
 	    }
 	}
+	$params{geometry_type} = 'Unknown' unless $params{geometry_type};
+	$params{layer_options} = '' unless $params{layer_options};
+	croak "$self->{OGR}->{Driver}->{name}: $params{data_source}: ".
+	    "Data source does not have the capability to create layers"
+	    unless $self->{OGR}->{DataSource}->TestCapability('CreateLayer');
 	eval {
 	    $self->{OGR}->{Layer} =
-		$self->{OGR}->{DataSource}->CreateLayer( $params{layer}, 
+		$self->{OGR}->{DataSource}->CreateLayer( $params{create}, 
 							 $srs, 
 							 $params{geometry_type},
 							 $params{layer_options});
 	};
-	croak "CreateLayer failed (did you specify update=>1?): $@"
-	    unless $self->{OGR}->{Layer};
+	croak "CreateLayer failed: $@" unless $self->{OGR}->{Layer};
+	
+    } elsif ( $params{SQL} ) {
+	    
+	$self->{SQL} = $params{SQL};
+	eval {
+	    $self->{OGR}->{Layer} =
+		$self->{OGR}->{DataSource}->ExecuteSQL( $self->{SQL} );
+	};
+	croak "ExecuteSQL failed: $@" unless $self->{OGR}->{Layer};
+	
+    } elsif ($params{open}) {
+	
+	$self->{OGR}->{Layer} =
+	    $self->{OGR}->{DataSource}->Layer( $params{open} );
+	
+    } else {
+	
+	# open the first layer
+	$self->{OGR}->{Layer} = $self->{OGR}->{DataSource}->GetLayerByIndex();
+	croak "Could not open the default layer: $@" unless $self->{OGR}->{Layer};
 	
     }
 
     schema($self, $params{schema}) if $params{schema};
-
+    $self->{OGR}->{Layer}->SyncToDisk unless $self->{OGR}->{Driver}->{name} eq 'Memory';
     return $self;
 }
 
 ## @ignore
-sub set_driver {
-    my($self, $driver, $data_source, $options, $data_source_method) = @_;
-    $options = [] unless $options;
-    if ($driver) {
-	if (isa($driver, 'Geo::OGR::Driver')) {
+sub open_data_source {
+    my($self, $driver, $data_source, $update, $create_options) = @_;
+    if ($driver or !$data_source) {
+	if (!$data_source) {
+	    $data_source = '';
+	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver('Memory');
+	    $create_options = {};
+	} elsif (isa($driver, 'Geo::OGR::Driver')) {
 	    $self->{OGR}->{Driver} = $driver;
 	} else {
 	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
-	    croak "Can't find driver: $driver" unless $self->{OGR}->{Driver};
 	}
+	croak "Can't find driver: $driver" unless $self->{OGR}->{Driver};
 	
-	if ($data_source_method eq 'open') {
+	unless ($create_options) {
 
 	    eval {
-		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->Open($data_source, $self->{update});
+		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->Open($data_source, $update);
 	    };
-	    $@ = "no reason given" unless $@;
-	    croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
+	    return if $self->{OGR}->{DataSource};
 
-	} else { # copy not implemented
-	
-	    eval {
-		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $options);
-	    };
-	    $@ = "no reason given" unless $@;
-	    croak "Can't create data source: $@" unless $self->{OGR}->{DataSource};
 	}
+
+	croak "$self->{OGR}->{Driver}->{name}: ".
+	    "Driver does not have the capability to create data sources"
+	    unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
+
+	eval {
+	    $self->{OGR}->{DataSource} = 
+		$self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
+	};
+	$@ = "no reason given" unless $@;
+	croak "Can't open nor create data source: $@" unless $self->{OGR}->{DataSource};
 
     } else {
 	eval {
-	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $self->{update});
+	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $update);
 	};
         $@ = "no reason given" unless $@;
 	croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     }
-    $self->{data_source} = $data_source;
 }
 
 ## @ignore
@@ -414,7 +403,7 @@ sub dump {
     my $schema = $self->schema();
     my $i = 1;
     $self->init_iterate;
-    while (my $feature = $self->get_next()) {
+    while (my $feature = $self->next_feature()) {
 	print $fh "Feature $i:\n";
 	my $s = $schema;
 	$s = $self->schema($i-1) unless $s;
@@ -429,29 +418,66 @@ sub dump {
     }
 }
 
-## @method init_iterate()
+## @method init_iterate(%options)
+# @param options Named parameters, all are optional.
+# - \a features => reference to a list of features, which to iterate
+# through.
+# - \a filter => a spatial filter
+# - \a filter_rect => reference to an array defining a spatial
+# rectangle filter (min_x, min_y, max_x, max_y)
 #
+# @todo filter for feature collections
 # @brief Reset reading features from the object iteratively.
 sub init_iterate {
     my $self = shift;
-    if ($self->{features}) {
+    my %options = @_ if @_;
+    if ($options{features}) {
+	$self->{_features} = $options{features};
 	$self->{_cursor} = 0;
-    } 
-    else {
+	$self->{_filter_rect} = $options{filter_rect};
+    } elsif ($self->{features}) {
+	$self->{_cursor} = 0;
+	$self->{_filter_rect} = $options{filter_rect};
+    } else {
+	if ( exists $options{filter} ) {
+	    $self->{OGR}->{Layer}->SetSpatialFilter( $options{filter} );
+	}
+	elsif ( exists $options{filter_rect} ) {
+	    $self->{OGR}->{Layer}->SetSpatialFilterRect( @{ $options{filter_rect} } );
+	}
+	else {
+	    $self->{OGR}->{Layer}->SetSpatialFilter(undef);
+	}
 	$self->{OGR}->{Layer}->ResetReading();
     }
 }
 
 ## @method next_feature()
 #
-# @brief Read a feature from the object iteratively.
+# @brief Return a feature iteratively or undef if no more features. 
 sub next_feature {
     my $self = shift;
-    if ($self->{features}) {
-	return if $self->{_cursor} > $#{$self->{features}};
-	return $self->{features}->[$self->{_cursor}++];
+    my $features = $self->{_features} || $self->{features};
+    if ($features) {
+	my $f;
+	while (1) {
+	    last if $self->{_cursor} > $#$features;
+	    $f = $features->[$self->{_cursor}++];
+	    last unless $self->{_filter_rect};
+	    my $r = $self->{_filter_rect};
+	    my $e = $f->GetGeometryRef()->GetEnvelope(); # [$minx, $maxx, $miny, $maxy]
+	    last if 
+		$e->[0] <= $r->[2] and $e->[1] >= $r->[0] and
+		$e->[2] <= $r->[3] and $e->[3] >= $r->[1];
+	}
+	return $f if $f;
+	delete $self->{_cursor};
+	delete $self->{_features};
+	return;
     }
-    return $self->{OGR}->{Layer}->GetNextFeature()
+    my $f = $self->{OGR}->{Layer}->GetNextFeature();
+    $self->{OGR}->{Layer}->SetSpatialFilter(undef) unless $f;
+    return $f;
 }
 *get_next = *next_feature;
 
@@ -584,44 +610,70 @@ sub within {
 # @brief Add features from the other layer to this layer.
 # @param other A Geo::Vector object
 # @param params Named parameters, used for creating the new object,
-# if one is created.
+# if one is created, and for iterating through the features of other.
 # @return (If used in non-void context) A new Geo::Vector object, which
 # contain features from both this and from the other.
 sub add {
     my $self = shift;
     my $other = shift;
+    #print STDERR "add from $other->{NAME} to $self->{NAME}\n";
     my %params = @_ if @_;
-    my($new, $out);
     if (defined wantarray) {
 	$params{schema} = $self->schema();
-	$new = Geo::Vector->new(%params);
-	$out = $new->{OGR}->{Layer};
-    } else {
-	$params{driver} = $self->driver;
-	$new = $self;
-	$out = $self->{OGR}->{Layer};
+	$self = Geo::Vector->new(%params);
     }
-    my $defn = $out->GetLayerDefn() if $out;
-    $other->init_iterate;
+    my $dst_layer = $self->{OGR}->{Layer} unless $self->{features};
+    my $dst_defn;
+    my %dst_schema;
+    my $dst_geometry_type;
+    if ($dst_layer) {
+	$dst_defn = $dst_layer->GetLayerDefn();
+	$dst_geometry_type = $dst_defn->GeometryType;
+	$dst_geometry_type =~ s/25D$//;
+	my $n = $dst_defn->GetFieldCount();
+	for my $i ( 0 .. $n - 1 ) {
+	    my $fd   = $dst_defn->GetFieldDefn($i);
+	    $dst_schema{$fd->GetName} = $fd->GetType;
+	}
+    } else {
+	$dst_geometry_type = 'Unknown';
+    }
+    $other->init_iterate(%params);
     while (my $feature = $other->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
-	$defn = $feature->GetDefnRef unless $out;
+
+	# check for match of geometry types
+	next unless $dst_geometry_type eq 'Unknown' or 
+	    $dst_geometry_type =~ /$geom->GeometryType/;
+
+	my $src_defn = $feature->GetDefnRef;
+	my $defn = $dst_defn ? $dst_defn : $src_defn;
 	my $f = Geo::OGR::Feature->new($defn);
-	if ($params{schema}) {
-	    for my $name (keys %{$params{schema}}) {
-		next if $name =~ /^\./;
-		$f->SetField($name, $feature->GetField($name));
+	my $n = $src_defn->GetFieldCount();
+	for my $i ( 0 .. $n - 1 ) {
+	    my $fd   = $src_defn->GetFieldDefn($i);
+	    my $name = $fd->GetName;
+	    my $type = $fd->GetType;
+	    if ($dst_defn) {
+		# copy only those attributes which match
+		next unless exists($dst_schema{$name}) and $dst_schema{$name} == $type;
 	    }
+	    $f->SetField($name, $feature->GetField($name));
+	}
+	if ($params{transformation}) {
+	    my $points = $geom->Points;
+	    transform_points($points, $params{transformation});
+	    $geom->Points($points);
 	}
 	$f->SetGeometry($geom);
-	if ($out) {
-	    $out->CreateFeature($f);
+	if ($dst_layer) {
+	    $dst_layer->CreateFeature($f);
 	} else {
-	    push @{$new->{features}}, $f;
+	    push @{$self->{features}}, $f;
 	}
     }
-    $out->SyncToDisk unless $new->driver eq 'Memory';
-    return $new if defined wantarray;
+    $dst_layer->SyncToDisk unless $self->driver eq 'Memory';
+    return $self if defined wantarray;
 }
 
 ## @method $feature_count()
@@ -721,15 +773,14 @@ sub geometry_type {
 #
 # @brief Get or set the schema of the object.
 #
-# For a layer object there is only one schema. For a feature table
-# object the schema is a feature specific (see the calling syntax
-# below). The schema is a hash (actually a reference to an anonymous
-# hash). The keys are attribute names except for pseudo
-# attributes. The names of the pseudo attributes start with a dot
-# ".". Currently there are the following pseudo attributes:
-# ".GeometryType", ".FID", and ".Z". Z attribute is defined only for
-# point features. FID pseudo attribute is the feature id as used by
-# OGR.
+# In an OGR layer all features share a common schema. In a feature
+# collection each feature has its own schema. The schema is a hash
+# (actually a reference to an anonymous hash). The keys are attribute
+# names except for pseudo attributes. The names of the pseudo
+# attributes start with a dot ".". Currently there are the following
+# pseudo attributes: ".GeometryType", ".FID", and ".Z". Z attribute is
+# defined only for point features. FID pseudo attribute is the feature
+# id as used by OGR.
 #
 # The value of the attribute entry in the schema is an anonymous hash
 # with keys such as Number, TypeName, Justify, Width, and Precision,
@@ -770,9 +821,11 @@ sub schema {
 	    $exists{$name} = 1;
 	}
 	for my $name ( keys %$schema ) {
-	    next if $name =~ /^\./;
-	    $schema->{$name}{Number} = $n++
-		unless defined $schema->{$name}{Number};
+	    if ($name =~ /^\./) {
+		$schema->{$name}{Number} = 0;
+	    } elsif (!defined($schema->{$name}{Number})) {
+		$schema->{$name}{Number} = $n++
+	    }
 	}
 	my $recreate = 0;
 	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
@@ -959,22 +1012,10 @@ sub value_range {
 	if $field_name eq '.FID';
     
     my $field = $schema->{Number};
-    
-# this would be probably faster as a database operation if data is in a database
-    if ( exists $params{filter} ) {
-	$self->{OGR}->{Layer}->SetSpatialFilter( $params{filter} );
-    }
-    elsif ( exists $params{filter_rect} ) {
-	$self->{OGR}->{Layer}->SetSpatialFilterRect( @{ $params{filter_rect} } );
-    }
-    else {
-	$self->{OGR}->{Layer}->SetSpatialFilter(undef);
-    }
-    $self->{OGR}->{Layer}->ResetReading();
     my @range;
-    while (1) {
-	my $f = $self->{OGR}->{Layer}->GetNextFeature();
-	last unless $f;
+    
+    $self->init_iterate(%params);
+    while (my $f = $self->next_feature()) {
 	my $value = $f->GetField($field);
 	$range[0] =
 	    defined $range[0]
@@ -1258,226 +1299,127 @@ sub add_feature {
 sub features {
     my ( $self, %params ) = @_;
     my @features;
+    my $i = 0;
     my $from = $params{from} || 1;
     my $limit = 0;
     $limit = $from + $params{limit} if exists $params{limit};
-    my $geom;
-    my $is_collection;
-    my $n;
-    my $e;
-    my $is_all = 0;
-    for (keys %params) {
-	if (/^that/) {
-	    $geom  = $params{$_};
-	    $is_collection = ($geom->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection;
-	    $n     = $geom->GetGeometryCount();
-	    $e     = $geom->GetEnvelope;
+    my $is_all = 1;
+
+    if ( exists $params{with_id} ) {
+
+	for my $fid (sort { $a <=> $b } @{$params{with_id}}) {
+	    my $x = $self->{OGR}->{Layer}->GetFeature($fid) if $self->{OGR}->{Layer};
+	    next unless $x;
+	    $i++;
+	    next if $i < $from;
+	    push @features, $x;
+	    $is_all = 0, last if $limit and $i >= $limit-1;
 	}
-    }
-    my $i = 0;
-    if ($self->{OGR}->{Layer}) 
-    {
-	my $layer = $self->{OGR}->{Layer};
-	if ($e) {
-	    $layer->SetSpatialFilterRect( $e->[0], $e->[2], $e->[1], $e->[3] );
-	    $layer->ResetReading();
-	}
+
+    } else {
+
+	my %options = ( filter_rect => $params{filter_with_rect} ) if $params{filter_with_rect};
+
 	if ( exists $params{that_contain} ) 
 	{
-	    while (1) {
-		my $f = $layer->GetNextFeature();
-		$is_all = 1, last unless $f;
+	    my $geom = $params{that_contain};
+	    my $e = $geom->GetEnvelope;
+	    $options{filter_rect} = [$e->[0], $e->[2], $e->[1], $e->[3]];
+	    $self->init_iterate(%options);
+	    while ( my $f = $self->next_feature() ) {
 		my $g = $f->GetGeometryRef;
-		if ($is_collection) {
-		    my $w = 0;
-		    for my $j (0..$n-1) {
-			$w = $geom->GetGeometryRef($j)->Within($g);
-			last if $w;
-		    }
-		    next unless $w;
-		} else {
-		    next unless $geom->Within($g);
-		}
+		next unless _within($geom, $g);
 		$i++;
 		next if $i < $from;
 		push @features, $f;
-		last if $limit and $i >= $limit-1;
+		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
 	}
 	elsif ( exists $params{that_are_within} ) 
 	{
-	    while (1) {
-		my $f = $layer->GetNextFeature();
-		$is_all = 1, last unless $f;
+	    my $geom = $params{that_are_within};
+	    my $e = $geom->GetEnvelope;
+	    $options{filter_rect} = [$e->[0], $e->[2], $e->[1], $e->[3]];
+	    $self->init_iterate(%options);
+	    while ( my $f = $self->next_feature() ) {
 		my $g = $f->GetGeometryRef;
-		if ($is_collection) {
-		    my $w = 0;
-		    for my $j (0..$n-1) {
-			$w = $g->Within($geom->GetGeometryRef($j));
-			last if $w;
-		    }
-		    next unless $w;
-		} else {
-		    next unless $g->Within($geom);
-		}
+		next unless _within($g, $geom);
 		$i++;
 		next if $i < $from;
 		push @features, $f;
-		last if $limit and $i >= $limit-1;
+		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
 	}
 	elsif ( exists $params{that_intersect} ) 
 	{
-	    while (1) {
-		my $f = $layer->GetNextFeature();
-		$is_all = 1, last unless $f;
+	    my $geom = $params{that_intersect};
+	    my $e = $geom->GetEnvelope;
+	    $options{filter_rect} = [$e->[0], $e->[2], $e->[1], $e->[3]];
+	    $self->init_iterate(%options);
+	    while ( my $f = $self->next_feature() ) {
 		my $g = $f->GetGeometryRef;
-		if ($is_collection) {
-		    my $w = 0;
-		    for my $j (0..$n-1) {
-			$w = $g->Intersect($geom->GetGeometryRef($j));
-			last if $w;
-		    }
-		    next unless $w;
-		} else {
-		    next unless $g->Intersect($geom);
-		}
+		next unless _intersect($g, $geom);
 		$i++;
 		next if $i < $from;
 		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	elsif ( exists $params{filter_with_rect} ) 
-	{
-	    my $rect  = $params{filter_with_rect};
-	    $layer->SetSpatialFilterRect( @$rect );
-	    $layer->ResetReading();
-	    while (1) {
-		my $f = $layer->GetNextFeature();
-		$is_all = 1, last unless $f;
-		$i++;
-		next if $i < $from;
-		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	elsif ( exists $params{with_id} ) {
-	    my $fids = $params{with_id};
-	    for my $f (@$fids) {
-		my $x = $layer->GetFeature($f);
-		push @features, $x if $x;
-	    }
-	    $is_all = 1;
-	}
-	else {
-	    $layer->SetSpatialFilter(undef);
-	    $layer->ResetReading();
-	    while (1) {
-		my $f = $layer->GetNextFeature();
-		$is_all = 1, last unless $f;
-		$i++;
-		next if $i < $from;
-		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	unless ($is_all) {
-	    my $f = $layer->GetNextFeature();
-	    $is_all = 1 unless $f;
-	}
-	$layer->SetSpatialFilter(undef) if $e; # remove the filter
-    } 
-    elsif ( $self->{features} )
-    {
-	if ( exists $params{that_contain} ) 
-	{
-	    for my $f (@{$self->{features}}) {
-		my $g = $f->GetGeometryRef;
-		if ($is_collection) {
-		    my $w = 0;
-		    for my $j (0..$n-1) {
-			$w = $geom->GetGeometryRef($j)->Within($g);
-			last if $w;
-		    }
-		    next unless $w;
-		} else {
-		    next unless $geom->Within($g);
-		}
-		$i++;
-		next if $i < $from;
-		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	elsif ( exists $params{that_are_within} ) 
-	{
-	    for my $f (@{$self->{features}}) {
-		my $g = $f->GetGeometryRef;
-		if ($is_collection) {
-		    my $w = 0;
-		    for my $j (0..$n-1) {
-			$w = $g->Within($geom->GetGeometryRef($j));
-			last if $w;
-		    }
-		    next unless $w;
-		} else {
-		    next unless $g->Within($geom);
-		}
-		$i++;
-		next if $i < $from;
-		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	elsif ( exists $params{that_intersect} ) 
-	{
-	    for my $f (@{$self->{features}}) {
-		my $g = $f->GetGeometryRef;
-		if ($is_collection) {
-		    my $w = 0;
-		    for my $j (0..$n-1) {
-			$w = $g->Intersect($geom->GetGeometryRef($j));
-			last if $w;
-		    }
-		    next unless $w;
-		} else {
-		    next unless $g->Intersect($geom);
-		}
-		$i++;
-		next if $i < $from;
-		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	elsif ( exists $params{filter_with_rect} ) 
-	{
-	    my $rect  = $params{filter_with_rect};
-	    for my $f (@{$self->{features}}) {
-		$i++;
-		next if $i < $from;
-		push @features, $f;
-		last if $limit and $i >= $limit-1;
-	    }
-	}
-	elsif ( exists $params{with_id} ) {
-	    my $fids = $params{with_id};
-	    for my $f (@$fids) {
-		my $x = $self->{features}->[$f];
-		push @features, $x if $x;
+		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
 	}
 	else {
-	    for my $f (@{$self->{features}}) {
+	    $self->init_iterate(%options);
+	    while ( my $f = $self->next_feature() ) {
 		$i++;
 		next if $i < $from;
 		push @features, $f;
-		last if $limit and $i >= $limit-1;
+		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
 	}
-	$is_all = @features == @{$self->{features}};
     }
     return wantarray ? (\@features, $is_all) : \@features;
+}
+
+## @ignore
+sub _within {
+    my($a, $b) = @_;
+    if (($a->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
+	my $w = 1;
+	for my $i (0..$a->GetGeometryCount()-1) {
+	    $w = $a->GetGeometryRef($i)->Within($b);
+	    last unless $w;
+	}
+	return $w;
+    } elsif (($b->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
+	my $w = 0;
+	for my $i (0..$b->GetGeometryCount()-1) {
+	    $w = $a->Within($b->GetGeometryRef($i));
+	    last if $w;
+	}
+	return $w;
+    } else {
+	return $a->Within($b);
+    }
+}
+
+## @ignore
+sub _intersect {
+    my($a, $b) = @_;
+    if (($a->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
+	my $w = 1;
+	for my $i (0..$a->GetGeometryCount()-1) {
+	    $w = $a->GetGeometryRef($i)->Intersect($b);
+	    last unless $w;
+	}
+	return $w;
+    } elsif (($b->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
+	my $w = 0;
+	for my $i (0..$b->GetGeometryCount()-1) {
+	    $w = $a->Intersect($b->GetGeometryRef($i));
+	    last if $w;
+	}
+	return $w;
+    } else {
+	return $a->Intersect($b);
+    }
 }
 
 ## @method @world(hash params)
@@ -1509,8 +1451,6 @@ sub world {
 	    $f = $self->{features}->[ $params{feature} ];
 	} elsif ( $self->{OGR}->{Layer} ) {
 	    $f = $self->{OGR}->{Layer}->GetFeature( $params{feature} );
-	} else {
-	    croak "no layer";
 	}
 	croak "feature with fid=$params{feature} does not exist" unless $f;
 	eval { $extent = $f->GetGeometryRef()->GetEnvelope(); };
@@ -1531,23 +1471,15 @@ sub world {
 		}
 	    }
 	}
-	elsif ( $self->{OGR}->{Layer} ) {
+	elsif ( $self->{OGR}->{Layer} and $self->{OGR}->{Layer}->GetFeatureCount() > 0 ) {
 	    eval { $extent = $self->{OGR}->{Layer}->GetExtent(); };
 	    croak "GetExtent failed: $@" if $@;
 	}
-	else {
-	    croak "no layer";
-	}
     }
     
-    # return a sensible world in any case
-    unless ($extent) {
-	$extent = [ 0, 1, 0, 1 ];
-    }
-    else {
-	$extent->[1] = $extent->[0] + 1 if $extent->[1] <= $extent->[0];
-	$extent->[3] = $extent->[2] + 1 if $extent->[3] <= $extent->[2];
-    }
+    return unless $extent;
+    $extent->[1] = $extent->[0] + 1 if $extent->[1] <= $extent->[0];
+    $extent->[3] = $extent->[2] + 1 if $extent->[3] <= $extent->[2];
     return ( $extent->[0], $extent->[2], $extent->[1], $extent->[3] );
 }
 
@@ -1556,12 +1488,11 @@ sub world {
 # @brief Copy selected or all features from the layer into a new layer.
 #
 # @param[in] params is a list of named parameters:
-# - \a copy_all boolean flag to copy all
 # - \a layer_name name for the new layer (default is "copy")
 # - \a driver driver (default is the driver of the layer)
 # - \a data_source data source (default is the data source of the layer)
-# - \a selected_features selected features (a ref to an array), if not
-# defined then copies all
+# - \a features features (a ref to an array) to copy, if not defined
+# then all are copied.
 # The params are forwarded to the constructor of the new layer.
 # @return A Geo::Vector object.
 # @bug If self is a polygon shapefile, the result seems to be linestrings, but
@@ -1583,23 +1514,9 @@ sub copy {
 	$copy->{OGR}->{Layer}->CreateField($fd);
     }
 
-    $params{copy_all} = 1 unless exists $params{selected_features};
-
-    $self->{OGR}->{Layer}->ResetReading() if $params{copy_all};
-    
     my $i = 0;
-    while (1) {
-
-	my $f;
-
-	if ($params{copy_all}) {
-	    $f = $self->{OGR}->{Layer}->GetNextFeature();
-	    last unless $f;
-	} else {
-	    last if $i > $#{$params{selected_features}};
-	    $f = $params{selected_features}[$i++];
-	    next unless $f; # should not happen
-	}	
+    $self->init_iterate(%params);
+    while (my $f = $self->next_feature()) {
 	
 	my $geometry = $f->GetGeometryRef();
 
@@ -1620,14 +1537,15 @@ sub copy {
 	    $feature->SetField($i, $value) if defined $value;
 	}
 	
-	$copy->{OGR}->{Layer}->CreateFeature($feature);
+	$copy->add_feature($feature);
 	
     }
     
-    $copy->{OGR}->{Layer}->SyncToDisk;
+    $copy->{OGR}->{Layer}->SyncToDisk if $copy->{OGR};
     return $copy;
 }
 
+## @ignore
 sub transform_points {
     my($points, $ct) = @_;
     unless (ref($points->[0])) { # single point [x,y,z]
@@ -1641,52 +1559,6 @@ sub transform_points {
     for my $p (@$points) {
 	transform_points($p, $ct);
     }
-}
-
-## @method void add_layer(Geo::Vector another)
-#
-# @brief Adds an another layer to this layer.
-# @param[in] another An another Geo::Vector layer.
-# @note The layers must have the same geometry_type.
-sub add_layer {
-    my ( $self, $another ) = @_;
-    
-    croak "the layer is not writable" unless $self->{update};
-
-    my $type =
-	$GEOMETRY_TYPE_INV{ $self->{OGR}->{Layer}->GetLayerDefn->GetGeomType };
-    my $another_type =
-	$GEOMETRY_TYPE_INV{ $another->{OGR}->{Layer}->GetLayerDefn->GetGeomType };
-    
-    croak "can't add a $another_type layer to a $type layer"
-	unless $type eq $another_type;
-    
-    my $defn = $self->{OGR}->{Layer}->GetLayerDefn();
-    
-    my $schema         = $self->schema;
-    my $another_schema = $another->schema;
-    
-    $another->{OGR}->{Layer}->ResetReading();
-    
-    while (1) {
-	my $f = $another->{OGR}->{Layer}->GetNextFeature();
-	last unless $f;
-	
-	my $geometry = $f->GetGeometryRef();
-	
-	# make copies of the features and add them to self
-	
-	my $feature = new Geo::OGR::Feature($defn);
-	$feature->SetGeometry($geometry);    # makes a copy
-	
-	for my $name ( keys %$schema ) {
-	    next if $name =~ /^\./;
-	    next unless $another_schema->{$name};
-	    $feature->SetField($name, $f->GetField($name));
-	}
-	$self->{OGR}->{Layer}->CreateFeature($feature);
-    }
-    $self->{OGR}->{Layer}->SyncToDisk;
 }
 
 ## @method Geo::Raster rasterize(%params)
@@ -1785,10 +1657,9 @@ sub graph {
     my ($self) = @_;
     my %node;
     my %edge;
-    my $layer = $self->{OGR}->{Layer};
-    $layer->ResetReading();
     my $distance = Geo::Distance->new();
-    while ( my $feature = $layer->GetNextFeature() ) {
+    $self->init_iterate;
+    while ( my $feature = $self->next_feature ) {
 	
 	my $geom = $feature->GetGeometryRef();
 	my $n    = $geom->GetPointCount - 1;

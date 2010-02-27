@@ -8,9 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter Gtk2::Ex::Geo::DialogMaster);
 
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw(&edit_entry &value_from_combo &get_selected) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -37,6 +35,48 @@ sub new {
     bless $self => (ref($class) or $class);
      
     return $self;
+}
+
+## @ignore
+sub edit_entry {
+    my($entry, $event, $self) = @_;
+    my $key = $event->keyval;
+    if ($key == $Gtk2::Gdk::Keysyms{Up}) {
+	$entry->set_text($self->{gui}{history}->arrow_up);
+	return 1;
+    } elsif ($key == $Gtk2::Gdk::Keysyms{Down}) {
+	$entry->set_text($self->{gui}{history}->arrow_down);
+	return 1;
+    }
+}
+
+## @ignore
+sub value_from_combo {
+    my($dialog, $name_of_combo) = @_;
+    my $combo = $dialog->get_widget($name_of_combo);
+    my $model = $combo->get_model;
+    my $iter = $model->get_iter_from_string($combo->get_active());
+    return $model->get_value($iter);
+}
+
+##@ignore
+sub get_selected {
+    my $selection = shift;
+    my @sel = $selection->get_selected_rows;
+    my %sel;
+    for (@sel) {
+	$sel{$_->to_string} = 1;
+    }
+    my $model = $selection->get_tree_view->get_model;
+    my $iter = $model->get_iter_first();
+    my $i = 0;
+    my %s;
+    while ($iter) {
+	my($id) = $model->get($iter, 0);
+	$s{$id} = 1 if $sel{$i++};
+	$iter = $model->iter_next($iter);
+    }
+    return \%s;
 }
 
 1;
