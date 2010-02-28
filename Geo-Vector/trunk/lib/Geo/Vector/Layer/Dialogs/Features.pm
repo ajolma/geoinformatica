@@ -53,13 +53,13 @@ sub open {
     my @coltypes;
     my @ctypes;
     my $schema = $self->schema;    
-    for my $name (sort {$schema->{$a}{VisualOrder} <=> $schema->{$b}{VisualOrder}} keys %$schema) {
-	my $n = $name;
+    for my $field ($schema->fields) {
+	my $n = $field->{Name};
 	$n =~ s/_/__/g;
 	$n =~ s/^\.//;
 	push @columns, $n;
 	push @coltypes, 'Glib::String'; # use custom sort
-	push @ctypes, $schema->{$name}{Type};
+	push @ctypes, $field->{Type};
     }
     
     my $tv = $dialog->get_widget('feature_treeview');
@@ -150,7 +150,7 @@ sub fill_features_table {
 
     $model->clear;
 
-    my @fnames = sort { $schema->{$a}{VisualOrder} <=> $schema->{$b}{VisualOrder} } keys %$schema;
+    my @fnames = $schema->fields;
 
     my $features = $self->selected_features;
 
@@ -185,7 +185,8 @@ sub add_features {
 	next if exists $added->{$id};
 	$added->{$id} = 1;
 
-	for my $name (@$fnames) {
+	for my $field (@$fnames) {
+	    my $name = $field->{Name};
 	    if ($name =~ /^\./ or $f->IsFieldSet($name)) {
 		push @rec, $rec++;
 		my $v = Geo::Vector::feature_attribute($f, $name);

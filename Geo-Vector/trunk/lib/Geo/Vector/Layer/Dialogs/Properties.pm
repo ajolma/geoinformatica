@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Geo::Vector qw/:all/;
 use Geo::Vector::Layer qw/:all/;
 use Geo::Vector::Layer::Dialogs::New;
 
@@ -17,6 +18,8 @@ sub open {
     unless ($dialog) {
 	$self->{properties_dialog} = $dialog = $gui->get_dialog('properties_dialog');
 	croak "properties_dialog for Geo::Vector does not exist" unless $dialog;
+	Geo::Vector::Layer::Dialogs::fill_render_as_combobox(
+	    $dialog->get_widget('properties_render_as_combobox') );
 	$dialog->get_widget('properties_dialog')
 	    ->signal_connect(delete_event => \&cancel_properties, [$self, $gui]);
 	$dialog->get_widget('properties_color_button')
@@ -40,19 +43,9 @@ sub open {
     $dialog->get_widget('properties_geometry_type_label')
 	->set_text($self->geometry_type or 'unknown type');
     
-    my $combo = $dialog->get_widget('properties_render_as_combobox');
-    my $renderer = Gtk2::CellRendererText->new;
-    $combo->pack_start ($renderer, TRUE);
-    $combo->add_attribute ($renderer, text => 0);
-    my $model = Gtk2::ListStore->new('Glib::String');
-    for (sort {$Geo::Vector::RENDER_AS{$a} <=> $Geo::Vector::RENDER_AS{$b}} keys %Geo::Vector::RENDER_AS) {
-	$model->set ($model->append, 0, $_);
-    }
-    my $a = 0;
-    $a = $self->render_as;
-    $a = $Geo::Vector::RENDER_AS{$a} if defined $a;
-    $combo->set_model($model);
-    $combo->set_active($a);
+    my $a = $self->render_as;
+    $a = defined $a ? $Geo::Vector::RENDER_AS{$a} : 0;
+    $dialog->get_widget('properties_render_as_combobox')->set_active($a);
     
     my $count = $self->{OGR}->{Layer}->GetFeatureCount();
     $count .= " (estimated)";

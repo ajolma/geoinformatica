@@ -41,7 +41,7 @@ eval {
 ok($@ eq '', "create a layer into the new dataset: $@");
 
 eval {
-    $test->schema({int=>{Number=>0, Type=>'Integer'}, real=>{Number=>1, TypeName=>'Real'}});
+    $test->schema(Fields => [{Name => 'int', Type=> 'Integer'}, {Name => 'real', Type => 'Real'}]);
 };
 ok($@ eq '', "add a schema into the layer: $@");
 
@@ -96,8 +96,8 @@ ok($c == 3, 'fset: field count '.$c);
 
 $s = $v->schema(0);
 
-ok($s->{rfield}{Type} eq 'Real', 'fset: schema');
-ok($s->{sfield}{Type} eq 'String', 'fset: schema');
+ok($s->field('rfield')->{Type} eq 'Real', 'fset: schema');
+ok($s->field('sfield')->{Type} eq 'String', 'fset: schema');
 
 my $ogc = Geo::OGC::Point->new(1,2);
 my $ogr = Geo::OGR::CreateGeometryFromWkt($ogc->AsText);

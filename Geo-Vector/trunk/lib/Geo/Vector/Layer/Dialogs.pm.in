@@ -3,6 +3,7 @@ package Geo::Vector::Layer::Dialogs;
 
 use strict;
 use warnings;
+use Glib qw/TRUE FALSE/;
 
 require Exporter;
 
@@ -35,6 +36,19 @@ sub new {
     bless $self => (ref($class) or $class);
      
     return $self;
+}
+
+sub fill_render_as_combobox {
+    my($combobox) = @_;
+    my $renderer = Gtk2::CellRendererText->new;
+    $combobox->pack_start($renderer, TRUE);
+    $combobox->add_attribute($renderer, text => 0);
+    my $model = Gtk2::ListStore->new('Glib::String');
+    for (sort {$Geo::Vector::RENDER_AS{$a} <=> $Geo::Vector::RENDER_AS{$b}} 
+	 keys %Geo::Vector::RENDER_AS) {
+	$model->set($model->append, 0, $_);
+    }
+    $combobox->set_model($model);
 }
 
 1;

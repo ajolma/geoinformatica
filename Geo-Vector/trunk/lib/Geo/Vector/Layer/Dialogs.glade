@@ -135,262 +135,6 @@
       </widget>
     </child>
   </widget>
-  <widget class="GtkDialog" id="rasterize_dialog">
-    <property name="width_request">500</property>
-    <property name="title" translatable="yes">dialog1</property>
-    <property name="type_hint">dialog</property>
-    <child internal-child="vbox">
-      <widget class="GtkVBox" id="dialog-vbox4">
-        <property name="visible">True</property>
-        <child>
-          <widget class="GtkVBox" id="vbox6">
-            <property name="visible">True</property>
-            <property name="border_width">5</property>
-            <property name="spacing">5</property>
-            <child>
-              <widget class="GtkHBox" id="hbox36">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkLabel" id="label53">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">Name for the new raster: </property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkEntry" id="rasterize_name_entry">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHBox" id="hbox15">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkLabel" id="label29">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">Select raster to be as a model for the canvas: </property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkComboBox" id="rasterize_like_combobox">
-                    <property name="visible">True</property>
-                    <property name="items" translatable="yes">x
-</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHBox" id="hbox16">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkLabel" id="label30">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">Render the data as: </property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkComboBox" id="rasterize_render_as_combobox">
-                    <property name="visible">True</property>
-                    <property name="items" translatable="yes">Native
-Points
-Lines
-Polygons</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">2</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHBox" id="hbox17">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkLabel" id="label31">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">Enter the fid of the feature to be rendered (optional): </property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkEntry" id="rasterize_fid_entry">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">3</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHBox" id="hbox18">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkLabel" id="label32">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">Select a field for the value (optional): </property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkComboBox" id="rasterize_value_field_combobox">
-                    <property name="visible">True</property>
-                    <property name="items" translatable="yes">x
-</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">4</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHBox" id="hbox19">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkLabel" id="label33">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">'Nodata value' to be used: </property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkEntry" id="rasterize_nodata_value_entry">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                  </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="position">5</property>
-              </packing>
-            </child>
-          </widget>
-          <packing>
-            <property name="position">2</property>
-          </packing>
-        </child>
-        <child internal-child="action_area">
-          <widget class="GtkHButtonBox" id="dialog-action_area4">
-            <property name="visible">True</property>
-            <property name="layout_style">end</property>
-            <child>
-              <widget class="GtkButton" id="rasterize_cancel_button">
-                <property name="label">gtk-cancel</property>
-                <property name="response_id">-6</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="can_default">True</property>
-                <property name="receives_default">False</property>
-                <property name="use_stock">True</property>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkButton" id="rasterize_ok_button">
-                <property name="label">gtk-ok</property>
-                <property name="response_id">-5</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="can_default">True</property>
-                <property name="receives_default">False</property>
-                <property name="use_stock">True</property>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </widget>
-          <packing>
-            <property name="expand">False</property>
-            <property name="pack_type">end</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-      </widget>
-    </child>
-  </widget>
   <widget class="GtkDialog" id="open_vector_dialog">
     <property name="border_width">5</property>
     <property name="default_width">720</property>
@@ -2300,6 +2044,222 @@ Polygons</property>
                 <property name="expand">False</property>
                 <property name="fill">False</property>
                 <property name="position">2</property>
+              </packing>
+            </child>
+          </widget>
+          <packing>
+            <property name="expand">False</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+      </widget>
+    </child>
+  </widget>
+  <widget class="GtkDialog" id="rasterize_dialog">
+    <property name="border_width">5</property>
+    <property name="type_hint">normal</property>
+    <property name="has_separator">False</property>
+    <child internal-child="vbox">
+      <widget class="GtkVBox" id="dialog-vbox11">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child>
+          <widget class="GtkVBox" id="vbox1">
+            <property name="visible">True</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <widget class="GtkHBox" id="hbox1">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkLabel" id="label1">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">Name for the new raster:</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkEntry" id="rasterize_name_entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="invisible_char">&#x25CF;</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHBox" id="hbox2">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkLabel" id="label2">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">Select raster to be as a model for the canvas:</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkComboBox" id="rasterize_like_combobox">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHBox" id="hbox3">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkLabel" id="label3">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">Render the data as:</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkComboBox" id="rasterize_render_as_combobox">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHBox" id="hbox4">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkLabel" id="label4">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">The FID of the feature to be rendered:</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkEntry" id="rasterize_fid_entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="invisible_char">&#x25CF;</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHBox" id="hbox5">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkLabel" id="label5">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">Select a field for the value:</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkComboBox" id="rasterize_value_field_combobox">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHBox" id="hbox6">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkLabel" id="label6">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">No data value to be used:</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkEntry" id="rasterize_nodata_value_entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="invisible_char">&#x25CF;</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="position">5</property>
+              </packing>
+            </child>
+          </widget>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child internal-child="action_area">
+          <widget class="GtkHButtonBox" id="dialog-action_area11">
+            <property name="visible">True</property>
+            <property name="layout_style">end</property>
+            <child>
+              <widget class="GtkButton" id="rasterize_cancel_button">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkButton" id="rasterize_ok_button">
+                <property name="label">gtk-ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
               </packing>
             </child>
           </widget>

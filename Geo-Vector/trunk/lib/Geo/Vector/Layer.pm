@@ -285,17 +285,17 @@ sub supported_palette_types {
     my ($self)  = @_;
     my $schema  = $self->schema;
     my $has_int = 0;
-    for my $name ( keys %$schema ) {
-	$has_int = 1, next if $schema->{$name}{Type} eq 'Integer';
+    for my $field ( $schema->fields ) {
+	$has_int = 1, next if $field->{Type} eq 'Integer';
     }
     if ($has_int) {
 	return (
-		'Single color',
-		'Grayscale',
-		'Rainbow',
-		'Color table',
-		'Color bins'
-		);
+	    'Single color',
+	    'Grayscale',
+	    'Rainbow',
+	    'Color table',
+	    'Color bins'
+	    );
     }
     else {
 	return ( 'Single color', 'Grayscale', 'Rainbow', 'Color bins' );
@@ -357,14 +357,13 @@ sub render {
     elsif ( $self->{OGR}->{Layer} ) {
 	
 	my $schema = $self->schema();
+	my($c,$ci) = $schema->field($self->{COLOR_FIELD});
+	my($s,$si) = $schema->field($self->{SYMBOL_FIELD});
 	
-	$self->{COLOR_FIELD_VALUE} =
-	    exists $schema->{ $self->{COLOR_FIELD} } ? 
-	    $schema->{ $self->{COLOR_FIELD} }{Number} : -1;
+	$self->{COLOR_FIELD_VALUE} = $c ? $ci : -1;
 	
 	$self->{SYMBOL_FIELD_VALUE} =
-	    $self->{SYMBOL_FIELD} eq 'Fixed size' ? 
-	    -2 : $schema->{ $self->{SYMBOL_FIELD} }{Number};
+	    $self->{SYMBOL_FIELD} eq 'Fixed size' ? -2 : $si;
 	
 	$self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};
 	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };

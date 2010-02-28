@@ -134,16 +134,15 @@ sub schema_to_treeview {
     $treeview->append_column($column);
 
     if ($schema) {
-	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
-	    next if $name =~ /^\./;
+	for my $field ( $schema->fields ) {
 	    my $iter = $model->append(undef);
 	    my @set = ($iter);
 	    my $i = 0;
-	    push @set, ($i++, $name);
-	    push @set, ($i++, $schema->{$name}{Type});
-	    push @set, ($i++, $schema->{$name}{Justify});
-	    push @set, ($i++, $schema->{$name}{Width});
-	    push @set, ($i++, $schema->{$name}{Precision});
+	    push @set, ($i++, $field->{Name});
+	    push @set, ($i++, $field->{Type});
+	    push @set, ($i++, $field->{Justify});
+	    push @set, ($i++, $field->{Width});
+	    push @set, ($i++, $field->{Precision});
 	    $model->set(@set);
 	}
     }
