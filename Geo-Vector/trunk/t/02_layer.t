@@ -16,7 +16,7 @@ $layer->open_symbols_dialog($gis);
 ok(1);
 $layer->open_colors_dialog($gis);
 ok(1);
-$layer->open_labels_dialog($gis);
+$layer->open_labeling_dialog($gis);
 ok(1);
 Geo::Vector::Layer::Dialogs::Properties::open($layer, $gis);
 ok(1);

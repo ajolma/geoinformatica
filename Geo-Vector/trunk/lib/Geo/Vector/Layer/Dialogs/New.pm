@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 
 ## @ignore
 sub open {
@@ -49,7 +50,7 @@ sub open {
 
     my $entry = $d->get_widget('new_vector_folder_entry');
     $d->get_widget('new_vector_open_button')
-	->signal_connect( clicked=>\&Geo::Vector::Layer::Dialogs::select_file_data_source, [$self, $entry, 'select_folder']);
+	->signal_connect( clicked=>\&select_file_data_source, [$self, $entry, 'select_folder']);
 
     $model = Gtk2::ListStore->new('Glib::String');
     for my $type (@Geo::Vector::GEOMETRY_TYPES) {
@@ -74,12 +75,14 @@ sub open {
 
     $cell = Gtk2::CellRendererCombo->new;
     $cell->set(editable => 1);
-    #$model = Gtk2::ListStore->new('Glib::String');
+    $cell->set(text_column => 0);
+    $cell->set(has_entry => 0);
+    my $m = Gtk2::ListStore->new('Glib::String');
     for my $type (@Geo::Vector::GEOMETRY_TYPES) {
-	#$model->set ($model->append, 0, $type);
+	$m->set($m->append, 0, $type);
     }
-    #$cell->set_model($model);
-    $column = Gtk2::TreeViewColumn->new_with_attributes('type', $cell, widget => $i++);
+    $cell->set(model=>$m);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('type', $cell, text => $i++);
     $treeview->append_column($column);
 
     $self->{schema} = $model;
@@ -109,15 +112,15 @@ sub ok_new_vector {
     my $self = pop;
     my $d = $self->{new_vector_dialog};
     my $layer;
-    my $driver = Geo::Vector::Layer::Dialogs::value_from_combo($d, 'new_vector_driver_combobox');
+    my $driver = get_value_from_combo($d, 'new_vector_driver_combobox');
     $driver = $self->{drivers}{$driver};
     my $create_options = $d->get_widget('new_vector_create_options_entry')->get_text;
     $create_options = {split(/[(=>),]/,$create_options)};
-    my $data_source = Geo::Vector::Layer::Dialogs::value_from_combo($d, 'new_vector_data_source_combobox');
+    my $data_source = get_value_from_combo($d, 'new_vector_data_source_combobox');
     $data_source = $d->get_widget('new_vector_folder_entry')->get_text unless $data_source;
     my $name = $d->get_widget('new_vector_layer_entry')->get_text;
     my $layer_options = $d->get_widget('new_vector_layer_options_entry')->get_text;
-    my $geometry_type = Geo::Vector::Layer::Dialogs::value_from_combo($d, 'new_vector_geometry_type_combobox');
+    my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
     my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;
     my $srs = $d->get_widget('new_vector_srs_entry')->get_text;
     eval {
@@ -157,6 +160,7 @@ sub add_field_to_schema {
     my @set = ($iter);
     my $i = 0;
     push @set, ($i++, 'name');
+    push @set, ($i++, 'Integer');
     $self->{schema}->set(@set);
 }
 

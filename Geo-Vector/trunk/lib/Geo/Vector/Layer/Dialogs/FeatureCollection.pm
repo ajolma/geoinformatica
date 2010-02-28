@@ -4,6 +4,7 @@ package Geo::Vector::Layer::Dialogs::FeatureCollection;
 use strict;
 use warnings;
 use Carp;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 
 ## @ignore
@@ -153,7 +154,7 @@ sub feature_activated2 {
     my $dialog = $self->{feature_collection_dialog};
     my $model = $dialog->get_widget('feature_collection_attributes_treeview')->get_model;
 
-    my $ids = get_selected($selection);
+    my $ids = get_selected_from_selection($selection);
     my $features = $self->features(with_id=>[keys %$ids]);
     return unless $features;
     return unless @$features;

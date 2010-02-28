@@ -165,13 +165,12 @@ sub features {
 # Gtk2::Ex::Geo::Glue.
 # @param[in] gui A reference to a GUI object, like for example Gtk2::Ex::Geo::Glue.
 # @todo Support for feature layer.
-sub properties_dialog {
+sub open_properties_dialog {
     my ( $self, $gui ) = @_;
     if ( $self->{features} ) {
 	$gui->message("not yet implemented");
     }
     elsif ( $self->{OGR}->{Layer} ) {
-	#$self->open_properties_dialog($gui);
 	Geo::Vector::Layer::Dialogs::Properties::open($self, $gui);
     }
     else {
@@ -225,8 +224,7 @@ sub menu_items {
 	{
 	    nr => 11,
 	    sub => sub {
-		my($self, $gui) = @{$_[1]};
-		Geo::Vector::Layer::Dialogs::Vertices::open($self, $gui);
+		open_vertices_dialog(@{$_[1]});
 	    }
 	};
 	$items->{'R_asterize...'} = 
@@ -244,6 +242,21 @@ sub menu_items {
     }
 
     return $items;
+}
+
+sub open_features_dialog {
+    my($self) = @_;
+    if ( $self->{features} ) {
+	Geo::Vector::Layer::Dialogs::FeatureCollection::open(@_);
+    }
+    elsif ( $self->{OGR}->{Layer} ) {
+	Geo::Vector::Layer::Dialogs::Features::open(@_);
+    }
+}
+sub open_vertices_dialog {
+    Geo::Vector::Layer::Dialogs::Vertices::open(@_);
+}
+sub open_rasterize_dialog {
 }
 
 ## @method $render_as($render_as)

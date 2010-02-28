@@ -6,6 +6,7 @@ use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 use Geo::Raster::Layer qw /:all/;
 
@@ -21,9 +22,12 @@ sub open {
 	$dialog->get_widget('copy_vector_dialog')
 	    ->signal_connect( delete_event => \&cancel_copy, [$self, $gui]);
 
-	my $entry = $dialog->get_widget('copy_datasource_entry');
 	$dialog->get_widget('copy_datasource_button')
-	    ->signal_connect( clicked=>\&select_file_data_source, [$self, $entry, 'select_folder']);
+	    ->signal_connect( clicked=> sub {
+		my(undef, $self) = @_;
+		my $entry = $self->{copy_dialog}->get_widget('copy_datasource_entry');
+		file_chooser('Select folder', 'select_folder', $entry);
+			      }, $self);
 
 	$dialog->get_widget('copy_cancel_button')
 	    ->signal_connect(clicked => \&cancel_copy, [$self, $gui]);

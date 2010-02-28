@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 
 ## @ignore
@@ -97,7 +98,17 @@ sub open {
     $self->{directory_toolbar} = [];
 
     my $entry = $d->get_widget('open_vector_SQL_entry');
-    $entry->signal_connect(key_press_event => \&edit_entry, $self);
+    $entry->signal_connect(key_press_event => sub {
+	my($entry, $event, $history) = @_;
+	my $key = $event->keyval;
+	if ($key == $Gtk2::Gdk::Keysyms{Up}) {
+	    $entry->set_text($history->arrow_up);
+	    return 1;
+	} elsif ($key == $Gtk2::Gdk::Keysyms{Down}) {
+	    $entry->set_text($history->arrow_down);
+	    return 1;
+	}
+			   }, $self->{gui}{history});
     $entry->signal_connect(changed => \&on_SQL_entry_changed, $self);
     
     $d->get_widget('open_vector_remove_button')->signal_connect(clicked => \&remove_layer, $self);
@@ -167,7 +178,7 @@ sub open_vector {
     $sql =~ s/\s+$//;
     $self->{gui}{history}->editing($sql);
 
-    my $layers = get_selected($self->{dialog}->get_widget('open_vector_layer_treeview')->get_selection);
+    my $layers = get_selected_from_selection($self->{dialog}->get_widget('open_vector_layer_treeview')->get_selection);
 
     if ($sql) {
 	$self->{gui}{history}->enter();
@@ -219,7 +230,7 @@ sub cancel_open_vector {
 sub remove_layer {
     my($button, $self) = @_;
     my($driver, $data_source) = get_data_source($self);
-    my $layers = get_selected($self->{dialog}->get_widget('open_vector_layer_treeview')->get_selection);
+    my $layers = get_selected_from_selection($self->{dialog}->get_widget('open_vector_layer_treeview')->get_selection);
     eval {
 	my $ds = Geo::OGR::Open($data_source, 1);
 	for my $i (0..$ds->GetLayerCount-1) {
@@ -677,6 +688,7 @@ sub show_schema {
 			  );
     
     my @world = $vector->world;
+    @world = ('undef','undef','undef','undef') unless @world;
     $iter = $property_model->insert (undef, 0);
     $property_model->set ($iter,
 			  0, 'Bounding box',

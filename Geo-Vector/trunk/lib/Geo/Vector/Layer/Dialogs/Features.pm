@@ -4,7 +4,9 @@ package Geo::Vector::Layer::Dialogs::Features;
 use strict;
 use warnings;
 use Carp;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
+use Geo::Vector::Layer::Dialogs::Copy;
 
 ## @ignore
 # features dialog
@@ -232,7 +234,7 @@ sub feature_activated {
     my $selection = shift;
     my($self, $gui) = @{$_[0]};
 
-    my $features = get_selected($selection);
+    my $features = get_selected_from_selection($selection);
     $features = $self->features(with_id=>[keys %$features]);
     return unless $features;
     return unless @$features;
@@ -265,7 +267,7 @@ sub zoom_to_selected_features {
 
     my $dialog = $self->{features_dialog};
     my $treeview = $dialog->get_widget('feature_treeview');
-    my $features = get_selected($treeview->get_selection);
+    my $features = get_selected_from_selection($treeview->get_selection);
     $features = $self->features(with_id=>[keys %$features]);
 
     my @viewport = $gui->{overlay}->get_viewport;
@@ -303,7 +305,7 @@ sub zoom_to_selected_features {
 ##@ignore
 sub copy_selected_features {
     my($self, $gui) = @{$_[1]};
-    Geo::Vector::Layer::Dialogs::Copy($self, $gui);
+    Geo::Vector::Layer::Dialogs::Copy::open($self, $gui);
 }
 
 ##@ignore
@@ -317,7 +319,7 @@ sub make_selection {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{features_dialog};
     my $treeview = $dialog->get_widget('feature_treeview');
-    my $features = get_selected($treeview->get_selection);
+    my $features = get_selected_from_selection($treeview->get_selection);
     $features = $self->features(with_id=>[keys %$features]);
     delete $gui->{overlay}->{selection};
     for (@$features) {

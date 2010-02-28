@@ -10,14 +10,11 @@ use vars qw/$folder/;
 
 our @ISA = qw(Exporter Gtk2::Ex::Geo::DialogMaster);
 
-our %EXPORT_TAGS = ( 
-    'all' => [ qw(&edit_entry &value_from_combo &get_selected &select_file_data_source) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw() ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw(
-	
-);
+our @EXPORT = qw( );
 
 =pod
 
@@ -38,71 +35,6 @@ sub new {
     bless $self => (ref($class) or $class);
      
     return $self;
-}
-
-## @ignore
-sub edit_entry {
-    my($entry, $event, $self) = @_;
-    my $key = $event->keyval;
-    if ($key == $Gtk2::Gdk::Keysyms{Up}) {
-	$entry->set_text($self->{gui}{history}->arrow_up);
-	return 1;
-    } elsif ($key == $Gtk2::Gdk::Keysyms{Down}) {
-	$entry->set_text($self->{gui}{history}->arrow_down);
-	return 1;
-    }
-}
-
-## @ignore
-sub value_from_combo {
-    my($dialog, $name_of_combo) = @_;
-    my $combo = $dialog->get_widget($name_of_combo);
-    my $model = $combo->get_model;
-    my $iter = $model->get_iter_from_string($combo->get_active());
-    return $model->get_value($iter);
-}
-
-##@ignore
-sub get_selected {
-    my $selection = shift;
-    my @sel = $selection->get_selected_rows;
-    my %sel;
-    for (@sel) {
-	$sel{$_->to_string} = 1;
-    }
-    my $model = $selection->get_tree_view->get_model;
-    my $iter = $model->get_iter_first();
-    my $i = 0;
-    my %s;
-    while ($iter) {
-	my($id) = $model->get($iter, 0);
-	$s{$id} = 1 if $sel{$i++};
-	$iter = $model->iter_next($iter);
-    }
-    return \%s;
-}
-
-## @ignore
-sub select_file_data_source {
-    my $button = shift;
-    my($self, $entry, $action) = @{$_[0]};
-    my $file_chooser =
-	Gtk2::FileChooserDialog->new ("Select a data store file or folder",
-				      undef, $action,
-				      'gtk-cancel' => 'cancel',
-				      'gtk-ok' => 'ok');
-    $file_chooser->set_current_folder($folder) if $folder;
-    my $uri;
-    if ($file_chooser->run eq 'ok') {
-	$folder = $file_chooser->get_current_folder();
-	$uri = $file_chooser->get_uri;
-	#print "$uri\n";
-	#print "$dialog_folder\n";
-	$uri =~ s/^file:\/\///;
-	$uri =~ s/^\/// if $uri =~ /^\/\w:/; # hack for windows
-	$entry->set_text($uri);
-    }
-    $file_chooser->destroy;
 }
 
 1;

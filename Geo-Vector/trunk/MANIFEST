@@ -16,4 +16,12 @@ lib/Geo/typemap
 lib/Geo/Vector/Layer.pm
 lib/Geo/Vector/Layer/Dialogs.glade
 lib/Geo/Vector/Layer/Dialogs.pm.in
+lib/Geo/Vector/Layer/Dialogs/Copy.pm
+lib/Geo/Vector/Layer/Dialogs/New.pm
+lib/Geo/Vector/Layer/Dialogs/Open.pm
+lib/Geo/Vector/Layer/Dialogs/Properties.pm
+lib/Geo/Vector/Layer/Dialogs/Features.pm
+lib/Geo/Vector/Layer/Dialogs/Vertices.pm
+lib/Geo/Vector/Layer/Dialogs/FeatureCollection.pm
+lib/Geo/Vector/Layer/Dialogs/Rasterize.pm
 META.yml                                 Module meta-data (added by MakeMaker)
