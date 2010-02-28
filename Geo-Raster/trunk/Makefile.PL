@@ -61,20 +61,27 @@ if ($^O eq 'MSWin32') {
 	 {OTHERLDFLAGS=>"-Wl,--out-implib=blib\\arch\\auto\\Geo\\Raster\\Raster.dll.a "});
 }
 
+our $root = 'lib/Geo/Raster';
+our $i = '$(INST_LIBDIR)/Raster';
+
 our %pm_files = 
     (
-     'lib/Geo/Raster.pm'                  => '$(INST_LIBDIR)/Raster.pm',
-     'lib/Geo/Raster/Operations.pm'       => '$(INST_LIBDIR)/Raster/Operations.pm',
-     'lib/Geo/Raster/Focal.pm'            => '$(INST_LIBDIR)/Raster/Focal.pm',
-     'lib/Geo/Raster/Zonal.pm'            => '$(INST_LIBDIR)/Raster/Zonal.pm',
-     'lib/Geo/Raster/Global.pm'            => '$(INST_LIBDIR)/Raster/Global.pm',
-     'lib/Geo/Raster/IO.pm'               => '$(INST_LIBDIR)/Raster/IO.pm',
-     'lib/Geo/Raster/Image.pm'            => '$(INST_LIBDIR)/Raster/Image.pm',
-     'lib/Geo/Raster/Algorithms.pm'       => '$(INST_LIBDIR)/Raster/Algorithms.pm',
-     'lib/Geo/Raster/TerrainAnalysis.pm'  => '$(INST_LIBDIR)/Raster/TerrainAnalysis.pm',
-     'lib/Geo/Raster/Geostatistics.pm'    => '$(INST_LIBDIR)/Raster/Geostatistics.pm',
-     'lib/Geo/Raster/Layer.pm'            => '$(INST_LIBDIR)/Raster/Layer.pm',
-     'lib/Geo/Raster/Layer/Dialogs.pm'    => '$(INST_LIBDIR)/Raster/Layer/Dialogs.pm',
+     $root.'.pm'                  => $i.'.pm',
+     $root.'/Operations.pm'       => $i.'/Operations.pm',
+     $root.'/Focal.pm'            => $i.'/Focal.pm',
+     $root.'/Zonal.pm'            => $i.'/Zonal.pm',
+     $root.'/Global.pm'            => $i.'/Global.pm',
+     $root.'/IO.pm'               => $i.'/IO.pm',
+     $root.'/Image.pm'            => $i.'/Image.pm',
+     $root.'/Algorithms.pm'       => $i.'/Algorithms.pm',
+     $root.'/TerrainAnalysis.pm'  => $i.'/TerrainAnalysis.pm',
+     $root.'/Geostatistics.pm'    => $i.'/Geostatistics.pm',
+     $root.'/Layer.pm'            => $i.'/Layer.pm',
+     $root.'/Layer/Dialogs.pm'    => $i.'/Layer/Dialogs.pm',
+     $root.'/Layer/Dialogs/Copy.pm' => $i.'/Layer/Dialogs/Copy.pm',
+     $root.'/Layer/Dialogs/Vectorize.pm' => $i.'/Layer/Dialogs/Vectorize.pm',
+     $root.'/Layer/Dialogs/Properties/GDAL.pm' => $i.'/Layer/Dialogs/Properties/GDAL.pm',
+     $root.'/Layer/Dialogs/Properties/libral.pm' => $i.'/Layer/Dialogs/Properties/libral.pm'
      );
 
 $deps->add_pm(%pm_files);

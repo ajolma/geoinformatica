@@ -20,6 +20,10 @@ lib/Geo/Raster/TerrainAnalysis.pm
 lib/Geo/Raster/Layer.pm
 lib/Geo/Raster/Layer/Dialogs.glade
 lib/Geo/Raster/Layer/Dialogs.pm.in
+lib/Geo/Raster/Layer/Dialogs/Copy.pm
+lib/Geo/Raster/Layer/Dialogs/Vectorize.pm
+lib/Geo/Raster/Layer/Dialogs/Properties/GDAL.pm
+lib/Geo/Raster/Layer/Dialogs/Properties/libral.pm
 Makefile.PL
 t/00_basic.t
 t/01_operators.t
