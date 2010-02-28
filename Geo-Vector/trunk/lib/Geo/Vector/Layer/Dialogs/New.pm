@@ -48,12 +48,15 @@ sub open {
     $combo->add_attribute ($renderer, text => 0);
     $combo->set_active(0);
 
-    my $entry = $d->get_widget('new_vector_folder_entry');
     $d->get_widget('new_vector_open_button')
-	->signal_connect( clicked=>\&select_file_data_source, [$self, $entry, 'select_folder']);
-
+	->signal_connect( clicked => sub {
+	    my(undef, $self) = @_;
+	    my $entry = $self->{new_vector_dialog}->get_widget('new_vector_folder_entry');
+	    file_chooser('Select folder', 'select_folder', $entry);
+			  }, $self );
+    
     $model = Gtk2::ListStore->new('Glib::String');
-    for my $type (@Geo::Vector::GEOMETRY_TYPES) {
+    for my $type (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
 	$model->set ($model->append, 0, $type);
     }
     $combo = $d->get_widget('new_vector_geometry_type_combobox');
@@ -63,29 +66,7 @@ sub open {
     $combo->add_attribute ($renderer, text => 0);
     $combo->set_active(0);
 
-    my $treeview = $d->get_widget('new_vector_schema_treeview');
-    $model = Gtk2::TreeStore->new(qw/Glib::String Glib::String/);
-    $treeview->set_model($model);
-
-    my $i = 0;
-    my $cell = Gtk2::CellRendererText->new;
-    $cell->set(editable => 1);
-    my $column = Gtk2::TreeViewColumn->new_with_attributes('name', $cell, text => $i++);
-    $treeview->append_column($column);
-
-    $cell = Gtk2::CellRendererCombo->new;
-    $cell->set(editable => 1);
-    $cell->set(text_column => 0);
-    $cell->set(has_entry => 0);
-    my $m = Gtk2::ListStore->new('Glib::String');
-    for my $type (@Geo::Vector::GEOMETRY_TYPES) {
-	$m->set($m->append, 0, $type);
-    }
-    $cell->set(model=>$m);
-    $column = Gtk2::TreeViewColumn->new_with_attributes('type', $cell, text => $i++);
-    $treeview->append_column($column);
-
-    $self->{schema} = $model;
+    $self->{schema} = schema_to_treeview($self, $d->get_widget('new_vector_schema_treeview'), 1);
 
     $d->get_widget('new_vector_add_button')
 	->signal_connect( clicked=>\&add_field_to_schema, $self);
@@ -99,6 +80,83 @@ sub open {
     
     $d->get_widget('new_vector_dialog')->show_all;
     $d->get_widget('new_vector_dialog')->present;
+}
+
+sub schema_to_treeview {
+    my($self, $treeview, $editable, $schema) = @_;
+
+    my $model = Gtk2::TreeStore->new(qw/Glib::String Glib::String Glib::String Glib::Int Glib::Int/);
+    $treeview->set_model($model);
+
+    my $i = 0;
+    my $cell = Gtk2::CellRendererText->new;
+    $cell->set(editable => $editable);
+    $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
+    my $column = Gtk2::TreeViewColumn->new_with_attributes('Name', $cell, text => $i++);
+    $treeview->append_column($column);
+
+    $cell = Gtk2::CellRendererCombo->new;
+    $cell->set(editable => $editable);
+    $cell->set(text_column => 0);
+    $cell->set(has_entry => 0);
+    $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
+    my $m = Gtk2::ListStore->new('Glib::String');
+    for my $type (@Geo::OGR::FieldDefn::FIELD_TYPES) {
+	$m->set($m->append, 0, $type);
+    }
+    $cell->set(model=>$m);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('Type', $cell, text => $i++);
+    $treeview->append_column($column);
+
+    $cell = Gtk2::CellRendererCombo->new;
+    $cell->set(editable => $editable);
+    $cell->set(text_column => 0);
+    $cell->set(has_entry => 0);
+    $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
+    $m = Gtk2::ListStore->new('Glib::String');
+    for my $type (@Geo::OGR::FieldDefn::JUSTIFY_TYPES) {
+	$m->set($m->append, 0, $type);
+    }
+    $cell->set(model=>$m);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('Justify', $cell, text => $i++);
+    $treeview->append_column($column);
+
+    $cell = Gtk2::CellRendererText->new;
+    $cell->set(editable => $editable);
+    $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('Width', $cell, text => $i++);
+    $treeview->append_column($column);
+
+    $cell = Gtk2::CellRendererText->new;
+    $cell->set(editable => $editable);
+    $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('Precision', $cell, text => $i++);
+    $treeview->append_column($column);
+
+    if ($schema) {
+	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
+	    next if $name =~ /^\./;
+	    my $iter = $model->append(undef);
+	    my @set = ($iter);
+	    my $i = 0;
+	    push @set, ($i++, $name);
+	    push @set, ($i++, $schema->{$name}{Type});
+	    push @set, ($i++, $schema->{$name}{Justify});
+	    push @set, ($i++, $schema->{$name}{Width});
+	    push @set, ($i++, $schema->{$name}{Precision});
+	    $model->set(@set);
+	}
+    }
+
+    return $model;
+}
+
+sub schema_changed {
+    my($cell, $path, $new_value, $data) = @_;
+    my($self, $column) = @$data;
+    my $iter = $self->{schema}->get_iter_from_string($path);
+    my @set = ($iter, $column, $new_value);
+    $self->{schema}->set(@set);
 }
 
 ## @ignore
@@ -123,6 +181,21 @@ sub ok_new_vector {
     my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
     my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;
     my $srs = $d->get_widget('new_vector_srs_entry')->get_text;
+    my %schema;
+    my $i = 1;
+    $self->{schema}->foreach(sub {
+	my($model, $path, $iter) = @_;
+	my @row = $model->get($iter);
+	$schema{$row[0]} = {
+	    Name => $row[0],
+	    Number => $i++,
+	    Type => $row[1],
+	    Justify => $row[2],
+	    Width => $row[3],
+	    Precision => $row[4]
+	};
+	0;
+			     });
     eval {
 	$layer = Geo::Vector::Layer->new
 	    ( driver => $driver,
@@ -133,7 +206,7 @@ sub ok_new_vector {
 	      geometry_type => $geometry_type,
 	      encoding => $encoding,
 	      srs => $srs,
-	      schema => $self->{schema_}
+	      schema => \%schema
 	    );
     };
     if ($@) {
@@ -161,6 +234,9 @@ sub add_field_to_schema {
     my $i = 0;
     push @set, ($i++, 'name');
     push @set, ($i++, 'Integer');
+    push @set, ($i++, 'Undefined');
+    push @set, ($i++, 8);
+    push @set, ($i++, 0);
     $self->{schema}->set(@set);
 }
 

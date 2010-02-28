@@ -286,7 +286,7 @@ sub supported_palette_types {
     my $schema  = $self->schema;
     my $has_int = 0;
     for my $name ( keys %$schema ) {
-	$has_int = 1, next if $schema->{$name}{TypeName} eq 'Integer';
+	$has_int = 1, next if $schema->{$name}{Type} eq 'Integer';
     }
     if ($has_int) {
 	return (
@@ -589,7 +589,8 @@ sub label_placement {
 	}
 	return label_placement($geom->GetGeometryRef($largest), $scale) if $largest >= 0;
     } else {
-	print STDERR "label placement not defined for geometry type $Geo::Vector::GEOMETRY_TYPE_INV{$type}\n";
+	my $t = Geo::OGR::Geometry::TYPE_INT2STRING{$type};
+	print STDERR "label placement not defined for geometry type $t\n";
 	return ();
     }
     print STDERR "couldn't compute label placement\n";

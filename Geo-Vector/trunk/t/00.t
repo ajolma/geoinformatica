@@ -19,7 +19,7 @@ eval {
 };
 ok(($test and ($@ eq '')), "open memory as a data source: $@");
 
-for (keys %Geo::Vector::GEOMETRY_TYPE) {
+for (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
     next if $_ =~ /GeometryC/;
     next if $_ =~ /Multi/;
     next if $_ =~ /Unkno/;
@@ -41,7 +41,7 @@ eval {
 ok($@ eq '', "create a layer into the new dataset: $@");
 
 eval {
-    $test->schema({int=>{Number=>0, TypeName=>'Integer'}, real=>{Number=>1, TypeName=>'Real'}});
+    $test->schema({int=>{Number=>0, Type=>'Integer'}, real=>{Number=>1, TypeName=>'Real'}});
 };
 ok($@ eq '', "add a schema into the layer: $@");
 
@@ -96,8 +96,8 @@ ok($c == 3, 'fset: field count '.$c);
 
 $s = $v->schema(0);
 
-ok($s->{rfield}{TypeName} eq 'Real', 'fset: schema');
-ok($s->{sfield}{TypeName} eq 'String', 'fset: schema');
+ok($s->{rfield}{Type} eq 'Real', 'fset: schema');
+ok($s->{sfield}{Type} eq 'String', 'fset: schema');
 
 my $ogc = Geo::OGC::Point->new(1,2);
 my $ogr = Geo::OGR::CreateGeometryFromWkt($ogc->AsText);

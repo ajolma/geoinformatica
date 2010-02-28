@@ -59,7 +59,7 @@ sub open {
 	$n =~ s/^\.//;
 	push @columns, $n;
 	push @coltypes, 'Glib::String'; # use custom sort
-	push @ctypes, $schema->{$name}{TypeName};
+	push @ctypes, $schema->{$name}{Type};
     }
     
     my $tv = $dialog->get_widget('feature_treeview');

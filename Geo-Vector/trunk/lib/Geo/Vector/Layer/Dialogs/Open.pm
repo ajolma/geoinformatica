@@ -710,7 +710,7 @@ sub show_schema {
 	$n =~ s/^\.//;
 	$schema_model->set ($iter,
 			    0, $n,
-			    1, $schema->{$name}{TypeName}
+			    1, $schema->{$name}{Type}
 			    );
     }
     

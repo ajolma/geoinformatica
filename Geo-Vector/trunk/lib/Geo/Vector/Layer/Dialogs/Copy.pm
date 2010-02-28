@@ -62,7 +62,7 @@ sub open {
     $dialog->get_widget('copy_vector_dialog')->set_title("Copy features from layer ".$self->name);
 
     my $model = Gtk2::ListStore->new('Glib::String');
-    my $i = 0;
+    my $i = 1;
     my $active = 0;
     $model->set($model->append, 0, ''); # create into existing data source 
     for my $driver (Geo::OGR::Drivers) {
