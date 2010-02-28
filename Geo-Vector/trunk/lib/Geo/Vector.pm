@@ -40,7 +40,7 @@ use Gtk2;
 
 use Geo::Vector::Layer;
 
-use vars qw( @ISA @GEOMETRY_TYPES %GEOMETRY_TYPE %GEOMETRY_TYPE_INV %RENDER_AS );
+use vars qw( @ISA %RENDER_AS );
 
 our $VERSION = '0.52';
 
@@ -48,23 +48,9 @@ require Exporter;
 
 @ISA = qw( Exporter );
 
-our %EXPORT_TAGS = ( 'all' => [qw( @GEOMETRY_TYPES %GEOMETRY_TYPE %RENDER_AS &drivers )] );
+our %EXPORT_TAGS = ( 'all' => [qw( %RENDER_AS &drivers )] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-
-# these should be in Geo::OGR
-@GEOMETRY_TYPES = ( 'Unknown', 'Point', 'LineString', 'Polygon',
-		    'MultiPoint', 'MultiLineString', 'MultiPolygon',
-		    'GeometryCollection', 'None', 'LinearRing',
-		    'Point25D', 'LineString25D', 'Polygon25D',
-		    'MultiPoint25D', 'MultiLineString25D', 'MultiPolygon25D',
-		    'GeometryCollection25D' );
-    
-for my $key (@GEOMETRY_TYPES) {
-    my $val = eval "\$Geo::OGR::wkb$key";
-    $GEOMETRY_TYPE{$key} = $val;
-    $GEOMETRY_TYPE_INV{ $val } = $key;
-}
 
 # from ral_visual.h:
 %RENDER_AS = ( Native => 0, Points => 1, Lines => 2, Polygons => 4 );
@@ -79,21 +65,17 @@ XSLoader::load( 'Geo::Vector', $VERSION );
 #
 # @brief Returns a list of valid geometry types.
 #
-# %GEOMETRY_TYPE is a hash of standard type names: 'Point', 'LineString', ...
 # @return a list of valid geometry types (as strings).
 sub geometry_types {
-    my ($class) = @_;
-    return keys %GEOMETRY_TYPE;
+    return @Geo::OGR::Geometry::GEOMETRY_TYPES;
 }
 
 ## @cmethod @render_as_modes()
 #
 # @brief Returns a list of valid render as modes.
 #
-# %RENDER_AS is a hash of render types: 'Native', 'Points', ...
 # @return a list of valid render as modes (as strings).
 sub render_as_modes {
-    my ($class) = @_;
     return keys %RENDER_AS;
 }
 
@@ -113,8 +95,8 @@ sub layers {
 	my $l  = $self->{OGR}->{DataSource}->GetLayerByIndex($i);
 	my $fd = $l->GetLayerDefn();
 	my $t  = $fd->GetGeomType;
-	next unless $GEOMETRY_TYPE_INV{$t};
-	$layers{ $l->GetName } = $GEOMETRY_TYPE_INV{$t};
+	next unless exists $Geo::OGR::Geometry::TYPE_INT2STRING{$t};
+	$layers{ $l->GetName } = $Geo::OGR::Geometry::TYPE_INT2STRING{$t};
     }
     return \%layers;
 }
@@ -243,7 +225,7 @@ sub new {
     $params{open} = $params{layer} if $params{layer};
     $params{SQL} = $params{sql} if $params{sql};
     $params{layer_options} = [] unless $params{layer_options};
-    $params{geometry_type} = $params{schema}{'.GeometryType'}{TypeName} 
+    $params{geometry_type} = $params{schema}{'.GeometryType'}{Type} 
     if ref $params{schema};
 
     if ($params{features} or $params{geometries}) {
@@ -768,7 +750,7 @@ sub geometry_type {
     }
     return unless $t;
     $t = $t & ~0x80000000 if $params{flatten};
-    return $GEOMETRY_TYPE_INV{$t};
+    return $Geo::OGR::Geometry::TYPE_INT2STRING{$t};
 }
 
 ## @method hashref schema(hashref schema)
@@ -785,7 +767,7 @@ sub geometry_type {
 # id as used by OGR.
 #
 # The value of the attribute entry in the schema is an anonymous hash
-# with keys such as Number, TypeName, Justify, Width, and Precision,
+# with keys such as Number, Type, Justify, Width, and Precision,
 # i.e. Geo::OGR::FieldDefn attributes etc. For the pseudo attribute
 # GeometryType the value is simply the name of the geometry type.
 #
@@ -830,23 +812,16 @@ sub schema {
 	    }
 	}
 	my $recreate = 0;
+	my $i = 0;
 	for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
 	    next if $name =~ /^\./;
-	    my $d    = $schema->{$name};
-	    my $type = $d->{Type};
-	    $type = eval "\$Geo::OGR::OFT$d->{TypeName}" unless $type;
-	    my $fd = new Geo::OGR::FieldDefn( $name, $type );
+	    $schema->{$name}{Type} = $schema->{$name}{TypeName} if exists $schema->{$name}{TypeName};
+	    delete $schema->{$name}{Number};
+	    $schema->{$name}{Name} = $name;
+	    my $fd = Geo::OGR::FieldDefn->create( %{$schema->{$name}} );
+	    $schema->{$name}{Number} = $i++;
 	    $fd->ACQUIRE;
-	    $fd->SetJustify( $d->{Justify} ) if defined $d->{Justify};
-	    $fd->SetWidth( $d->{Width} )     if defined $d->{Width};
-	    
-	    if ( exists $d->{Width} ) {
-		$fd->SetWidth( $d->{Width} );
-	    }
-	    else {
-		$fd->SetWidth(10) if $type == $Geo::OGR::OFTInteger;
-	    }
-	    $fd->SetPrecision( $d->{Precision} ) if defined $d->{Precision};
+	    $fd->SetWidth(10) if $schema->{$name}{Type} eq 'Integer';
 	    unless ( $exists{$name} ) {
 		$self->{OGR}->{Layer}->CreateField($fd) if $self->{OGR}->{Layer};
 		$recreate = 1;
@@ -858,21 +833,16 @@ sub schema {
 	    $dg->ACQUIRE;
 	    copy_geometry_data( $sg, $dg );
 	    my $d = Geo::OGR::FeatureDefn->new();
+	    my $i = 0;
 	    for my $name ( sort { $schema->{$a}{Number} <=> $schema->{$b}{Number} } keys %$schema ) {
 		next if $name =~ /^\./;
-		my $fd = Geo::OGR::FieldDefn->new( $name, $schema->{$name}{Type} );
+		$schema->{$name}{Type} = $schema->{$name}{TypeName} if exists $schema->{$name}{TypeName};
+		delete $schema->{$name}{Number};
+		$schema->{$name}{Name} = $name;
+		my $fd = Geo::OGR::FieldDefn->create( %{$schema->{$name}} );
+		$schema->{$name}{Number} = $i++;
 		$fd->ACQUIRE;
-		$fd->SetJustify( $schema->{$name}{Justify} )
-		    if exists $schema->{$name}{Justify};
-		if ( exists $schema->{$name}{Width} ) {
-		    $fd->SetWidth( $schema->{$name}{Width} );
-		}
-		else {
-		    $fd->SetWidth(10)
-			if $schema->{$name}{Type} == $Geo::OGR::OFTInteger;
-		}
-		$fd->SetPrecision( $schema->{$name}{Precision} )
-		    if exists $schema->{$name}{Precision};
+		$fd->SetWidth(10) if $schema->{$name}{Type} eq 'Integer';
 		$d->AddFieldDefn($fd);
 	    }
 	    $d->DISOWN;    # this is given to feature
@@ -892,27 +862,20 @@ sub schema {
 	    for my $i ( 0 .. $n - 1 ) {
 		my $fd   = $defn->GetFieldDefn($i);
 		my $name = $fd->GetName;
+		$schema->{$name} = $fd->Schema;
 		$schema->{$name}{Number}   = $i;
-		$schema->{$name}{Type}     = $fd->GetType;
-		$schema->{$name}{TypeName} =
-		    $fd->GetFieldTypeName( $fd->GetType );
-		$schema->{$name}{Justify}   = $fd->GetJustify;
-		$schema->{$name}{Width}     = $fd->GetWidth;
-		$schema->{$name}{Precision} = $fd->GetPrecision;
 	    }
 	};
 	croak "GetFieldCount failed: $@" if $@;
 	$schema->{'.FID'} = { Number   => -1,
-			      Type     => $Geo::OGR::OFTInteger,
-			      TypeName => 'Integer' };
+			      Type     => 'Integer' };
 	if ($defn->GeometryType eq 'Point25D') {
 	    $schema->{'.Z'} = { Number   => -2,
-				Type     => $Geo::OGR::OFTReal,
-				TypeName => 'Real' };
+				Type     => 'Real' };
 	}
 	$schema->{'.GeometryType'} = {
 	    Number => -3,
-	    TypeName => $defn->GeometryType };
+	    Type   => $defn->GeometryType };
 	
         # sort order for visual interfaces, first FID and other pseudo attributes, the fields in order
 	for my $key (keys %$schema) {
@@ -1006,9 +969,9 @@ sub value_range {
     croak "value_range: field with name '$field_name' does not exist"
 	unless defined $schema;
     croak
-	"value_range: can't use value from field '$field_name' since its' type is '$schema->{TypeName}'"
-	unless $schema->{TypeName} eq 'Integer'
-	or $schema->{TypeName}     eq 'Real';
+	"value_range: can't use value from field '$field_name' since its' type is '$schema->{Type}'"
+	unless $schema->{Type} eq 'Integer'
+	or $schema->{Type}     eq 'Real';
     
     return ( 0, $self->{OGR}->{Layer}->GetFeatureCount - 1 )
 	if $field_name eq '.FID';
@@ -1628,11 +1591,11 @@ sub rasterize {
 	    unless defined $schema;
 		croak
 		    "rasterize: can't use value from field ".
-		    "'$params{value_field}' since its' type is '$schema->{TypeName}'"
-		    unless $schema->{TypeName} eq 'Integer'
-		    or $schema->{TypeName}     eq 'Real';
+		    "'$params{value_field}' since its' type is '$schema->{Type}'"
+		    unless $schema->{Type} eq 'Integer'
+		    or $schema->{Type}     eq 'Real';
 	$field = $schema->{Number};
-	$params{datatype} = $schema->{TypeName};
+	$params{datatype} = $schema->{Type};
     }
     
     my $gd = Geo::Raster->new(
