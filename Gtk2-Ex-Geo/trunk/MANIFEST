@@ -20,4 +20,7 @@ lib/Gtk2/Ex/Geo/DialogMaster.pm
 lib/Gtk2/Ex/Geo/Layer.pm
 lib/Gtk2/Ex/Geo/Overlay.pm
 lib/Gtk2/Ex/Geo/TreeDumper.pm
+lib/Gtk2/Ex/Geo/Dialogs/Colors.pm
+lib/Gtk2/Ex/Geo/Dialogs/Symbols.pm
+lib/Gtk2/Ex/Geo/Dialogs/Labeling.pm
 META.yml                                 Module meta-data (added by MakeMaker)

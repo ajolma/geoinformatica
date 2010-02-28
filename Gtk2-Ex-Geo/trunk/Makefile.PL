@@ -51,6 +51,9 @@ for $package (@packages) {
 our $deps = ExtUtils::Depends->new('Gtk2::Ex::Geo', 'Gtk2');
 
 our %pm_files = (
+		 'lib/Gtk2/Ex/Geo/Dialogs/Colors.pm'  => '$(INST_LIBDIR)/Geo/Dialogs/Colors.pm',
+		 'lib/Gtk2/Ex/Geo/Dialogs/Labeling.pm'=> '$(INST_LIBDIR)/Geo/Dialogs/Labeling.pm',
+		 'lib/Gtk2/Ex/Geo/Dialogs/Symbols.pm' => '$(INST_LIBDIR)/Geo/Dialogs/Symbols.pm',
 		 'lib/Gtk2/Ex/Geo/Overlay.pm'      => '$(INST_LIBDIR)/Geo/Overlay.pm',
 		 'lib/Gtk2/Ex/Geo/Glue.pm'         => '$(INST_LIBDIR)/Geo/Glue.pm',
 		 'lib/Gtk2/Ex/Geo/TreeDumper.pm'   => '$(INST_LIBDIR)/Geo/TreeDumper.pm',
