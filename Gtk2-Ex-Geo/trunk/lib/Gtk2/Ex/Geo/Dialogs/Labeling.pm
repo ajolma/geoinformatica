@@ -38,7 +38,7 @@ sub open {
     $model->set ($model->append, 0, 'No Labels');
     $active = $i if $labeling->{field} eq 'No Labels';
     $i++;
-    for my $fname (sort keys %$schema) {
+    for my $fname ($schema->field_names) {
 	$model->set ($model->append, 0, $fname);
 	$active = $i if $labeling->{field} eq $fname;
 	$i++;

@@ -584,17 +584,17 @@ sub fill_color_field_combo {
     delete $self->{index2field};
     my $active = 0;
     my $i = 0;
-    my $schema = $self->schema();
-    for my $name (sort keys %$schema) {
-	my $type = $schema->{$name}{TypeName};
-	next unless $type;
+    for my $field ($self->schema()->fields) {
+	next unless $field->{Type};
 	next if $palette_type eq 'Single color';
-	next if ($palette_type eq 'Grayscale' or $palette_type eq 'Rainbow' or $palette_type eq 'Color bins') 
-	    and not($type eq 'Integer' or $type eq 'Real');
-	next if $palette_type eq 'Color table' and !($type eq 'Integer' or $type eq 'String');
-	$model->set($model->append, 0, $name);
-	$active = $i if $name eq $self->color_field();
-	$self->{index2field}{$i} = $name;
+	next if ($palette_type eq 'Grayscale' or $palette_type eq 'Rainbow' or 
+		 $palette_type eq 'Color bins') 
+	    and not($field->{Type} eq 'Integer' or $field->{Type} eq 'Real');
+	next if $palette_type eq 'Color table' and 
+	    !($field->{Type} eq 'Integer' or $field->{Type} eq 'String');
+	$model->set($model->append, 0, $field->{Name});
+	$active = $i if $field->{Name} eq $self->color_field();
+	$self->{index2field}{$i} = $field->{Name};
 	$i++;
     }
     $combo->set_active($active);
@@ -606,12 +606,13 @@ sub current_coloring_type {
     my $type = '';
     my $field = get_selected_color_field($self);
     return unless defined $field;
-    my $schema = $self->schema();
-    if (!$schema->{$field}{TypeName} or $schema->{$field}{TypeName} eq 'Integer') {
+    $field = $self->schema->field($field);
+    return unless $field;
+    if (!$field->{Type} or $field->{Type} eq 'Integer') {
 	$type = 'Int';
-    } elsif ($schema->{$field}{TypeName} eq 'Real') {
+    } elsif ($field->{Type} eq 'Real') {
 	$type = 'Double';
-    } elsif ($schema->{$field}{TypeName} eq 'String') {
+    } elsif ($field->{Type} eq 'String') {
 	$type = 'String';
     }
     return $type;

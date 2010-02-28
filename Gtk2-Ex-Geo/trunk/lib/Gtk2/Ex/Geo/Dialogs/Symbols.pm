@@ -136,15 +136,12 @@ sub fill_symbol_field_combo {
     $active = $i if $name eq $self->symbol_field();
     $self->{index2symbol_field}{$i} = $name;
     $i++;
-
-    my $schema = $self->schema();
-    for my $name (sort keys %$schema) {
-	my $type = $schema->{$name}{TypeName};
-	next unless $type;
-	next unless $type eq 'Integer' or $type eq 'Real';
-	$model->set($model->append, 0, $name);
-	$active = $i if $name eq $symbol_field;
-	$self->{index2symbol_field}{$i} = $name;
+    for my $field ($self->schema()->fields) {
+	next unless $field->{Type};
+	next unless $field->{Type} eq 'Integer' or $field->{Type} eq 'Real';
+	$model->set($model->append, 0, $field->{Name});
+	$active = $i if $field->{Name} eq $symbol_field;
+	$self->{index2symbol_field}{$i} = $field->{Name};
 	$i++;
     }
     $combo->set_active($active);

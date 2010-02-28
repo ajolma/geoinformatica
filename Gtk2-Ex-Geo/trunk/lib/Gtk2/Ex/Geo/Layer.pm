@@ -547,8 +547,7 @@ sub hue {
 sub symbol_field {
     my($self, $field_name) = @_;
     if (defined $field_name) {
-	my $schema = $self->schema();
-	if ($field_name eq 'Fixed size' or $schema->{$field_name}) {
+	if ($field_name eq 'Fixed size' or $self->schema->field($field_name)) {
 	    $self->{SYMBOL_FIELD} = $field_name;
 	} else {
 	    croak "Layer ".$self->name()." does not have field with name: $field_name";
@@ -598,8 +597,7 @@ sub color_scale {
 sub color_field {
     my($self, $field_name) = @_;
     if (defined $field_name) {
-	my $schema = $self->schema();
-	if ($schema->{$field_name}) {
+	if ($self->schema->field($field_name)) {
 	    $self->{COLOR_FIELD} = $field_name;
 	} else {
 	    croak "Layer ", $self->name, " does not have field: $field_name";
@@ -815,8 +813,60 @@ sub features {
 #
 # For the structure of the schema hash see Geo::Vector::schema
 sub schema {
-    return { dummy => { TypeName => 'Integer' } };
+    my $schema = {};
+    return bless $schema, 'Gtk2::Ex::Geo::Schema';
 }
+
+package Gtk2::Ex::Geo::Schema;
+
+## @ignore
+sub fields {
+    my $schema = shift;
+    my @fields = (
+	{ Name => '.FID', Type => 'Integer' },
+	{ Name => '.GeometryType', Type => 'String' }
+	);
+    push @fields, { Name => '.Z', Type => 'Real' } if $schema->{GeometryType} =~ /25/;
+    push @fields, @{$schema->{Fields}};
+    return @fields;
+}
+
+## @ignore
+sub field_names {
+    my $schema = shift;
+    my @names = ('.FID', '.GeometryType');
+    push @names, '.Z' if $schema->{GeometryType} =~ /25/;
+    for my $f (@{$schema->{Fields}}) {
+	push @names, $f->{Name};
+    }
+    return @names;
+}
+
+## @ignore
+sub field {
+    my($schema, $field_name) = @_;
+    if ($field_name eq '.FID') {
+	return wantarray ? ({ Name => '.FID', Type => 'Integer' }, -3) : 
+	{ Name => '.FID', Type => 'Integer' };
+    }
+    if ($field_name eq '.GeometryType') {
+	return wantarray ? ({ Name => '.GeometryType', Type => 'String' }, -2) : 
+	{ Name => '.GeometryType', Type => 'String' };
+    }
+    if ($field_name eq '.Z') {
+	return wantarray ? ({ Name => '.Z', Type => 'Real' }, -1) : 
+	{ Name => '.Z', Type => 'Real' };
+    }
+    my $i = 0;
+    for my $f (@{$schema->{Fields}}) {
+	if ($field_name eq $f->{Name}) {
+	    return wantarray ? ($f, $i) : $f;
+	}
+	$i++;
+    }
+}
+
+package Gtk2::Ex::Geo::Layer;
 
 sub value_range {
     return (0, 0);
