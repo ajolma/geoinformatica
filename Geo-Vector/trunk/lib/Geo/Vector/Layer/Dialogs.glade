@@ -1350,6 +1350,7 @@
   </widget>
   <widget class="GtkDialog" id="new_vector_dialog">
     <property name="border_width">5</property>
+    <property name="default_height">500</property>
     <property name="type_hint">normal</property>
     <property name="has_separator">False</property>
     <child internal-child="vbox">

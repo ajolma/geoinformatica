@@ -135,6 +135,7 @@ sub schema_to_treeview {
 
     if ($schema) {
 	for my $field ( $schema->fields ) {
+	    next if $field->{Name} =~ /^\./;
 	    my $iter = $model->append(undef);
 	    my @set = ($iter);
 	    my $i = 0;
@@ -180,18 +181,16 @@ sub ok_new_vector {
     my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
     my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;
     my $srs = $d->get_widget('new_vector_srs_entry')->get_text;
-    my %schema;
-    my $i = 1;
+    my %schema = ( Fields => [] );
     $self->{schema}->foreach(sub {
 	my($model, $path, $iter) = @_;
 	my @row = $model->get($iter);
-	$schema{$row[0]} = {
-	    Name => $row[0],
-	    Number => $i++,
-	    Type => $row[1],
-	    Justify => $row[2],
-	    Width => $row[3],
-	    Precision => $row[4]
+	push @{$schema{Fields}},
+	{ Name => $row[0],
+	  Type => $row[1],
+	  Justify => $row[2],
+	  Width => $row[3],
+	  Precision => $row[4]
 	};
 	0;
 			     });
