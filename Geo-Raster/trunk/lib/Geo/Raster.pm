@@ -37,7 +37,7 @@ use Config; # For byteorder
 use UNIVERSAL qw(isa);
 use XSLoader;
 use File::Basename;
-use Geo::GDAL; # this requires libral, which _may_ require GDAL
+use Geo::GDAL;
 
 # subsystems:
 use Geo::Raster::Operations;
@@ -635,14 +635,17 @@ sub schema {
     if ($schema) {
     	
     } else {
-	$schema = { 'Cell value' => { Number => -1, TypeName => $self->_type_name() } };
+	$schema = { GeometryType => 'Polygon',
+		    Fields => [ { Name => 'Cell value', Type => $self->_type_name() } ] };
 	if ($self->{TABLE_NAMES}) {
 	    for my $i (0..$#{$self->{TABLE_NAMES}}) {
-		$schema->{$self->{TABLE_NAMES}->[$i]}{Number} = $i;
-		$schema->{$self->{TABLE_NAMES}->[$i]}{TypeName} = $self->{TABLE_TYPES}->[$i];
+		push @{$schema->{Fields}}, {
+		    Name => $self->{TABLE_NAMES}->[$i],
+		    Type => $self->{TABLE_TYPES}->[$i],
+		}
 	    }
 	}
-	return $schema;
+	return bless $schema, 'Gtk2::Ex::Geo::Schema';
     }
 }
 
