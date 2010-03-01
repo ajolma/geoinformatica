@@ -704,14 +704,12 @@ sub show_schema {
 			  );
     
     my $schema = $vector->schema();
-    for my $name (sort {$b cmp $a} keys %$schema) {
-	my $iter = $schema_model->insert (undef, 0);
-	my $n = $name;
-	$n =~ s/^\.//;
+    for my $field (@{$schema->{Fields}}) {
+	my $iter = $schema_model->insert(undef, 0);
 	$schema_model->set ($iter,
-			    0, $n,
-			    1, $schema->{$name}{Type}
-			    );
+			    0, $field->{Name},
+			    1, $field->{Type}
+	    );
     }
     
 }

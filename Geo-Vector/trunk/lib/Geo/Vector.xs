@@ -47,11 +47,11 @@ int
 field_index(field)
 	char *field
 	CODE:
-		if (strcmp(field, ".FID"))
+		if (strcmp(field, ".FID") == 0)
 		   RETVAL = RAL_FIELD_FID;
-		else if (strcmp(field, ".Z"))
-		   RETVAL = RAL_FIELD_FID;
-		else if (strcmp(field, "Fixed size"))
+		else if (strcmp(field, ".Z") == 0)
+		   RETVAL = RAL_FIELD_Z;
+		else if (strcmp(field, "Fixed size") == 0)
 		   RETVAL = RAL_FIELD_FIXED_SIZE;
 		else
 		   RETVAL = 0;
@@ -71,7 +71,7 @@ xs_rasterize(l, gd, render_override, fid_to_rasterize, value_field)
 		OGRFieldType ft = 0;
 		OGRFeatureH f = OGR_L_GetFeature(l, fid_to_rasterize);
 		if (value_field >= 0)
-			RAL_CHECK(ral_get_field_type(l, value_field, &ft));
+		   RAL_CHECK(ral_get_field_type(l, value_field, &ft));
 		ral_grid_rasterize_feature(gd, f, value_field, ft, render_override);
 
 	} else {
@@ -155,8 +155,8 @@ ral_visual_layer_create(perl_layer, ogr_layer)
 		ral_visual_layer *layer = ral_visual_layer_create();
 		layer->layer = ogr_layer;
 		RAL_CHECK(fetch2visual(perl_layer, &layer->visualization, OGR_L_GetLayerDefn(layer->layer)));
-		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV);
-		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV);
+		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV, 0);
+		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV, 0);
 		goto ok;
 		fail:
 		ral_visual_layer_destroy(&layer);
@@ -196,8 +196,8 @@ ral_visual_feature_table_create(perl_layer, features)
 		RAL_CHECK(layer);
 		char *color_field_name = NULL, *symbol_size_field_name = NULL;;
 
-		RAL_FETCH(perl_layer, "COLOR_FIELD", color_field_name, SvPV_nolen);
-		RAL_FETCH(perl_layer, "SYMBOL_FIELD", symbol_size_field_name, SvPV_nolen);
+		RAL_FETCH(perl_layer, "COLOR_FIELD", color_field_name, SvPV_nolen, "");
+		RAL_FETCH(perl_layer, "SYMBOL_FIELD", symbol_size_field_name, SvPV_nolen, "");
 
 		int i;
 		for (i = 0; i <= av_len(features); i++) {
@@ -239,8 +239,8 @@ ral_visual_feature_table_create(perl_layer, features)
 			
 		}
 
-		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV);
-		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV);
+		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV, 0);
+		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV, 0);
 		goto ok;
 		fail:
 		ral_visual_feature_table_destroy(&layer);

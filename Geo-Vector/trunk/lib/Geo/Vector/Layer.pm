@@ -363,7 +363,6 @@ sub render {
 	(undef,$si) = $schema->field($self->{SYMBOL_FIELD}) if $si == 0;
 	
 	$self->{COLOR_FIELD_VALUE} = $ci;
-	
 	$self->{SYMBOL_FIELD_VALUE} = $si;
 	
 	$self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};

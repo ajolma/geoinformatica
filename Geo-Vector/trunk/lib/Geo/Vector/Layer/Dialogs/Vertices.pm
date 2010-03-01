@@ -4,6 +4,7 @@ package Geo::Vector::Layer::Dialogs::Vertices;
 use strict;
 use warnings;
 use Carp;
+use UNIVERSAL qw(isa);
 use Geo::Vector::Layer::Dialogs qw/:all/;
 
 ## @ignore
@@ -86,7 +87,7 @@ sub fill_vtv {
 	    my $fid = $f->GetFID;
 	    my $name = $geom->GetGeometryName;
 	    my $vertices2 = $vertices;
-	    my $d = $self->get_geom_data($gui, $geom, \$vertex, \$vertices2, $from, $count);
+	    my $d = get_geom_data($self, $gui, $geom, \$vertex, \$vertices2, $from, $count);
 	    push @data,["Feature (fid=$fid) ($name)",$d,$fid] if $vertices2 > $vertices;
 	    $vertices = $vertices2;
 	    last if $vertices >= $count;
@@ -155,7 +156,7 @@ sub get_geom_data {
 	    my $name = $geom2->GetGeometryName;
 	    
 	    my $vertices2 = $$vertices;
-	    my $data = $self->get_geom_data($gui, $geom2, $vertex, \$vertices2, $from, $count);
+	    my $data = get_geom_data($self, $gui, $geom2, $vertex, \$vertices2, $from, $count);
 	    push @d, [($i2+1).'. '.$name, $data, $i2] if $vertices2 > $$vertices;
 	    $$vertices = $vertices2;
 	    last if $$vertices >= $count;
