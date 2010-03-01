@@ -262,7 +262,7 @@ void ral_visual_initialize(ral_visual *v)
     v->render_as = RAL_RENDER_AS_NATIVE;
     v->palette_type = RAL_PALETTE_SINGLE_COLOR;
     v->symbol = RAL_SYMBOL_CROSS;
-    v->symbol_field = RAL_FIELD_FID;
+    v->symbol_field = RAL_FIELD_FIXED_SIZE;
     v->symbol_pixel_size = RAL_DEFAULT_SYMBOL_PIXEL_SIZE;
     v->symbol_size_int.min = 0;
     v->symbol_size_int.max = -1;
@@ -273,10 +273,10 @@ void ral_visual_initialize(ral_visual *v)
     v->color_int.max = -1;
     v->color_double.min = 0;
     v->color_double.max = -1;
-    v->hue = RAL_RBG_HUE;
+    v->hue = 0;
     v->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     v->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
-    v->hue_dir = 0;
+    v->hue_dir = RAL_RGB_HUE;
     v->color_field = RAL_FIELD_FID;
     v->color_table = NULL;
     v->string_color_table = NULL;

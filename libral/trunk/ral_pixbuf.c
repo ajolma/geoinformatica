@@ -1431,6 +1431,8 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 	RAL_CHECK(ral_get_field_type(defn, layer->visualization.symbol_field, &feature.symbol_size_field_type));
     } else if (layer->visualization.symbol_field == RAL_FIELD_FID)
 	feature.symbol_size_field_type = OFTInteger;
+    else if (layer->visualization.symbol_field == RAL_FIELD_FIXED_SIZE)
+	feature.symbol_size_field_type = OFTInteger;
 
     y.min = 0;
     y.max = layer->visualization.symbol_pixel_size+1;
