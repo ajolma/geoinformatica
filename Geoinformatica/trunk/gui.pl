@@ -101,9 +101,11 @@ sub setup{
     $list->add($gis->{tree_view});
     
     # layer list and the map
-    my $hbox = Gtk2::HBox->new(FALSE, 0);
-    $hbox->pack_start($list, FALSE, FALSE, 0);
-    $hbox->pack_start($gis->{overlay}, TRUE, TRUE, 0);
+    my $hbox = Gtk2::HPaned->new(); #Gtk2::HBox->new(FALSE, 0);
+    #$hbox->pack_start($list, FALSE, FALSE, 0);
+    #$hbox->pack_start($gis->{overlay}, TRUE, TRUE, 0);
+    $hbox->add1($list);
+    $hbox->add2($gis->{overlay});
     
     # the stack
     my $vbox = Gtk2::VBox->new(FALSE, 0);
