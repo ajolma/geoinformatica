@@ -149,7 +149,7 @@ sub feature_changed {
     $f->SetField($column, $new_value);
     $self->feature($fid, $f);
     $self->select; # clear selection since it is a list of features read from the source
-    $gui->{overlay}->update_image;
+    $gui->{overlay}->render;
 }
 
 ##@ignore
@@ -313,8 +313,8 @@ sub delete_selected_features {
     for my $f (@$features) {
 	$self->{OGR}->{Layer}->DeleteFeature($f->FID);
     }
-    $gui->{overlay}->update_image;
     fill_features_table(undef, [$self, $gui]);
+    $gui->{overlay}->render;
 }
 
 ##@ignore
@@ -402,8 +402,8 @@ sub from_selection {
     my($self, $gui) = @{$_[1]};
     return unless $gui->{overlay}->{selection};
     $self->add_feature({ geometry => $gui->{overlay}->{selection} });
-    $gui->{overlay}->update_image;
     fill_features_table(undef, [$self, $gui]);
+    $gui->{overlay}->render;
 }
 
 1;
