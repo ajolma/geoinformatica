@@ -54,6 +54,7 @@ sub open {
     $dialog->get_widget('features_dialog')->set_title("Features of ".$self->name);
 
     $dialog->get_widget('delete_feature_button')->set_sensitive($self->{update});
+    $dialog->get_widget('from_selection_button')->set_sensitive($self->{update});
 	
     my @editable;
     my @columns;
