@@ -357,13 +357,14 @@ sub render {
     elsif ( $self->{OGR}->{Layer} ) {
 	
 	my $schema = $self->schema();
-	my($c,$ci) = $schema->field($self->{COLOR_FIELD});
-	my($s,$si) = $schema->field($self->{SYMBOL_FIELD});
+	my $ci = Geo::Vector::field_index($self->{COLOR_FIELD});
+	(undef,$ci) = $schema->field($self->{COLOR_FIELD}) if $ci == 0;
+	my $si = Geo::Vector::field_index($self->{SYMBOL_FIELD});
+	(undef,$si) = $schema->field($self->{SYMBOL_FIELD}) if $si == 0;
 	
-	$self->{COLOR_FIELD_VALUE} = $c ? $ci : -1;
+	$self->{COLOR_FIELD_VALUE} = $ci;
 	
-	$self->{SYMBOL_FIELD_VALUE} =
-	    $self->{SYMBOL_FIELD} eq 'Fixed size' ? -2 : $si;
+	$self->{SYMBOL_FIELD_VALUE} = $si;
 	
 	$self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};
 	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };

@@ -283,6 +283,7 @@ sub new {
 	
 	$self->{OGR}->{Layer} =
 	    $self->{OGR}->{DataSource}->Layer( $params{open} );
+	croak "Could not open layer '$params{open}': $@" unless $self->{OGR}->{Layer};
 	
     } else {
 	
@@ -755,7 +756,7 @@ sub geometry_type {
 #
 # @brief Get or set the schema of the layer.
 #
-# Schema is a hash whose keyes are Name, GeometryType, FID, Z, and
+# Schema is a hash whose keyes are GeometryType, FID, and
 # Fields. Fields is a reference to a list of field schemas. A field
 # schema is a hash whose keys are Name, Type, Justify, Width, and
 # Precision. This is similar to schemas in Geo::OGR.
@@ -876,7 +877,7 @@ sub value_range {
 	or $schema->{Type}     eq 'Real';
     
     return ( 0, $self->{OGR}->{Layer}->GetFeatureCount - 1 )
-	if $field_name eq 'FID';
+	if $field_name eq '.FID';
     
     my @range;
     

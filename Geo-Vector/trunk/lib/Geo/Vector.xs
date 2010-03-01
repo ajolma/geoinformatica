@@ -43,6 +43,21 @@ OGRLayerH(layer)
   OUTPUT:
     RETVAL
 
+int
+field_index(field)
+	char *field
+	CODE:
+		if (strcmp(field, ".FID"))
+		   RETVAL = RAL_FIELD_FID;
+		else if (strcmp(field, ".Z"))
+		   RETVAL = RAL_FIELD_FID;
+		else if (strcmp(field, "Fixed size"))
+		   RETVAL = RAL_FIELD_FIXED_SIZE;
+		else
+		   RETVAL = 0;
+	OUTPUT:
+	    RETVAL
+
 void
 xs_rasterize(l, gd, render_override, fid_to_rasterize, value_field)
 	OGRLayerH l
