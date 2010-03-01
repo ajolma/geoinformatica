@@ -54,6 +54,8 @@ sub open {
 	    my $entry = $self->{new_vector_dialog}->get_widget('new_vector_folder_entry');
 	    file_chooser('Select folder', 'select_folder', $entry);
 			  }, $self );
+
+    $d->get_widget('new_vector_layer_entry')->set_text('x');
     
     $model = Gtk2::ListStore->new('Glib::String');
     for my $type (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
@@ -177,6 +179,7 @@ sub ok_new_vector {
     my $data_source = get_value_from_combo($d, 'new_vector_data_source_combobox');
     $data_source = $d->get_widget('new_vector_folder_entry')->get_text unless $data_source;
     my $name = $d->get_widget('new_vector_layer_entry')->get_text;
+    $name = 'x' unless $name;
     my $layer_options = $d->get_widget('new_vector_layer_options_entry')->get_text;
     my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
     my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;

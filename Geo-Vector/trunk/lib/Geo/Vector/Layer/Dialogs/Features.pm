@@ -16,7 +16,8 @@ sub open {
     unless ($dialog) {
 	$self->{features_dialog} = $dialog = $gui->get_dialog('features_dialog');
 	croak "features_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('features_dialog')->signal_connect(delete_event => \&close_features_dialog, [$self, $gui]);
+	$dialog->get_widget('features_dialog')
+	    ->signal_connect(delete_event => \&close_features_dialog, [$self, $gui]);
 	
 	my $selection = $dialog->get_widget('feature_treeview')->get_selection;
 	$selection->set_mode('multiple');
@@ -43,12 +44,18 @@ sub open {
 	$dialog->get_widget('close_features_button')
 	    ->signal_connect(clicked => \&close_features_dialog, [$self, $gui]);
 
+	$dialog->get_widget('delete_feature_button')
+	    ->signal_connect(clicked => \&delete_selected_features, [$self, $gui]);
+
     } elsif (!$dialog->get_widget('features_dialog')->get('visible')) {
 	$dialog->get_widget('features_dialog')
 	    ->move(@{$self->{features_dialog_position}}) if $self->{features_dialog_position};
     }
     $dialog->get_widget('features_dialog')->set_title("Features of ".$self->name);
+
+    $dialog->get_widget('delete_feature_button')->set_sensitive($self->{update});
 	
+    my @editable;
     my @columns;
     my @coltypes;
     my @ctypes;
@@ -56,6 +63,7 @@ sub open {
     for my $field ($schema->fields) {
 	my $n = $field->{Name};
 	$n =~ s/_/__/g;
+	push @editable, (!($n =~ /^\./) and $self->{update}) ? 1 : 0;
 	$n =~ s/^\.//;
 	push @columns, $n;
 	push @coltypes, 'Glib::String'; # use custom sort
@@ -91,6 +99,8 @@ sub open {
 		return $a cmp $b}, $i);
 	}
 	my $cell = Gtk2::CellRendererText->new;
+	$cell->set(editable => $editable[$i]);
+	$cell->signal_connect(edited => \&feature_changed, [$self, $gui, $i]);
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$tv->append_column($col);
     }
@@ -111,6 +121,37 @@ sub open {
     $dialog->get_widget('features_dialog')->present;
 }
 
+sub feature_changed {
+    my($cell, $path, $new_value, $data) = @_;
+    my($self, $gui, $column) = @$data;
+
+    my $dialog = $self->{features_dialog};
+    my $treeview = $dialog->get_widget('feature_treeview');
+    my $model = $treeview->get_model;
+
+    my $iter = $model->get_iter_from_string($path);
+    my @set = ($iter, $column, $new_value);
+    $model->set(@set);
+
+    my @row = $model->get($iter);
+    my $fid;
+    for my $i (0..$#row) {
+	if ('FID' eq $treeview->get_column($i)->get_title) {
+	    $fid = $row[$i];
+	    last; 
+	}
+    }
+    return unless defined $fid;
+
+    my $f = $self->feature($fid);
+    $new_value = undef if $new_value eq '';
+    $column = $treeview->get_column($column)->get_title;
+    $f->SetField($column, $new_value);
+    $self->feature($fid, $f);
+    $self->select; # clear selection since it is a list of features read from the source
+    $gui->{overlay}->update_image;
+}
+
 ##@ignore
 sub close_features_dialog {
     my($self, $gui);
@@ -128,8 +169,7 @@ sub close_features_dialog {
 ##@ignore
 sub in_field_order {
     my $_a = $a;
-    my $_b = $b;
-    
+    my $_b = $b;    
 }
 
 
@@ -162,9 +202,9 @@ sub fill_features_table {
     if ($count > 0) {
 	if ($limit) {
 	    my @r = $overlay->get_viewport;
-	    ($features, $is_all) = Geo::Vector::features( $self, filter_with_rect => \@r, from => $from, limit => $count );
+	    ($features, $is_all) = $self->features( filter_rect => \@r, from => $from, limit => $count );
 	} else {
-	    ($features, $is_all) = Geo::Vector::features( $self, from => $from, limit => $count );
+	    ($features, $is_all) = $self->features( from => $from, limit => $count );
 	}
 	add_features($self, $treeview, $model, \@fnames, $features, 0, \%added);
     }
@@ -263,6 +303,21 @@ sub feature_activated {
 }
 
 ##@ignore
+sub delete_selected_features {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{features_dialog};
+    my $treeview = $dialog->get_widget('feature_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    $features = $self->features(with_id=>[keys %$features]);
+    $self->select;
+    for my $f (@$features) {
+	$self->{OGR}->{Layer}->DeleteFeature($f->FID);
+    }
+    $gui->{overlay}->update_image;
+    fill_features_table(undef, [$self, $gui]);
+}
+
+##@ignore
 sub zoom_to_selected_features {
     my($self, $gui) = @{$_[1]};
 
@@ -347,6 +402,7 @@ sub from_selection {
     my($self, $gui) = @{$_[1]};
     return unless $gui->{overlay}->{selection};
     $self->add_feature({ geometry => $gui->{overlay}->{selection} });
+    $gui->{overlay}->update_image;
     fill_features_table(undef, [$self, $gui]);
 }
 

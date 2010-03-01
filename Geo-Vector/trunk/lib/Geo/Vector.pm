@@ -153,6 +153,7 @@ sub delete_layer {
 # open. Opening a data source is first attempted unless create_options
 # is given. If open fails, creation is attempted.
 # - \a open => string The layer to open.
+# - \a update => boolean Set true if open in update mode.
 # - \a layer => string [deprecated] Same as \a open.
 # - \a create => string The layer to create.
 # - \a layer_options forwarded to Geo::OGR::DataSource::CreateLayer.
@@ -192,29 +193,6 @@ sub new {
 	$params{data_source} = $params{single} if $params{single};
     }
 
-    # complain about unknown / deprecated parameters
-    my %known = (
-	driver => 1,
-	create_options => 1,
-	data_source => 1,
-	open => 1,
-	create => 1,
-	layer_options => 1,
-	SQL => 1,
-	geometry_type => 1,
-	schema => 1,
-	encoding => 1,
-	srs => 1,
-	features => 1,
-	geometries => 1,
-	);
-
-    for my $param (keys %params) {
-	unless ($known{$param}) {
-#	    warn("parameter $param is unknown or deprecated in Geo::Vector->new()") 
-	}
-    }
-
     # aliases
     $params{data_source} = $params{filename} if $params{filename};
     $params{data_source} = $params{datasource} if $params{datasource};
@@ -236,7 +214,9 @@ sub new {
 	return $self;
     }
 
-    $params{update} = $params{create} ? 1 : 0;
+    $params{update} = 0 unless defined $params{update};
+    $params{update} = 1 if $params{create};
+    $self->{update} = $params{update};
     $self->{encoding} = $params{encoding};
 
     $self->open_data_source($params{driver}, $params{data_source}, $params{update}, $params{create_options});
@@ -355,6 +335,7 @@ sub DESTROY {
 	    undef $_;
 	}
     }
+    $self->{OGR}->{Layer}->SyncToDisk if $self->{update};
 }
 
 ## @method driver()
@@ -397,6 +378,26 @@ sub dump {
 	}
 	my $geom = $feature->GetGeometryRef();
 	dump_geom($geom, $fh, $params{suppress_points});
+    }
+}
+
+## @ignore
+sub dump_geom {
+    my($geom, $fh, $supp) = @_;
+    my $type = $geom->GeometryType;
+    my $dim = $geom->CoordinateDimension;
+    my $count = $geom->GetPointCount;
+    print $fh "Geometry type: $type, Dimension: $dim, Point count: $count\n";
+    if ($geom->GetGeometryCount) {
+	for (0..$geom->GetGeometryCount-1) {
+	    dump_geom($geom->GetGeometryRef($_), $fh, $supp);
+	}
+    } else {
+	return if $supp;
+	for my $i (1..$count) {
+	    my @point = $geom->GetPoint($i-1);
+	    print $fh "Point $i: @point\n";
+	}
     }
 }
 
@@ -463,28 +464,9 @@ sub next_feature {
 }
 *get_next = *next_feature;
 
-## @ignore
-sub dump_geom {
-    my($geom, $fh, $supp) = @_;
-    my $type = $geom->GeometryType;
-    my $dim = $geom->CoordinateDimension;
-    my $count = $geom->GetPointCount;
-    print $fh "Geometry type: $type, Dimension: $dim, Point count: $count\n";
-    if ($geom->GetGeometryCount) {
-	for (0..$geom->GetGeometryCount-1) {
-	    dump_geom($geom->GetGeometryRef($_), $fh, $supp);
-	}
-    } else {
-	return if $supp;
-	for my $i (1..$count) {
-	    my @point = $geom->GetPoint($i-1);
-	    print $fh "Point $i: @point\n";
-	}
-    }
-}
-
 ## @method $buffer(%params)
 #
+# @deprecated
 # @brief Create a new Geo::Vector object, whose features are buffer
 # areas to the original.
 # @param[in] params Named parameters: (see also the named
@@ -539,6 +521,7 @@ sub buffer {
 
 ## @method $within($other, %params)
 #
+# @deprecated
 # @brief Return the features from this layer that are within the
 # features of other.
 # @todo Add some optimizations.
@@ -704,7 +687,8 @@ sub srs {
 }
 
 ## @method $field_count(%params)
-#
+# 
+# @deprecated
 # @brief For a layer object returns the number of fields in the layer schema.
 # For a feature set object requires a named parameter that specifies the feature.
 #
@@ -929,7 +913,8 @@ sub feature {
 	    $feature = $self->make_feature($feature);
 	    $self->{features}->[$fid] = $feature;
 	} else {
-	    croak "can't set a feature in a layer (at least yet)";
+	    $feature->SetFID($fid);
+	    $self->{OGR}->{Layer}->SetFeature($feature);
 	}
     } elsif ( ref($fid) ) {
 
@@ -939,29 +924,27 @@ sub feature {
 	    push @{$self->{features}}, $fid;
 	} else {
 	    $self->{OGR}->{Layer}->CreateFeature($fid);
-	    $self->{OGR}->{Layer}->SyncToDisk;
 	}
     } else {
 
 	# retrieve
-	my $f;
 	if ( $self->{features} ) {
-	    $f = $self->{features}->[$fid];
-	    croak "feature: index out of bounds: $fid" unless $f;
+	    $feature = $self->{features}->[$fid];
+	    croak "feature: index out of bounds: $fid" unless $feature;
 	} else {
-	    $f = $self->{OGR}->{Layer}->GetFeature($fid);
+	    $feature = $self->{OGR}->{Layer}->GetFeature($fid);
 	}
 
-	my $defn = $f->GetDefnRef;
-	$feature = {};
-	my $n = $defn->GetFieldCount();
-	for my $i ( 0 .. $n - 1 ) {
-	    my $fd   = $defn->GetFieldDefn($i);
-	    my $name = $fd->GetName;
-	    $feature->{$name} = $f->GetField($i);
-	}
-	$feature->{geometry} = Geo::OGC::Geometry->new
-	    (Text => $f->GetGeometryRef->ExportToWkt);
+	#my $defn = $feature->GetDefnRef;
+	#my $f = {};
+	#my $n = $defn->GetFieldCount();
+	#for my $i ( 0 .. $n - 1 ) {
+	#    my $fd   = $defn->GetFieldDefn($i);
+	#    my $name = $fd->GetName;
+	#    $f->{$name} = $feature->GetField($i);
+	#}
+	#$f->{geometry} = Geo::OGC::Geometry->new(Text => $feature->GetGeometryRef->ExportToWkt);
+
 	return $feature;
     }
 }
@@ -1120,6 +1103,8 @@ sub add_feature {
 # features are those that intersect with the geometry. If the geometry
 # is a multigeometry, then the features intersect with at least one of
 # the geometries.
+# - \a filter
+# - \a filter_rect
 # - \a with_id => Reference to an array of feature indexes (fids).
 # - \a from => If defined, the number of features that are skipped + 1.
 # - \a limit => If defined, maximum number of features returned.
@@ -1146,13 +1131,11 @@ sub features {
 
     } else {
 
-	my %options = ( filter_rect => $params{filter_with_rect} ) if $params{filter_with_rect};
-
 	if ( exists $params{that_contain} ) 
 	{
 	    my $geom = $params{that_contain};
 	    my $e = $geom->GetEnvelope;
-	    $options{filter_rect} = [$e->[0], $e->[2], $e->[1], $e->[3]];
+	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
 	    $self->init_iterate(%options);
 	    while ( my $f = $self->next_feature() ) {
 		my $g = $f->GetGeometryRef;
@@ -1167,7 +1150,7 @@ sub features {
 	{
 	    my $geom = $params{that_are_within};
 	    my $e = $geom->GetEnvelope;
-	    $options{filter_rect} = [$e->[0], $e->[2], $e->[1], $e->[3]];
+	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
 	    $self->init_iterate(%options);
 	    while ( my $f = $self->next_feature() ) {
 		my $g = $f->GetGeometryRef;
@@ -1182,7 +1165,7 @@ sub features {
 	{
 	    my $geom = $params{that_intersect};
 	    my $e = $geom->GetEnvelope;
-	    $options{filter_rect} = [$e->[0], $e->[2], $e->[1], $e->[3]];
+	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
 	    $self->init_iterate(%options);
 	    while ( my $f = $self->next_feature() ) {
 		my $g = $f->GetGeometryRef;
@@ -1194,6 +1177,8 @@ sub features {
 	    }
 	}
 	else {
+	    my %options = %params;
+	    $options{filter_rect} = $params{filter_with_rect} if $params{filter_with_rect};
 	    $self->init_iterate(%options);
 	    while ( my $f = $self->next_feature() ) {
 		$i++;
