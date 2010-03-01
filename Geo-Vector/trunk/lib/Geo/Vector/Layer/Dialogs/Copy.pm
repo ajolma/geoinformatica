@@ -53,6 +53,12 @@ sub open {
 
 	$combo = $dialog->get_widget('copy_name_comboboxentry');
 	$combo->set_text_column(0);
+	$combo->signal_connect(changed => \&copy_into_changed, [$self, $gui]);
+
+	$dialog->get_widget('copy_add_button')
+	    ->signal_connect( clicked=>\&add_to_mappings, $self);
+	$dialog->get_widget('copy_delete_button')
+	    ->signal_connect( clicked=>\&delete_from_mappings, $self);
 	
     } elsif (!$dialog->get_widget('copy_vector_dialog')->get('visible')) {
 	$dialog->get_widget('copy_vector_dialog')
@@ -100,6 +106,8 @@ sub open {
     $dialog->get_widget('copy_datasource_entry')->set_text('');
     my $s = $self->selected_features;
     $dialog->get_widget('copy_count_label')->set_label($#$s+1);
+
+    copy_into_changed(undef, [$self, $gui]);
 
     $dialog->get_widget('copy_vector_dialog')->show_all;
     $dialog->get_widget('copy_vector_dialog')->present;
@@ -227,6 +235,14 @@ sub do_copy {
     $gui->{overlay}->render;
 }
 
+sub mappings_changed {
+    my($cell, $path, $new_value, $data) = @_;
+    my($self, $column) = @$data;
+    my $iter = $self->{mappings}->get_iter_from_string($path);
+    my @set = ($iter, $column, $new_value);
+    $self->{mappings}->set(@set);
+}
+
 ##@ignore
 sub cancel_copy {
     my($self, $gui);
@@ -274,6 +290,86 @@ sub copy_data_source_changed {
 	  } while ($iter = $model->iter_next($iter));
       }
     }
+}
+
+## @ignore
+sub copy_into_changed {
+    my($combo) = @_;
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{copy_dialog};
+    my $into = get_value_from_combo($dialog, 'copy_name_comboboxentry') if $combo;
+    my $into_layer;
+    if ($into) {
+	for my $layer (@{$gui->{overlay}->{layers}}) {
+	    my $n = $layer->name();
+	    next unless isa($layer, 'Geo::Vector');
+	    if ($into eq $layer->name()) {
+		$into_layer = $layer;
+		last;
+	    }
+	}
+    }
+
+    my $treeview = $dialog->get_widget('copy_mappings_treeview');
+    my $model = Gtk2::TreeStore->new(qw/Glib::String Glib::String/);
+    $self->{mappings} = $model;
+    $treeview->set_model($model);
+    for ($treeview->get_columns) {
+	$treeview->remove_column($_);
+    }
+
+    my $i = 0;
+    my $cell = Gtk2::CellRendererCombo->new;
+    $cell->set(editable => 1);
+    $cell->set(text_column => 0);
+    $cell->set(has_entry => 0);
+    $cell->signal_connect(edited => \&mappings_changed, [$self, $i]);
+    my $m = Gtk2::ListStore->new('Glib::String');
+    for my $name ($self->schema->field_names) {
+	next if $name =~ /^\./;
+	$m->set($m->append, 0, $name);
+    }
+    $cell->set(model=>$m);
+    my $column = Gtk2::TreeViewColumn->new_with_attributes('From', $cell, text => $i++);
+    $treeview->append_column($column);
+    
+    $cell = Gtk2::CellRendererCombo->new;
+    $cell->set(editable => 1);
+    $cell->set(text_column => 0);
+    $cell->set(has_entry => 1);
+    $cell->signal_connect(edited => \&mappings_changed, [$self, $i]);
+    $m = Gtk2::ListStore->new('Glib::String');
+    if ($into_layer) {
+	for my $name ($into_layer->schema->field_names) {
+	    next if $name =~ /^\./;
+	    $m->set($m->append, 0, $name);
+	}
+    }
+    $cell->set(model=>$m);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('To', $cell, text => $i++);
+    $treeview->append_column($column);
+
+}
+
+## @ignore
+sub add_to_mappings {
+    my $self = pop;
+    my $iter = $self->{mappings}->append(undef);
+    my @set = ($iter);
+    my $i = 0;
+    push @set, ($i++, '');
+    push @set, ($i++, '');
+    $self->{mappings}->set(@set);
+}
+
+## @ignore
+sub delete_from_mappings {
+    my $self = pop;
+    my $treeview = $self->{copy_dialog}->get_widget('copy_mappings_treeview');
+    my($path, $focus_column) = $treeview->get_cursor;
+    return unless $path;
+    my $iter = $self->{mappings}->get_iter($path);
+    $self->{mappings}->remove($iter);
 }
 
 1;

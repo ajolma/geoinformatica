@@ -637,7 +637,7 @@ sub add {
 	    my $type = $fd->GetType;
 	    if ($dst_defn) {
 		# copy only those attributes which match
-		next unless exists($dst_schema{$name}) and $dst_schema{$name} eq $type;
+		next unless exists($dst_schema{$name}) and $dst_schema{$name} == $type;
 	    }
 	    $f->SetField($name, $feature->GetField($name));
 	}
@@ -772,19 +772,14 @@ sub geometry_type {
 # @return the schema.
 sub schema {
     my $self = shift;
-    my %schema;
-    my $feature;
-    if (ref($_[$#_]) eq 'HASH') {
-	my $s = pop;
-	%schema = %{$s};
-    } else {
-	if (@_ == 1) {
-	    $feature = pop;
-	} else {
-	    %schema = @_;
-	}
+    my $s;
+    if (@_ == 0) {
+	return if $self->{features};
+	$s = $self->{OGR}->{Layer}->Schema();
+	return bless $s, 'Gtk2::Ex::Geo::Schema';
     }
-    my $s = Gtk2::Ex::Geo::Layer::schema();
+    my $feature = shift if $_[0] =~ /^\d/; 
+    my %schema = @_ == 1 ? %{$_[0]} : @_;
     if ($self->{features}) {
 	return unless defined $feature;
 	$s = $self->{features}->[$feature]->Schema(%schema);
@@ -900,41 +895,6 @@ sub value_range {
     return @range;
 }
 
-## @method void copy_geometry_data(Geo::OGR::Geometry source, Geo::OGR::Geometry destination)
-#
-# @brief The method copies the data of the other Geo::OGR::Geometry to the other.
-# @param[in] source A reference to an Geo::OGR::Geometry object, whose data is
-# copied.
-# @param[out] destination A reference to an Geo::OGR::Geometry object to which the
-# other parameters data is copied to.
-sub copy_geometry_data {
-    my ( $src, $dst ) = @_;
-    
-    if ( $src->GetGeometryCount ) {
-	
-	for ( 0 .. $src->GetGeometryCount - 1 ) {
-	    my $s = $src->GetGeometryRef($_);
-	    my $t = $s->GetGeometryType;
-	    my $n = $s->GetGeometryName;
-	    $t = $Geo::OGR::wkbLinearRing if $n eq 'LINEARRING';
-	    my $r = new Geo::OGR::Geometry($t);
-	    $r->ACQUIRE;
-	    copy_geom_data( $s, $r );
-	    $dst->AddGeometry($r);
-	}
-	
-    } else {
-	
-	for ( 0 .. $src->GetPointCount - 1 ) {
-	    my $x = $src->GetX($_);
-	    my $y = $src->GetY($_);
-	    my $z = $src->GetZ($_);
-	    $dst->AddPoint( $x, $y, $z );
-	}
-	
-    }
-}
-
 ## @method hashref feature($fid, $feature)
 #
 # @brief Get, add or update a feature.
@@ -967,30 +927,30 @@ sub feature {
 	if ( $self->{features} ) {
 	    $feature = $self->make_feature($feature);
 	    $self->{features}->[$fid] = $feature;
-	}
-	elsif ( $self->{OGR}->{Layer} ) {
+	} else {
 	    croak "can't set a feature in a layer (at least yet)";
 	}
-	else {
-	    croak "no layer";
+    } elsif ( ref($fid) ) {
+
+	# add
+	my $feature = $self->make_feature($fid);
+	if ($self->{features}) {
+	    push @{$self->{features}}, $fid;
+	} else {
+	    $self->{OGR}->{Layer}->CreateFeature($fid);
+	    $self->{OGR}->{Layer}->SyncToDisk;
 	}
-    }
-    elsif ( ref($fid) ) {
-	$self->add_feature($fid);
-    }
-    else {	
+    } else {
+
 	# retrieve
 	my $f;
 	if ( $self->{features} ) {
 	    $f = $self->{features}->[$fid];
 	    croak "feature: index out of bounds: $fid" unless $f;
-	}
-	elsif ( $self->{OGR}->{Layer} ) {
+	} else {
 	    $f = $self->{OGR}->{Layer}->GetFeature($fid);
 	}
-	else {
-	    croak "no layer";
-	}
+
 	my $defn = $f->GetDefnRef;
 	$feature = {};
 	my $n = $defn->GetFieldCount();
@@ -1026,7 +986,14 @@ sub geometry {
 	}
     }
     elsif (ref $fid) {
-	$self->add_feature(geometry => $fid);
+	# add
+	my $feature = $self->make_feature(geometry => $fid);
+	if ($self->{features}) {
+	    push @{$self->{features}}, $feature;
+	} else {
+	    $self->{OGR}->{Layer}->CreateFeature($feature);
+	    $self->{OGR}->{Layer}->SyncToDisk;
+	}
     }
     else {
 	# retrieve
@@ -1391,8 +1358,12 @@ sub copy {
 	    my $value = $f->GetField($i);
 	    $feature->SetField($i, $value) if defined $value;
 	}
-	
-	$copy->add_feature($feature);
+
+	if ($copy->{features}) {
+	    push @{$copy->{features}}, $feature;
+	} else {
+	    $copy->{OGR}->{Layer}->CreateFeature($feature);
+	}
 	
     }
     

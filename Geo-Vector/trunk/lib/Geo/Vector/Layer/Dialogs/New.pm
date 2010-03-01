@@ -241,6 +241,11 @@ sub add_field_to_schema {
 ## @ignore
 sub delete_field_from_schema {
     my $self = pop;
+    my $treeview = $self->{new_vector_dialog}->get_widget('new_vector_schema_treeview');
+    my($path, $focus_column) = $treeview->get_cursor;
+    return unless $path;
+    my $iter = $self->{schema}->get_iter($path);
+    $self->{schema}->remove($iter);
 }
 
 1;
