@@ -50,7 +50,11 @@ sub get_value_from_combo {
     my $combo = $dialog->get_widget($name_of_combo);
     my $model = $combo->get_model;
     return unless $model;
-    my $iter = $model->get_iter_from_string($combo->get_active());
+    my $a = $combo->get_active();
+    if ($a == -1) { # comboboxentry
+	return $combo->child->get_text;
+    }
+    my $iter = $model->get_iter_from_string($a);
     return unless $iter;
     return $model->get_value($iter);
 }

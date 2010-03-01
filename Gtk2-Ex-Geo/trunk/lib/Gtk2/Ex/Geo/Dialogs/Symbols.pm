@@ -158,7 +158,7 @@ sub get_selected_symbol_field {
 sub fill_symbol_scale_fields {
     my($self, $gui) = @{$_[1]};
     my @range;
-    my $field = $self->get_selected_symbol_field();
+    my $field = get_selected_symbol_field($self);
     return if $field eq 'Fixed size';
     my @r = $gui->{overlay}->get_viewport_of_selection;
     @r = $gui->{overlay}->get_viewport unless @r;

@@ -660,7 +660,7 @@ sub pan {
 # @brief Handling of key press events.
 #
 # Tied to key_press_event and key_release_event. Ties "+" to zoom_in,
-# "-" to zoom_out,and arrow keysto pan. Also ties "Esc" to finishing
+# "-" to zoom_out,and arrow keysto pan. Also ties "Enter" to finishing
 # making a selection. Records press and release of "Ctrl" to object
 # attribute "_control_down".
 sub key_press_event {
@@ -672,6 +672,7 @@ sub key_press_event {
 #    my(undef, $event, $self) = @_;
 
     my $key = $event->keyval;
+    #print STDERR "$key\n";
     if ($key == $Gtk2::Gdk::Keysyms{plus}) {
 	$self->zoom_in($event); # , $self->event_pixel2point());
     } elsif ($key == $Gtk2::Gdk::Keysyms{minus}) {
@@ -685,6 +686,8 @@ sub key_press_event {
     } elsif ($key == $Gtk2::Gdk::Keysyms{Down}) {
 	$self->pan(0, $self->{viewport_size}->[1]/$self->{step}, $event);
     } elsif ($key == $Gtk2::Gdk::Keysyms{Escape}) {
+	$self->delete_rubberband;
+    } elsif ($key == 65293) { # enter
 	if ($self->{rubberband_mode} eq 'select' and $self->{path}) {
 	    if ($self->{rubberband_geometry} eq 'polygon') {
 		if (@{$self->{path}} > 2) {
