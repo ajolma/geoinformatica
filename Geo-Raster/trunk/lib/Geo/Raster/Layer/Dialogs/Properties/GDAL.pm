@@ -6,6 +6,7 @@ use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 
 ## @ignore
 sub open {
@@ -16,10 +17,14 @@ sub open {
     unless ($dialog) {
 	$self->{gdal_properties_dialog} = $dialog = $gui->get_dialog('gdal_properties_dialog');
 	croak "gdal_properties_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('gdal_properties_dialog')->signal_connect(delete_event => \&cancel_gdal_properties, [$self, $gui]);
-	$dialog->get_widget('gdal_properties_apply_button')->signal_connect(clicked => \&apply_gdal_properties, [$self, $gui, 0]);
-	$dialog->get_widget('gdal_properties_cancel_button')->signal_connect(clicked => \&cancel_gdal_properties, [$self, $gui]);
-	$dialog->get_widget('gdal_properties_ok_button')->signal_connect(clicked => \&apply_gdal_properties, [$self, $gui, 1]);
+	$dialog->get_widget('gdal_properties_dialog')
+	    ->signal_connect(delete_event => \&cancel_gdal_properties, [$self, $gui]);
+	$dialog->get_widget('gdal_properties_apply_button')
+	    ->signal_connect(clicked => \&apply_gdal_properties, [$self, $gui, 0]);
+	$dialog->get_widget('gdal_properties_cancel_button')
+	    ->signal_connect(clicked => \&cancel_gdal_properties, [$self, $gui]);
+	$dialog->get_widget('gdal_properties_ok_button')
+	    ->signal_connect(clicked => \&apply_gdal_properties, [$self, $gui, 1]);
     } elsif (!$dialog->get_widget('gdal_properties_dialog')->get('visible')) {
 	$dialog->get_widget('gdal_properties_dialog')->move(@{$self->{gdal_properties_dialog_position}});
     }
@@ -69,7 +74,7 @@ sub apply_gdal_properties {
 	my $alpha = $dialog->get_widget('gdal_alpha_spinbutton')->get_value_as_int;
 	$self->alpha($alpha);
 	
-	my $nodata = get_number($dialog->get_widget('gdal_nodata_entry'));
+	my $nodata = get_number_from_entry($dialog->get_widget('gdal_nodata_entry'));
 	my $band = $self->band();
 	$band->SetNoDataValue($nodata) if $nodata ne '';
     };

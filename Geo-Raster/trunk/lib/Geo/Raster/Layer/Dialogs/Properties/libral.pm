@@ -6,6 +6,7 @@ use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 
 ## @ignore
 sub open {
@@ -74,11 +75,11 @@ sub apply_libral_properties {
 	$self->alpha($alpha);
 
 	my @world;
-	$world[0] = get_number($dialog->get_widget('libral_min_x_entry'));
-	$world[1] = get_number($dialog->get_widget('libral_min_y_entry'));
-	$world[2] = get_number($dialog->get_widget('libral_max_x_entry'));
-	$world[3] = get_number($dialog->get_widget('libral_max_y_entry'));
-	my $cell_size = get_number($dialog->get_widget('libral_cellsize_entry'));
+	$world[0] = get_number_from_entry($dialog->get_widget('libral_min_x_entry'));
+	$world[1] = get_number_from_entry($dialog->get_widget('libral_min_y_entry'));
+	$world[2] = get_number_from_entry($dialog->get_widget('libral_max_x_entry'));
+	$world[3] = get_number_from_entry($dialog->get_widget('libral_max_y_entry'));
+	my $cell_size = get_number_from_entry($dialog->get_widget('libral_cellsize_entry'));
     
 	my ($minX,$minY) = ($world[0], $world[1]);
 	my ($maxX,$maxY) = ($world[2], $world[3]);
@@ -89,7 +90,7 @@ sub apply_libral_properties {
     
 	$self->world(minX=>$minX, minY=>$minY, maxX=>$maxX, maxY=>$maxY, cell_size=>$cell_size);
 	
-	my $nodata = get_number($dialog->get_widget('libral_nodata_entry'));
+	my $nodata = get_number_from_entry($dialog->get_widget('libral_nodata_entry'));
 	$self->nodata_value($nodata);
     };
     $gui->message("$@") if $@;

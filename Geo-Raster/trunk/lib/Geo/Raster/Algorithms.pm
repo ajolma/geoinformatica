@@ -526,7 +526,7 @@ sub vectorize {
     my ($minX,$minY,$maxX,$maxY) = $self->world();
 
     my $vector = Geo::Vector->new(%param, geometry_type => 'Polygon', update => 1);
-    $vector->schema({value=>{ TypeName => 'Integer' }});
+    $vector->schema(Fields => [{Name => 'value', Type => 'Integer' }]);
 
     croak "layer with name: '$param{layer}' already exists" if $vector->geometry_type ne 'Polygon' or $vector->feature_count() > 0;
 

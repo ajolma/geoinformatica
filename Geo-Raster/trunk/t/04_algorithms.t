@@ -30,7 +30,7 @@ for my $e ('dbf','prj','shp','shx') {
 	  skip 'No Geo::Vector', 1;
       }
     } else {
-	my $vector = $grid->vectorize(driver=>'ESRI Shapefile',datasource=>'.',layer=>'v_test');
+	my $vector = $grid->vectorize(driver=>'ESRI Shapefile',datasource=>'.',create=>'v_test');
 	for my $e ('dbf','prj','shp','shx') {
 	    unlink "v_test.$e";
 	}
