@@ -199,13 +199,23 @@ typedef ral_double_color_bins *ral_double_color_bins_handle;
 ral_double_color_bins_handle RAL_CALL ral_double_color_bins_create(int n);
 void RAL_CALL ral_double_color_bins_destroy(ral_double_color_bins **bins);
 
+#define RAL_FIELD_FIXED_SIZE -3
+#define RAL_FIELD_Z -2
+#define RAL_FIELD_FID -1
+/* field index value >=0 is feature attribute table index */
+
+/* red->green->blue rainbow */
+#define RAL_RGB_HUE 1 
+/* red->blue->green rainbow */
+#define RAL_RBG_HUE -1
+
 /**\brief visualization information */
 typedef struct {
     short alpha;
     int render_as;
     int palette_type;
     int symbol;
-    int symbol_field;
+    int symbol_field; /* RAL_FIELD_FIXED_SIZE, RAL_FIELD_Z, RAL_FIELD_FID or index to attribute table */
     int symbol_pixel_size;
     ral_int_range symbol_size_int;
     ral_double_range symbol_size_double;
@@ -214,8 +224,8 @@ typedef struct {
     ral_double_range color_double;
     int hue;
     ral_int_range hue_at;
-    int hue_dir; /* 1 means rainbow is red->green->blue, -1 means red->blue->green */
-    int color_field; /* -2 is Z, -1 is FID, >=0 is the field of feature attribute */
+    int hue_dir; /* RAL_RGB_HUE or RAL_RBG_HUE */
+    int color_field; /* RAL_FIELD_Z, RAL_FIELD_FID or index to attribute table */
     ral_color_table *color_table;
     ral_string_color_table *string_color_table;
     ral_int_color_bins *int_bins;

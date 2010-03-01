@@ -199,7 +199,7 @@ ral_integer_grid_layer *ral_integer_grid_layer_create()
     l->color_bins = NULL;
     l->range.min = 0;
     l->range.max = -1;
-    l->hue = -1;
+    l->hue = RAL_RBG_HUE;
     l->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     l->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
     l->hue_dir = 0;
@@ -236,7 +236,7 @@ ral_real_grid_layer *ral_real_grid_layer_create()
     l->color_bins = NULL;
     l->range.min = 0;
     l->range.max = -1;
-    l->hue = -1;
+    l->hue = RAL_RBG_HUE;
     l->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     l->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
     l->hue_dir = 0;
@@ -262,7 +262,7 @@ void ral_visual_initialize(ral_visual *v)
     v->render_as = RAL_RENDER_AS_NATIVE;
     v->palette_type = RAL_PALETTE_SINGLE_COLOR;
     v->symbol = RAL_SYMBOL_CROSS;
-    v->symbol_field = -1;
+    v->symbol_field = RAL_FIELD_FID;
     v->symbol_pixel_size = RAL_DEFAULT_SYMBOL_PIXEL_SIZE;
     v->symbol_size_int.min = 0;
     v->symbol_size_int.max = -1;
@@ -273,11 +273,11 @@ void ral_visual_initialize(ral_visual *v)
     v->color_int.max = -1;
     v->color_double.min = 0;
     v->color_double.max = -1;
-    v->hue = -1;
+    v->hue = RAL_RBG_HUE;
     v->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     v->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
     v->hue_dir = 0;
-    v->color_field = -1;
+    v->color_field = RAL_FIELD_FID;
     v->color_table = NULL;
     v->string_color_table = NULL;
     v->int_bins = NULL;
