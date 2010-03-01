@@ -75,8 +75,10 @@ sub _fill_hash {
 
 sub _fill_recursive {
 	my ($self, $model, $parent, $name, $ref) = @_;
-	return if $self->{data}{$ref};
-	$self->{data}{$ref} = 1;
+
+	#$ref = '' unless defined $ref;
+	#return if $self->{data}{$ref};
+	#$self->{data}{$ref} = 1;
 
 	if (UNIVERSAL::isa $ref, 'HASH') {
 		_fill_hash ($self, $model, $parent, $name, $ref);
