@@ -154,6 +154,7 @@ sub feature_changed {
     my $f = $self->feature($fid);
     $new_value = undef if $new_value eq '';
     $column = $treeview->get_column($column)->get_title;
+    $column =~ s/__/_/g;
     $f->SetField($column, $new_value);
     $self->feature($fid, $f);
     $self->select; # clear selection since it is a list of features read from the source
