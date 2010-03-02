@@ -506,11 +506,11 @@ sub render {
 # @param gc A gdk graphics context (Gtk2::Gdk::GC object)
 # @param geom A Geo::OGC::Geometry object.
 sub render_geometry {
-    my($self, $gc, $geom) = @_;
+    my($self, $gc, $geom, %param) = @_;
     if (isa($geom, 'Geo::OGC::GeometryCollection')) 
     {
 	for my $g ($geom->NumGeometries) {
-	    $self->render_geometry($gc, $g);
+	    $self->render_geometry($gc, $g, %param);
 	}
 	return;
     } 
@@ -527,10 +527,22 @@ sub render_geometry {
 	    push @points, $self->point2pixmap_pixel($p->X, $p->Y);
 	}
 	$self->{pixmap}->draw_lines($gc, @points);
+	if ($param{enhance_vertices}) {
+	    my $pm = $self->{pixmap};
+	    for (my $i = 0; $i < $#points; $i+=2) {
+		my $x = $points[$i];
+		my $y = $points[$i+1];
+		$pm->draw_line($gc, $x-4, $y, $x+4, $y);
+		$pm->draw_line($gc, $x, $y-4, $x, $y+4);
+	    }
+	}
     }
     elsif (isa($geom, 'Geo::OGC::Polygon')) 
     {
-	$self->render_geometry($gc, $geom->ExteriorRing);
+	$self->render_geometry($gc, $geom->ExteriorRing, %param);
+	for my $i (0..$geom->NumInteriorRing-1) {
+	    $self->render_geometry($gc, $geom->InteriorRingN($i), %param);
+	}
     }
 }
 
@@ -554,7 +566,7 @@ sub reset_image {
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(0, 65535, 0));
 	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
-	$self->render_geometry($gc, $self->{drawing});
+	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
     }
     $self->{image}->set_from_pixmap($self->{pixmap}, undef);
 }
@@ -788,13 +800,17 @@ sub button_press_event {
 
 	push @{$self->{path}}, [$event->x, $event->y];
 
-	$self->{rubberband_gc} = Gtk2::Gdk::GC->new ($self->{pixmap});
-	$self->{rubberband_gc}->copy($self->style->fg_gc($self->state));
-	$self->{rubberband_gc}->set_function('invert');
+	unless ($self->{rubberband_mode} eq 'edit') {
+	    $self->{rubberband_gc} = Gtk2::Gdk::GC->new($self->{pixmap});
+	    $self->{rubberband_gc}->copy($self->style->fg_gc($self->state));
+	    $self->{rubberband_gc}->set_function('invert');
+	}
 
 	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
 	    # find the closest point in drawing
-	    $self->{drawing_edit} = $self->{drawing}; # is a hashref now test with a point
+	    my @p = $self->event_pixel2point($event->x, $event->y);
+	    my($q, $d, $last) = $self->{drawing}->ClosestPoint(@p);
+	    $self->{drawing_edit} = $q if $d/$self->{pixel_size} < 30;
 	} elsif (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and 
 		 !$self->{_control_down} and
 		 !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
@@ -902,11 +918,12 @@ sub button_release_event {
 		}
 	    };
 	    (/measure/ or /edit/) && do {
-		if ($self->{rubberband_mode} eq 'edit') {
+		if ($self->{drawing_edit}) {
 		    $self->{drawing_edit}{X} = $wend[0];
-		    $self->{drawing_edit}{Y} = $wend[1];		    
-		}
-		if ($self->{rubberband_geometry} eq 'line') {
+		    $self->{drawing_edit}{Y} = $wend[1];
+		    delete $self->{drawing_edit};
+		    $self->delete_rubberband;
+		} elsif ($self->{rubberband_geometry} eq 'line') {
 		    $self->delete_rubberband;		    
 		} elsif ($self->{rubberband_geometry} eq 'rect') {
 		    $self->delete_rubberband;
@@ -914,7 +931,6 @@ sub button_release_event {
 		    $self->delete_rubberband;
 		} elsif ($self->{rubberband_geometry} eq 'path') {
 		    delete $self->{rubberband};
-		    $self->update_image if $self->{rubberband_mode} eq 'edit';
 		}
 	    }
 	}
@@ -932,20 +948,39 @@ sub motion_notify {
 
     @{$self->{event_coordinates}} = ($event->x, $event->y);
 
-    my $handled = 0;
-    if ($self->{path}) {
+    unless ($self->{path}) {
+	$self->signal_emit('motion-notify');
+	return 0; # not handled
+    }
 
-	my $pm = $self->{pixmap};
-	my $rgc = $self->{rubberband_gc};
-	my @begin = @{$self->{path}[0]};
-	my @end = @{$self->{event_coordinates}};
-	my $w = $end[0] - $begin[0];
-	my $h = $end[1] - $begin[1];
-	my @rb = @{$self->{rubberband}} if $self->{rubberband};
+    my $pm = $self->{pixmap};
+    my $rgc = $self->{rubberband_gc};
+    my @begin = @{$self->{path}[0]};
+    my @end = @{$self->{event_coordinates}};
+    my $w = $end[0] - $begin[0];
+    my $h = $end[1] - $begin[1];
+    my @rb = @{$self->{rubberband}} if $self->{rubberband};
+    
+    if ($self->{drawing_edit}) {
+	
+	$pm = $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
+	my @wend = $self->event_pixel2point(@end);
+	$self->{drawing_edit}{X} = $wend[0];
+	$self->{drawing_edit}{Y} = $wend[1];
+	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(0, 65535, 0));
+	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
+	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
+	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
+
+    } else {    
 
 	for ($self->{rubberband_mode}.' '.$self->{rubberband_geometry}) {
+	    /edit/ && do {
+		last;
+	    };
 	    /pan/ && do {
-		my $gc = new Gtk2::Gdk::GC $pm;
+		my $gc = Gtk2::Gdk::GC->new($pm);
 		$pm->draw_rectangle($gc, 1, 0, 0, @{$self->{viewport_size}});
 		$pm->draw_pixbuf($gc, $self->{pixbuf}, 0, 0, $w, $h, -1, -1, 'GDK_RGB_DITHER_NONE', 0, 0);
 		last;
@@ -997,20 +1032,19 @@ sub motion_notify {
 		    pop @points;
 		    pop @points;
 		    push @points, @rb;
-		    $pm->draw_polygon($rgc, 1, @points);
+			$pm->draw_polygon($rgc, 1, @points);
 		}
 	    }
 	}
-
-	@{$self->{rubberband}} = @rb;
-	
-	$self->{image}->set_from_pixbuf(undef);
-	$self->{image}->set_from_pixmap($pm, undef);
-	$handled = 1;
     }
     
+    @{$self->{rubberband}} = @rb;
+
+    $self->{image}->set_from_pixbuf(undef);
+    $self->{image}->set_from_pixmap($pm, undef);
+    
     $self->signal_emit('motion-notify');
-    return $handled;
+    return 1; # handled
 }
 
 ## @method @rubberband_value()

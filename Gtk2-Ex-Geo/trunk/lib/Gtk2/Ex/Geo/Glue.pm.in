@@ -440,6 +440,14 @@ sub overlay_menu {
 	     $self->{selecting} = 'that_intersect';
 	 },
 	 1 => 0,
+	 'Clear drawing' => sub { 
+	     my ($item, $self) = @_;
+	     if ($self->{drawing}) {
+		 delete $self->{drawing};
+		 $self->update_image;
+	     }
+	 },
+	 1 => 0,
 	 'Set _background color..' => sub { 
 	     my ($item, $self) = @_;
 	     my $color = $self->{bg_color};
@@ -505,6 +513,8 @@ sub overlay_menu {
 	    $_ .= ' x', last if /Pan/ and $self->{rubberband_mode} =~ /pan/;
 	    $_ .= ' x' if /_Select/ and $self->{rubberband_mode} =~ /select/;
 	    $_ .= ' x' if /Measure/ and $self->{rubberband_mode} =~ /measure/;
+	    $_ .= ' x' if /Draw/ and $self->{rubberband_mode} =~ /draw/;
+	    $_ .= ' x' if /Edit drawing/ and $self->{rubberband_mode} =~ /edit/;
 	    $_ .= ' x' if /Line/ and $self->{rubberband_geometry} =~ /line/;
 	    $_ .= ' x' if /Path/ and $self->{rubberband_geometry} =~ /path/;
 	    $_ .= ' x' if /Rect/ and $self->{rubberband_geometry} =~ /rect/;
