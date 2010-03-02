@@ -1051,7 +1051,15 @@ sub ClosestPoint {
 	    $i = $j;
 	}
     }
-    return wantarray ? ($p, $min, ($i == 0 or $i == $#{$self->{Points}})) : $p;
+    my $dual;
+    if (isa($self, 'Geo::OGC::LinearRing')) {
+	if ($i == 0) {
+	    $dual = $self->{Points}[$#{$self->{Points}}];
+	} elsif ($i == $#{$self->{Points}}) {
+	    $dual = $self->{Points}[0];
+	}
+    }
+    return wantarray ? ($p, $min, $dual) : $p;
 }
 
 #
@@ -1984,12 +1992,12 @@ sub MakeCollection {
 sub ClosestPoint {
     my($self, $x, $y) = @_;
     return unless $self->{ExteriorRing};
-    my($p, $min, $last) = $self->{ExteriorRing}->ClosestPoint($x, $y);
+    my($p, $min, $dual) = $self->{ExteriorRing}->ClosestPoint($x, $y);
     for my $ring (@{$self->{InteriorRings}}) {
-	my($q, $m, $l) = $ring->ClosestPoint($x, $y);
-	($p, $min, $last) = ($q, $m, $l) if $m < $min;
+	my($q, $m, $d) = $ring->ClosestPoint($x, $y);
+	($p, $min, $dual) = ($q, $m, $d) if $m < $min;
     }
-    return wantarray ? ($p, $min, $last) : $p;
+    return wantarray ? ($p, $min, $dual) : $p;
 }
 
 #
@@ -2302,12 +2310,12 @@ sub Distance {
 sub ClosestPoint {
     my($self, $x, $y) = @_;
     return unless @{$self->{Geometries}};
-    my($p, $min, $last) = $self->{Geometries}[0]->ClosestPoint($x, $y);
+    my($p, $min, $dual) = $self->{Geometries}[0]->ClosestPoint($x, $y);
     for my $g (@{$self->{Geometries}}) {
-	my($q, $m, $l) = $g->ClosestPoint($x, $y);
-	($p, $min, $last) = ($q, $m, $l) if $m < $min;
+	my($q, $m, $d) = $g->ClosestPoint($x, $y);
+	($p, $min, $dual) = ($q, $m, $d) if $m < $min;
     }
-    return wantarray ? ($p, $min, $last) : $p;
+    return wantarray ? ($p, $min, $dual) : $p;
 }
 
 #
