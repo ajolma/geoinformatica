@@ -809,8 +809,8 @@ sub button_press_event {
 	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
 	    # find the closest point in drawing
 	    my @p = $self->event_pixel2point($event->x, $event->y);
-	    my($q, $d, $last) = $self->{drawing}->ClosestPoint(@p);
-	    $self->{drawing_edit} = $q if $d/$self->{pixel_size} < 30;
+	    my($q, $distance, $dual) = $self->{drawing}->ClosestPoint(@p);
+	    $self->{drawing_edit} = [$q, $dual] if $distance/$self->{pixel_size} < 30;
 	} elsif (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and 
 		 !$self->{_control_down} and
 		 !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
@@ -919,8 +919,13 @@ sub button_release_event {
 	    };
 	    (/measure/ or /edit/) && do {
 		if ($self->{drawing_edit}) {
-		    $self->{drawing_edit}{X} = $wend[0];
-		    $self->{drawing_edit}{Y} = $wend[1];
+		    my $p = $self->{drawing_edit};
+		    $p->[0]{X} = $wend[0];
+		    $p->[0]{Y} = $wend[1];
+		    if ($p->[1]) {
+			$p->[1]{X} = $wend[0];
+			$p->[1]{Y} = $wend[1];
+		    }
 		    delete $self->{drawing_edit};
 		    $self->delete_rubberband;
 		} elsif ($self->{rubberband_geometry} eq 'line') {
@@ -965,8 +970,13 @@ sub motion_notify {
 	
 	$pm = $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
 	my @wend = $self->event_pixel2point(@end);
-	$self->{drawing_edit}{X} = $wend[0];
-	$self->{drawing_edit}{Y} = $wend[1];
+	my $p = $self->{drawing_edit};
+	$p->[0]{X} = $wend[0];
+	$p->[0]{Y} = $wend[1];
+	if ($p->[1]) {
+	    $p->[1]{X} = $wend[0];
+	    $p->[1]{Y} = $wend[1];
+	}
 	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(0, 65535, 0));
 	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
