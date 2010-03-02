@@ -353,207 +353,147 @@ sub message {
 ## @fn overlay_menu()
 # @brief Construct a menu for an overlay object.
 sub overlay_menu {
-    my %menu = 
-	('Zoom _in' => {
-	    nr => 1,
-	    sub => sub { 
-		my ($item, $self) = @_;
-		$self->zoom_in(); 
-	    },
-	},
-	 'Zoom _out' => {
-	     nr => 2,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->zoom_out(); 
-	     },
+    my @menu = 
+	('Zoom _in' => sub { 
+	    my ($item, $self) = @_;
+	    $self->zoom_in(); 
 	 },
-	 'Zoom to pre_vious' => {
-	     nr => 3,
-	     sub => sub {
-		 my ($item, $self) = @_;
-		 my $zoom = pop @{$self->{zoom_stack}};
-		 $self->zoom(@$zoom, 0, 1) if $zoom;
-	     },
+	 'Zoom _out' => sub { 
+	     my ($item, $self) = @_;
+	     $self->zoom_out(); 
 	 },
-	 4 => {
-	     nr => 4,
+	 'Zoom to pre_vious' => sub {
+	     my ($item, $self) = @_;
+	     my $zoom = pop @{$self->{zoom_stack}};
+	     $self->zoom(@$zoom, 0, 1) if $zoom;
 	 },
-	 '_Zoom' => {
-	     nr => 5,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{rubberband_mode} = 'zoom';
-	     },
+	 1 => 0,
+	 '_Zoom' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'zoom';
 	 },
-	 '_Pan' => {
-	     nr => 6,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{rubberband_mode} = 'pan';
-	     },
+	 '_Pan' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'pan';
 	 },
-	 '_Select' => {
-	     nr => 7,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{rubberband_mode} = 'select';
-	     },
+	 '_Select' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'select';
 	 },
-	 '_Measure' => {
-	     nr => 8,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{rubberband_mode} = 'measure';
-	     },
+	 '_Measure' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'measure';
 	 },
-	 9 => {
-	     nr => 9,
+	 '_Draw' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'draw';
 	 },
-	 '_Line' => {
-	     nr => 10,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{rubberband_geometry} = 'line';
-	     },
+	 'Edit drawing' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'edit';
 	 },
-	 'Path' => {
-	     nr => 11,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{rubberband_geometry} = 'path';
-	     },
+	 1 => 0,
+	 '_Line' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_geometry} = 'line';
 	 },
-	 '_Rectangle' => {
-	     nr => 12,
-	     sub => sub {
-		 my ($item, $self) = @_;
-		 $self->{rubberband_geometry} = 'rect';
-	     },
+	 'Path' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{rubberband_geometry} = 'path';
 	 },
-	 '_Ellipse' => {
-	     nr => 13,
-	     sub => sub {
-		 my ($item, $self) = @_;
-		 $self->{rubberband_mode} = 'measure';
-		 $self->{rubberband_geometry} = 'ellipse';
-	     },
+	 '_Rectangle' => sub {
+	     my ($item, $self) = @_;
+	     $self->{rubberband_geometry} = 'rect';
 	 },
-	 'Polygon' => {
-	     nr => 14,
-	     sub => sub {
-		 my ($item, $self) = @_;
-		 $self->{rubberband_geometry} = 'polygon';
-	     },
+	 '_Ellipse' => sub {
+	     my ($item, $self) = @_;
+	     $self->{rubberband_mode} = 'measure';
+	     $self->{rubberband_geometry} = 'ellipse';
 	 },
-	 15 => {
-	     nr => 15,
+	 'Polygon' => sub {
+	     my ($item, $self) = @_;
+	     $self->{rubberband_geometry} = 'polygon';
 	 },
-	 'Reselect' => {
-	     nr => 16,
-	     sub => sub { my ($item, $self) = @_;
-			  $self->signal_emit('new_selection');
-		      }
+	 1 => 0,
+	 'Reselect' => sub { 
+	     my ($item, $self) = @_;
+	     $self->signal_emit('new_selection');
 	 },
-	 '_Clear selection' => {
-	     nr => 17,
-	     sub => sub { my ($item, $self) = @_;
-		   if ($self->{selection}) {
-		       delete $self->{selection};
-		       $self->signal_emit('new_selection');
-		   }
-	       },
+	 '_Clear selection' => sub { 
+	     my ($item, $self) = @_;
+	     if ($self->{selection}) {
+		 delete $self->{selection};
+		 $self->signal_emit('new_selection');
+	     }
 	 },
-	 18 => {
-	     nr => 18,
+	 1 => 0,
+	 'Select within' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{selecting} = 'that_are_within';
 	 },
-	 'Select within' => {
-	     nr => 19,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{selecting} = 'that_are_within';
-	     },
+	 'Select containing' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{selecting} = 'that_contain';
 	 },
-	 'Select containing' => {
-	     nr => 20,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{selecting} = 'that_contain';
-	     },
+	 'Select intersecting' => sub { 
+	     my ($item, $self) = @_;
+	     $self->{selecting} = 'that_intersect';
 	 },
-	 'Select intersecting' => {
-	     nr => 21,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->{selecting} = 'that_intersect';
-	     },
+	 1 => 0,
+	 'Set _background color..' => sub { 
+	     my ($item, $self) = @_;
+	     my $color = $self->{bg_color};
+	     my $d = Gtk2::ColorSelectionDialog->new('Color for the background');
+	     my $c = new Gtk2::Gdk::Color ($color ? $color->[0]*257 : 0,
+					   $color ? $color->[1]*257 : 0,
+					   $color ? $color->[2]*257 : 0);
+	     $d->colorsel->set_current_color($c);
+	     
+	     if ($d->run eq 'ok') {
+		 $c = $d->colorsel->get_current_color;
+		 $d->destroy;
+		 $self->{bg_color} = 
+		     [int($c->red/257),int($c->green/257),int($c->blue/257),255];
+		 $self->render;
+	     } else {
+		 $d->destroy};
 	 },
-	 21 => {
-	     nr => 22,
-	 },
-	 'Set _background color..' => {
-	     nr => 23,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 my $color = $self->{bg_color};
-		 my $d = Gtk2::ColorSelectionDialog->new('Color for the background');
-		 my $c = new Gtk2::Gdk::Color ($color ? $color->[0]*257 : 0,
-					       $color ? $color->[1]*257 : 0,
-					       $color ? $color->[2]*257 : 0);
-		 $d->colorsel->set_current_color($c);
-		 
-		 if ($d->run eq 'ok') {
-		     $c = $d->colorsel->get_current_color;
-		     $d->destroy;
-		     $self->{bg_color} = 
-			 [int($c->red/257),int($c->green/257),int($c->blue/257),255];
-		     $self->render;
-		 } else {
-		     $d->destroy};
-	     },
-	 },
-	 '_Export as PNG' => {
-	     nr => 24,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 my $filename;
-		 my $type = 'png';
-		 my $file_chooser =
-		     Gtk2::FileChooserDialog->new ('Export as a PNG image',
-						   undef, 'save',
-						   'gtk-cancel' => 'cancel',
-						   'gtk-ok' => 'ok');
-		 
-		 my $folder = $file_chooser->get_current_folder;
-		 
-		 $file_chooser->set_current_folder($self->{folder}) if $self->{folder};
-		 
-		 if ('ok' eq $file_chooser->run) {
-		     # you can get the user's selection as a filename or a uri.
-		     $self->{folder} = $file_chooser->get_current_folder;
-		     $filename = $file_chooser->get_filename;
-		     if (-e $filename) {
-			 my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent',
-							       'question',
-							       'yes_no',
-							       "Overwrite existing $filename?");
-			 my $ret = $dialog->run;
-			 $filename = '' if $ret eq 'no';
-			 $dialog->destroy;
-		     }
+	 '_Export as PNG' => sub { 
+	     my ($item, $self) = @_;
+	     my $filename;
+	     my $type = 'png';
+	     my $file_chooser =
+		 Gtk2::FileChooserDialog->new ('Export as a PNG image',
+					       undef, 'save',
+					       'gtk-cancel' => 'cancel',
+					       'gtk-ok' => 'ok');
+	     
+	     my $folder = $file_chooser->get_current_folder;
+	     
+	     $file_chooser->set_current_folder($self->{folder}) if $self->{folder};
+	     
+	     if ('ok' eq $file_chooser->run) {
+		 # you can get the user's selection as a filename or a uri.
+		 $self->{folder} = $file_chooser->get_current_folder;
+		 $filename = $file_chooser->get_filename;
+		 if (-e $filename) {
+		     my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent',
+							   'question',
+							   'yes_no',
+							   "Overwrite existing $filename?");
+		     my $ret = $dialog->run;
+		     $filename = '' if $ret eq 'no';
+		     $dialog->destroy;
 		 }
-	       
-		 $file_chooser->set_current_folder($folder);	       
-		 $file_chooser->destroy;
-		 $self->render(filename=>$filename, type=>$type) if $filename;
-	     },
+	     }
+	     
+	     $file_chooser->set_current_folder($folder);	       
+	     $file_chooser->destroy;
+	     $self->render(filename=>$filename, type=>$type) if $filename;
 	 },
-	 'Res_tore' => {
-	     nr => 25,
-	     sub => sub { 
-		 my ($item, $self) = @_;
-		 $self->update_image;
-	     },
+	 'Res_tore' => sub { 
+	     my ($item, $self) = @_;
+	     $self->update_image;
 	 });
     my $item_setup = sub {
 	my($item, $self) = @_;
@@ -573,7 +513,7 @@ sub overlay_menu {
 	}
 	return $item;
     };
-    return (\%menu, $item_setup);
+    return (\@menu, $item_setup);
 }
 
 ## @fn layer_menu()

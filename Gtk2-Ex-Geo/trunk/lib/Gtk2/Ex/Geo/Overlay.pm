@@ -549,6 +549,13 @@ sub reset_image {
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{selection});
     }
+    if ($self->{drawing}) {
+	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(0, 65535, 0));
+	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
+	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
+	$self->render_geometry($gc, $self->{drawing});
+    }
     $self->{image}->set_from_pixmap($self->{pixmap}, undef);
 }
 
@@ -687,8 +694,8 @@ sub key_press_event {
 	$self->pan(0, $self->{viewport_size}->[1]/$self->{step}, $event);
     } elsif ($key == $Gtk2::Gdk::Keysyms{Escape}) {
 	$self->delete_rubberband;
-    } elsif ($key == 65293) { # enter
-	if ($self->{rubberband_mode} eq 'select' and $self->{path}) {
+    } elsif ($key == $Gtk2::Gdk::Keysyms{Return}) {
+	if (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and $self->{path}) {
 	    if ($self->{rubberband_geometry} eq 'polygon') {
 		if (@{$self->{path}} > 2) {
 		    my $geom = new Geo::OGC::Polygon;
@@ -734,18 +741,18 @@ sub key_release_event {
 
 sub add_to_selection {
     my($self, $geom) = @_;
+    my $store = ($self->{rubberband_mode} eq 'select') ? 'selection' : 'drawing';
     if ($self->{_control_down}) {
-	if (!$self->{selection} or
-	    !isa($self->{selection}, 'Geo::OGC::GeometryCollection')) {
+	if (!$self->{$store} or !isa($self->{$store}, 'Geo::OGC::GeometryCollection')) {
 	    my $coll = Geo::OGC::GeometryCollection->new;
-	    $coll->AddGeometry($self->{selection}) if $self->{selection};
-	    $self->{selection} = $coll;
+	    $coll->AddGeometry($self->{$store}) if $self->{$store};
+	    $self->{$store} = $coll;
 	}
-	$self->{selection}->AddGeometry($geom) if $geom;
+	$self->{$store}->AddGeometry($geom) if $geom;
     } else {
-	$self->{selection} = $geom;
+	$self->{$store} = $geom;
     }
-    $self->signal_emit('new_selection');
+    $self->signal_emit('new_selection') if $self->{rubberband_mode} eq 'select';
 }
 
 ## @method button_press_event()
@@ -762,14 +769,14 @@ sub button_press_event {
 
 	$self->delete_rubberband;
 	my $menu = Gtk2::Menu->new;
-	for (sort {$self->{menu}{$a}{nr} <=> $self->{menu}{$b}{nr}} keys %{$self->{menu}}) {
-	    my $name = $self->{menu_item_setup}->($_, $self);
+	for (my $i =0; $i < @{$self->{menu}}; $i+=2) {
+	    my $name = $self->{menu_item_setup}->($self->{menu}->[$i], $self);
 	    my $item;
-	    unless ($self->{menu}{$_}{sub}) {
+	    unless ($self->{menu}->[$i+1]) {
 		$item = Gtk2::SeparatorMenuItem->new();
 	    } else {
 		$item = Gtk2::MenuItem->new($name);
-		$item->signal_connect(activate => $self->{menu}{$_}{sub}, $self);
+		$item->signal_connect(activate => $self->{menu}->[$i+1], $self);
 	    }
 	    $item->show;
 	    $menu->append ($item);
@@ -785,12 +792,20 @@ sub button_press_event {
 	$self->{rubberband_gc}->copy($self->style->fg_gc($self->state));
 	$self->{rubberband_gc}->set_function('invert');
 
-	if ($self->{rubberband_mode} eq 'select' and !$self->{_control_down} and
-	    !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
+	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
+	    # find the closest point in drawing
+	    $self->{drawing_edit} = $self->{drawing}; # is a hashref now test with a point
+	} elsif (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and 
+		 !$self->{_control_down} and
+		 !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
 	    )
 	{
-	    delete $self->{selection};
-	    $self->signal_emit('new_selection');
+	    if ($self->{rubberband_mode} eq 'select') {
+		delete $self->{selection};
+		$self->signal_emit('new_selection');
+	    } elsif ($self->{rubberband_mode} eq 'draw') {
+		delete $self->{drawing};
+	    }
 	}
 
 	$handled = 1;
@@ -849,7 +864,7 @@ sub button_release_event {
 		    $self->zoom($w_offset, $h_offset, $pixel_size, 1);
 		}
 	    };
-	    /select/ && do {
+	    (/select/ or /draw/) && do {
 		if ($self->{rubberband_geometry} eq 'line') {
 		    my $geom;
 		    if ($click) {
@@ -886,7 +901,11 @@ sub button_release_event {
 		    delete $self->{rubberband};
 		}
 	    };
-	    /measure/ && do {
+	    (/measure/ or /edit/) && do {
+		if ($self->{rubberband_mode} eq 'edit') {
+		    $self->{drawing_edit}{X} = $wend[0];
+		    $self->{drawing_edit}{Y} = $wend[1];		    
+		}
 		if ($self->{rubberband_geometry} eq 'line') {
 		    $self->delete_rubberband;		    
 		} elsif ($self->{rubberband_geometry} eq 'rect') {
@@ -895,6 +914,7 @@ sub button_release_event {
 		    $self->delete_rubberband;
 		} elsif ($self->{rubberband_geometry} eq 'path') {
 		    delete $self->{rubberband};
+		    $self->update_image if $self->{rubberband_mode} eq 'edit';
 		}
 	    }
 	}
