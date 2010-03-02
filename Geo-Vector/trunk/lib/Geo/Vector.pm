@@ -403,8 +403,8 @@ sub dump_geom {
 
 ## @method init_iterate(%options)
 # @param options Named parameters, all are optional.
-# - \a features => reference to a list of features, which to iterate
-# through.
+# - \a selected_features => reference to a list of features, which to
+# iterate through.
 # - \a filter => a spatial filter
 # - \a filter_rect => reference to an array defining a spatial
 # rectangle filter (min_x, min_y, max_x, max_y)
@@ -414,8 +414,8 @@ sub dump_geom {
 sub init_iterate {
     my $self = shift;
     my %options = @_ if @_;
-    if ($options{features}) {
-	$self->{_features} = $options{features};
+    if ($options{selected_features}) {
+	$self->{_features} = $options{selected_features};
 	$self->{_cursor} = 0;
 	$self->{_filter_rect} = $options{filter_rect};
     } elsif ($self->{features}) {
@@ -1300,27 +1300,16 @@ sub world {
 #
 # @brief Copy selected or all features from the layer into a new layer.
 #
-# @param[in] params is a list of named parameters:
-# - \a layer_name name for the new layer (default is "copy")
-# - \a driver driver (default is the driver of the layer)
-# - \a data_source data source (default is the data source of the layer)
-# - \a features features (a ref to an array) to copy, if not defined
-# then all are copied.
-# The params are forwarded to the constructor of the new layer.
+# @param[in] params is a list of named parameters. They are forwarded
+# to constructor (new) and init_iterate. If no value is given the
+# defaults are taken from this layer.
 # @return A Geo::Vector object.
-# @bug If self is a polygon shapefile, the result seems to be linestrings, but
-# the saved shapefile is ok.
 sub copy {
     my($self, %params) = @_;
-
-    $params{create} = 'copy' unless $params{create};
-    $params{data_source} = $params{datasource} if $params{datasource}; 
     $params{data_source} = $self->{data_source} unless $params{data_source};
     $params{driver} = $self->driver unless $params{driver};
-    $params{schema} = $self->schema;
-
+    $params{schema} = $self->schema unless $params{schema};
     my $copy = Geo::Vector->new(%params);
-
     my $fd = Geo::OGR::FeatureDefn->create($params{schema});
     my $i = 0;
     $self->init_iterate(%params);

@@ -145,7 +145,7 @@ sub do_copy {
 	}
     }
 
-    my %ret = ( features => $self->selected_features ) 
+    my %ret = ( selected_features => $self->selected_features ) 
 	unless $dialog->get_widget('copy_all_checkbutton')->get_active;
 
     unless ($into_layer) {
