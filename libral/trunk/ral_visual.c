@@ -199,10 +199,10 @@ ral_integer_grid_layer *ral_integer_grid_layer_create()
     l->color_bins = NULL;
     l->range.min = 0;
     l->range.max = -1;
-    l->hue = RAL_RBG_HUE;
+    l->hue = 0; /* red */
     l->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     l->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
-    l->hue_dir = 0;
+    l->hue_dir = RAL_RGB_HUE;
     return l;
 fail:
     return NULL;
@@ -236,10 +236,10 @@ ral_real_grid_layer *ral_real_grid_layer_create()
     l->color_bins = NULL;
     l->range.min = 0;
     l->range.max = -1;
-    l->hue = RAL_RBG_HUE;
+    l->hue = 0;
     l->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     l->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
-    l->hue_dir = 0;
+    l->hue_dir = RAL_RGB_HUE;
     return l;
 fail:
     return NULL;

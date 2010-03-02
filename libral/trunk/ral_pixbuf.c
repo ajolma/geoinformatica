@@ -239,7 +239,7 @@ int ral_render_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer)
 	ral_int_range r = layer->hue_at;
 	r.min = max(min(r.min, 360), 0);
 	r.max = max(min(r.max, 360), 0);
-	if (layer->hue_dir == 1) {
+	if (layer->hue_dir == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
@@ -733,7 +733,7 @@ int ral_render_real_grid(ral_pixbuf *pb, ral_real_grid_layer *layer)
 	ral_int_range r = layer->hue_at;
 	r.min = max(min(r.min,360),0);
 	r.max = max(min(r.max,360),0);
-	if (layer->hue_dir == 1) {
+	if (layer->hue_dir == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
@@ -1121,7 +1121,7 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	ral_int_range r = visualization.hue_at;
 	r.min = max(min(r.min, 360), 0);
 	r.max = max(min(r.max, 360), 0);
-	if (visualization.hue_dir == 1) {
+	if (visualization.hue_dir == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
