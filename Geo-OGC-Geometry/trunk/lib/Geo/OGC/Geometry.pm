@@ -835,6 +835,11 @@ sub ApplyTransformation {
     }
 }
 
+sub ClosestPoint {
+    my($self, $x, $y) = @_;
+    return wantarray ? ($self, ($self->{X}-$x)**2 + ($self->{Y}-$y)**2, 0) : $self;
+}
+
 #
 #    Curve
 #
@@ -1032,6 +1037,21 @@ sub ApplyTransformation {
 sub Reverse {
     my($self) = @_;
     @{$self->{Points}} = reverse @{$self->{Points}};
+}
+
+sub ClosestPoint {
+    my($self, $x, $y) = @_;
+    return unless @{$self->{Points}};
+    my($p, $min) = $self->{Points}[0]->ClosestPoint($x, $y);
+    my $i = 0;
+    for my $j (1..$#{$self->{Points}}) {
+	my($q, $m) = $self->{Points}[$j]->ClosestPoint($x, $y);
+	if ($m < $min) {
+	    ($p, $min) = ($q, $m);
+	    $i = $j;
+	}
+    }
+    return wantarray ? ($p, $min, ($i == 0 or $i == $#{$self->{Points}})) : $p;
 }
 
 #
@@ -1961,6 +1981,17 @@ sub MakeCollection {
     return $coll;
 }
 
+sub ClosestPoint {
+    my($self, $x, $y) = @_;
+    return unless $self->{ExteriorRing};
+    my($p, $min, $last) = $self->{ExteriorRing}->ClosestPoint($x, $y);
+    for my $ring (@{$self->{InteriorRings}}) {
+	my($q, $m, $l) = $ring->ClosestPoint($x, $y);
+	($p, $min, $last) = ($q, $m, $l) if $m < $min;
+    }
+    return wantarray ? ($p, $min, $last) : $p;
+}
+
 #
 #    Triangle
 #
@@ -2266,6 +2297,17 @@ sub Distance {
     } else {
 	croak "can't compute distance between a ".ref($geom)." and a geometry collection";
     }
+}
+
+sub ClosestPoint {
+    my($self, $x, $y) = @_;
+    return unless @{$self->{Geometries}};
+    my($p, $min, $last) = $self->{Geometries}[0]->ClosestPoint($x, $y);
+    for my $g (@{$self->{Geometries}}) {
+	my($q, $m, $l) = $g->ClosestPoint($x, $y);
+	($p, $min, $last) = ($q, $m, $l) if $m < $min;
+    }
+    return wantarray ? ($p, $min, $last) : $p;
 }
 
 #
