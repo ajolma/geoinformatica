@@ -1114,8 +1114,8 @@
               </packing>
             </child>
             <child>
-              <widget class="GtkButton" id="from_selection_button">
-                <property name="label" translatable="yes">Create from selection</property>
+              <widget class="GtkButton" id="from_drawing_button">
+                <property name="label" translatable="yes">Create from drawing</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -1124,6 +1124,30 @@
                 <property name="expand">False</property>
                 <property name="fill">False</property>
                 <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkButton" id="copy_to_drawing_button">
+                <property name="label" translatable="yes">Copy to drawing</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkButton" id="copy_from_drawing_button">
+                <property name="label" translatable="yes">Copy from drawing</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>

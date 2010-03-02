@@ -35,8 +35,8 @@ sub open {
 	    ->signal_connect(clicked => \&vertices_of_selected_features, [$self, $gui]);
 	$dialog->get_widget('make_selection_button')
 	    ->signal_connect(clicked => \&make_selection, [$self, $gui]);
-	$dialog->get_widget('from_selection_button')
-	    ->signal_connect(clicked => \&from_selection, [$self, $gui]);
+	$dialog->get_widget('from_drawing_button')
+	    ->signal_connect(clicked => \&from_drawing, [$self, $gui]);
 	$dialog->get_widget('copy_selected_button')
 	    ->signal_connect(clicked => \&copy_selected_features, [$self, $gui]);
 	$dialog->get_widget('zoom_to_button')
@@ -47,6 +47,11 @@ sub open {
 	$dialog->get_widget('delete_feature_button')
 	    ->signal_connect(clicked => \&delete_selected_features, [$self, $gui]);
 
+	$dialog->get_widget('copy_to_drawing_button')
+	    ->signal_connect(clicked => \&copy_to_drawing, [$self, $gui]);
+	$dialog->get_widget('copy_from_drawing_button')
+	    ->signal_connect(clicked => \&copy_from_drawing, [$self, $gui]);
+
     } elsif (!$dialog->get_widget('features_dialog')->get('visible')) {
 	$dialog->get_widget('features_dialog')
 	    ->move(@{$self->{features_dialog_position}}) if $self->{features_dialog_position};
@@ -54,7 +59,9 @@ sub open {
     $dialog->get_widget('features_dialog')->set_title("Features of ".$self->name);
 
     $dialog->get_widget('delete_feature_button')->set_sensitive($self->{update});
-    $dialog->get_widget('from_selection_button')->set_sensitive($self->{update});
+    $dialog->get_widget('from_drawing_button')->set_sensitive($self->{update});
+    $dialog->get_widget('copy_to_drawing_button')->set_sensitive($self->{update});
+    $dialog->get_widget('copy_from_drawing_button')->set_sensitive($self->{update});
 	
     my @editable;
     my @columns;
@@ -399,10 +406,58 @@ sub make_selection {
 }
 
 ##@ignore
-sub from_selection {
+sub from_drawing {
     my($self, $gui) = @{$_[1]};
-    return unless $gui->{overlay}->{selection};
-    $self->add_feature({ geometry => $gui->{overlay}->{selection} });
+    return unless $gui->{overlay}->{drawing};
+    $self->add_feature({ geometry => $gui->{overlay}->{drawing} });
+    fill_features_table(undef, [$self, $gui]);
+    $gui->{overlay}->render;
+}
+
+##@ignore
+sub copy_to_drawing {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{features_dialog};
+    my $treeview = $dialog->get_widget('feature_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    my @features = keys %$features;
+    if (@features == 0 or @features > 1) {
+	$gui->message("Select one and only one feature.");
+	return;
+    }
+    $features = $self->features(with_id=>[@features]);
+    for my $f (@$features) {
+	my $geom = $f->GetGeometryRef();
+	next unless $geom;
+	my $g = Geo::OGC::Geometry->new(Text => $geom->ExportToWkt);
+	$gui->{overlay}->{drawing} = $g;
+	last;
+    }
+    $gui->{overlay}->update_image;
+}
+
+##@ignore
+sub copy_from_drawing {
+    my($self, $gui) = @{$_[1]};
+    unless ($gui->{overlay}->{drawing}) {
+	$gui->message("Create a drawing first.");
+	return;
+    }
+    my $dialog = $self->{features_dialog};
+    my $treeview = $dialog->get_widget('feature_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    my @features = keys %$features;
+    if (@features == 0 or @features > 1) {
+	$gui->message("Select one and only one feature.");
+	return;
+    }
+    $features = $self->features(with_id=>[@features]);
+    for my $f (@$features) {
+	my $geom = Geo::OGR::Geometry->create(WKT => $gui->{overlay}->{drawing}->AsText);
+	$f->SetGeometry($geom);
+	$self->feature($f->FID, $f);
+	last;
+    }
     fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
