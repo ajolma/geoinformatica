@@ -137,8 +137,8 @@
   </widget>
   <widget class="GtkDialog" id="open_vector_dialog">
     <property name="border_width">5</property>
-    <property name="default_width">720</property>
-    <property name="default_height">510</property>
+    <property name="default_width">740</property>
+    <property name="default_height">530</property>
     <property name="type_hint">normal</property>
     <property name="has_separator">False</property>
     <child internal-child="vbox">
@@ -239,12 +239,39 @@
                   </packing>
                 </child>
                 <child>
+                  <widget class="GtkHBox" id="hbox6">
+                    <property name="visible">True</property>
+                    <child>
+                      <widget class="GtkLabel" id="label2">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Filesystem read:</property>
+                      </widget>
+                      <packing>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkComboBox" id="filesystem_driver_combobox">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">Use this driver</property>
+                      </widget>
+                      <packing>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
+                <child>
                   <widget class="GtkToolbar" id="open_vector_directory_toolbar">
                     <property name="visible">True</property>
                   </widget>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="position">4</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
                 <child>
@@ -261,7 +288,7 @@
                     </child>
                   </widget>
                   <packing>
-                    <property name="position">5</property>
+                    <property name="position">6</property>
                   </packing>
                 </child>
               </widget>

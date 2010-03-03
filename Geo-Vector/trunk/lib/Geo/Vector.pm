@@ -218,6 +218,7 @@ sub new {
     $params{update} = 1 if $params{create};
     $self->{update} = $params{update};
     $self->{encoding} = $params{encoding};
+    $params{create_options} = [] if (!$params{create_options} and $params{create});
 
     $self->open_data_source($params{driver}, $params{data_source}, $params{update}, $params{create_options});
 
@@ -298,8 +299,11 @@ sub open_data_source {
 	    eval {
 		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->Open($data_source, $update);
 	    };
-	    return if $self->{OGR}->{DataSource};
-
+	    unless ($self->{OGR}->{DataSource}) {
+		$@ = "no reason given" unless $@;
+		croak "Can't open data source '$data_source': $@"
+	    }
+	    return;
 	}
 
 	croak "$self->{OGR}->{Driver}->{name}: ".
@@ -311,7 +315,7 @@ sub open_data_source {
 		$self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
 	};
 	$@ = "no reason given" unless $@;
-	croak "Can't open nor create data source: $@" unless $self->{OGR}->{DataSource};
+	croak "Can't open nor create data source '$data_source': $@" unless $self->{OGR}->{DataSource};
 
     } else {
 	eval {
@@ -327,6 +331,7 @@ sub open_data_source {
 sub DESTROY {
     my $self = shift;
     return unless $self;
+    $self->{OGR}->{Layer}->SyncToDisk if ($self->{update} and $self->{OGR}->{Layer});
     if ( $self->{SQL} and $self->{OGR}->{DataSource} ) {
 	$self->{OGR}->{DataSource}->ReleaseResultSet( $self->{OGR}->{Layer} );
     }
@@ -335,7 +340,6 @@ sub DESTROY {
 	    undef $_;
 	}
     }
-    $self->{OGR}->{Layer}->SyncToDisk if $self->{update};
 }
 
 ## @method driver()
@@ -1341,7 +1345,6 @@ sub copy {
 	}
 	
     }
-    
     $copy->{OGR}->{Layer}->SyncToDisk if $copy->{OGR};
     return $copy;
 }
