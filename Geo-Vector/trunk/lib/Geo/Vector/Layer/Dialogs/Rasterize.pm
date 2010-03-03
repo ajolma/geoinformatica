@@ -14,10 +14,16 @@ sub open {
     my($self, $gui) = @_;
 
     # bootstrap:
-    my $dialog = $self->{rasterize_dialog};
-    unless ($dialog) {
-	$self->{rasterize_dialog} = $dialog = $gui->get_dialog('rasterize_dialog');
-	croak "rasterize_dialog for Geo::Vector does not exist" unless $dialog;
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'rasterize_dialog', "Rasterize ".$self->name,
+	 {
+	     rasterize_dialog => [delete_event => \&cancel_rasterize, [$self, $gui]],
+	     rasterize_dialog => [delete_event => \&cancel_rasterize, [$self, $gui]],
+	     rasterize_cancel_button => [clicked => \&cancel_rasterize, [$self, $gui]],
+	     rasterize_ok_button => [clicked => \&apply_rasterize, [$self, $gui, 1]],
+	 });
+    
+    if ($boot) {
 	Geo::Vector::Layer::Dialogs::fill_render_as_combobox(
 	    $dialog->get_widget('rasterize_render_as_combobox') );
 
@@ -50,32 +56,17 @@ sub open {
 	    $model->set($model->append, 0, $layer->name);
 	}
 	$combobox->set_model($model);
-
-	$dialog->get_widget('rasterize_dialog')
-	    ->signal_connect(delete_event => \&cancel_rasterize, [$self, $gui]);
-	$dialog->get_widget('rasterize_cancel_button')
-	    ->signal_connect(clicked => \&cancel_rasterize, [$self, $gui]);
-	$dialog->get_widget('rasterize_ok_button')
-	    ->signal_connect(clicked => \&apply_rasterize, [$self, $gui, 1]);
-    } elsif (!$dialog->get_widget('rasterize_dialog')->get('visible')) {
-	$dialog->get_widget('rasterize_dialog')->move(@{$self->{rasterize_dialog_position}});
     }
-    $dialog->get_widget('rasterize_dialog')->set_title("Rasterize ".$self->name);
 	
     $dialog->get_widget('rasterize_name_entry')->set_text('r');
-
     $dialog->get_widget('rasterize_like_combobox')->set_active(0);
 
     my $a = $self->render_as;
     $a = defined $a ? $Geo::Vector::RENDER_AS{$a} : 0;
     $dialog->get_widget('rasterize_render_as_combobox')->set_active($a);
-
     $dialog->get_widget('rasterize_value_field_combobox')->set_active(0);
-
     $dialog->get_widget('rasterize_nodata_value_entry')->set_text(-9999);
-    
-    $dialog->get_widget('rasterize_dialog')->show_all;
-    $dialog->get_widget('rasterize_dialog')->present;
+
 }
 
 ##@ignore
@@ -112,9 +103,7 @@ sub apply_rasterize {
 	$gui->add_layer($g, $ret{name}, 1);
 	$gui->{overlay}->render;
     }
-
-    $self->{rasterize_dialog_position} = [$dialog->get_widget('rasterize_dialog')->get_position];
-    $dialog->get_widget('rasterize_dialog')->hide() if $close;
+    $self->hide_dialog('rasterize_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
 }
@@ -126,10 +115,7 @@ sub cancel_rasterize {
 	next unless ref CORE::eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    
-    my $dialog = $self->{rasterize_dialog}->get_widget('rasterize_dialog');
-    $self->{rasterize_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('rasterize_dialog');
     $gui->set_layer($self);
     1;
 }

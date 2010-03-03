@@ -14,24 +14,20 @@ sub open {
     my($self, $gui) = @_;
 
     # bootstrap:
-    my $dialog = $self->{properties_dialog};
-    unless ($dialog) {
-	$self->{properties_dialog} = $dialog = $gui->get_dialog('properties_dialog');
-	croak "properties_dialog for Geo::Vector does not exist" unless $dialog;
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'properties_dialog', "Properties of ".$self->name,
+	 {
+	     properties_dialog => [delete_event => \&cancel_properties, [$self, $gui]],
+	     properties_dialog => [delete_event => \&cancel_properties, [$self, $gui]],
+	     properties_color_button => [clicked => \&border_color_dialog, [$self]],
+	     properties_apply_button => [clicked => \&apply_properties, [$self, $gui, 0]],
+	     properties_cancel_button => [clicked => \&cancel_properties, [$self, $gui]],
+	     properties_ok_button => [clicked => \&apply_properties, [$self, $gui, 1]],
+	 });
+    
+    if ($boot) {
 	Geo::Vector::Layer::Dialogs::fill_render_as_combobox(
 	    $dialog->get_widget('properties_render_as_combobox') );
-	$dialog->get_widget('properties_dialog')
-	    ->signal_connect(delete_event => \&cancel_properties, [$self, $gui]);
-	$dialog->get_widget('properties_color_button')
-	    ->signal_connect(clicked => \&border_color_dialog, [$self]);
-	$dialog->get_widget('properties_apply_button')
-	    ->signal_connect(clicked => \&apply_properties, [$self, $gui, 0]);
-	$dialog->get_widget('properties_cancel_button')
-	    ->signal_connect(clicked => \&cancel_properties, [$self, $gui]);
-	$dialog->get_widget('properties_ok_button')
-	    ->signal_connect(clicked => \&apply_properties, [$self, $gui, 1]);
-    } elsif (!$dialog->get_widget('properties_dialog')->get('visible')) {
-	$dialog->get_widget('properties_dialog')->move(@{$self->{properties_dialog_position}});
     }
     $dialog->get_widget('properties_dialog')->set_title("Properties of ".$self->name);
 
@@ -73,9 +69,7 @@ sub open {
 
     my $t = $dialog->get_widget('properties_schema_treeview');
     Geo::Vector::Layer::Dialogs::New::schema_to_treeview(undef, $t, 0, $self->schema);
-    
-    $dialog->get_widget('properties_dialog')->show_all;
-    $dialog->get_widget('properties_dialog')->present;
+
 }
 
 ##@ignore
@@ -94,8 +88,7 @@ sub apply_properties {
     my @color = split(/ /, $dialog->get_widget('properties_color_label')->get_text);
     @color = () unless $has_border;
     $self->border_color(@color);
-    $self->{properties_dialog_position} = [$dialog->get_widget('properties_dialog')->get_position];
-    $dialog->get_widget('properties_dialog')->hide() if $close;
+    $self->hide_dialog('properties_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
 }
@@ -111,9 +104,7 @@ sub cancel_properties {
     $self->name($self->{backup}->{name});
     $self->render_as($self->{backup}->{render_as});
     $self->border_color(@{$self->{backup}->{border_color}});
-    my $dialog = $self->{properties_dialog}->get_widget('properties_dialog');
-    $self->{properties_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('properties_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;

@@ -99,9 +99,7 @@ sub close_feature_collection_dialog {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    my $dialog = $self->{feature_collection_dialog}->get_widget('feature_collection_dialog');
-    $self->{feature_collection_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('feature_collection_dialog');
     1;
 }
 

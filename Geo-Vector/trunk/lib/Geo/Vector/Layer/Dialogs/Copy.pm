@@ -213,8 +213,7 @@ sub do_copy {
 
     }
 
-    $self->{copy_dialog_position} = [$dialog->get_widget('copy_vector_dialog')->get_position];
-    $dialog->get_widget('copy_vector_dialog')->hide();
+    $self->hide_dialog('copy_dialog');
     $gui->{overlay}->render;
 }
 
@@ -233,10 +232,7 @@ sub cancel_copy {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    my $dialog = $self->{copy_dialog}->get_widget('copy_vector_dialog');
-    $self->{copy_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
-    #$gui->{overlay}->render;
+    $self->hide_dialog('copy_dialog');
     1;
 }
 

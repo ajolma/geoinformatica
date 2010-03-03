@@ -12,8 +12,7 @@ use Geo::Vector::Layer::Dialogs qw/:all/;
 ## @ignore
 sub open {
     my($gui) = @_;
-    my $self = {};
-    $self->{gui} = $gui;
+    my $self = { gui => $gui };
 
     # bootstrap:
     my($dialog, $boot) = Gtk2::Ex::Geo::Layer::bootstrap_dialog

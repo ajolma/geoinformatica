@@ -11,25 +11,22 @@ use Geo::Vector::Layer::Dialogs qw/:all/;
 # vertices dialog
 sub open {
     my($self, $gui) = @_;
-    my $dialog = $self->{vertices_dialog};
-    unless ($dialog) {
-	$self->{vertices_dialog} = $dialog = $gui->get_dialog('vertices_dialog');
-	croak "vertices_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('vertices_dialog')->signal_connect(delete_event => \&close_vertices_dialog, [$self, $gui]);
-	
+    
+    # bootstrap:
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'vertices_dialog', "Vertices from ".$self->name,
+	 {
+	     vertices_dialog => [delete_event => \&close_vertices_dialog, [$self, $gui]],
+	     vertices_from_spinbutton => [value_changed => \&fill_vtv, [$self, $gui]],
+	     vertices_max_spinbutton => [value_changed => \&fill_vtv, [$self, $gui]],	
+	     vertices_close_button => [clicked => \&close_vertices_dialog, [$self, $gui]],
+	 });
+    
+    if ($boot) {
 	my $selection = $dialog->get_widget('vertices_treeview')->get_selection;
 	$selection->set_mode('multiple');
 	$selection->signal_connect(changed => \&vertices_activated, [$self, $gui]);
-	
-	$dialog->get_widget('vertices_from_spinbutton')->signal_connect(value_changed => \&fill_vtv, [$self, $gui]);
-	$dialog->get_widget('vertices_max_spinbutton')->signal_connect(value_changed => \&fill_vtv, [$self, $gui]);
-	
-	$dialog->get_widget('vertices_close_button')->signal_connect(clicked => \&close_vertices_dialog, [$self, $gui]);
-
-    } elsif (!$dialog->get_widget('vertices_dialog')->get('visible')) {
-	$dialog->get_widget('vertices_dialog')->move(@{$self->{vertices_dialog_position}}) if $self->{vertices_dialog_position};
     }
-    $dialog->get_widget('vertices_dialog')->set_title("Vertices of ".$self->name);
 	
     my $tv = $dialog->get_widget('vertices_treeview');
     my @c = $tv->get_columns;
@@ -44,9 +41,6 @@ sub open {
     $tv->set_model($model);
 
     fill_vtv(undef, [$self, $gui]);
-     
-    $dialog->get_widget('vertices_dialog')->show_all;
-    $dialog->get_widget('vertices_dialog')->present;
 }
 
 ##@ignore
@@ -56,9 +50,7 @@ sub close_vertices_dialog {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    my $dialog = $self->{vertices_dialog}->get_widget('vertices_dialog');
-    $self->{vertices_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('vertices_dialog');
     1;
 }
 

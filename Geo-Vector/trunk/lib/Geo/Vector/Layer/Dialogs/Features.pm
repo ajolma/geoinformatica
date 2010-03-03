@@ -150,9 +150,7 @@ sub close_features_dialog {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    my $dialog = $self->{features_dialog}->get_widget('features_dialog');
-    $self->{features_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('features_dialog');
     1;
 }
 

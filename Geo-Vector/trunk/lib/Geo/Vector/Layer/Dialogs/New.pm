@@ -10,13 +10,20 @@ use Gtk2::Ex::Geo::Dialogs qw/:all/;
 ## @ignore
 sub open {
     my($gui) = @_;
-    my $self = {};
-    $self->{gui} = $gui;
-    my $d = $self->{new_vector_dialog} = $gui->get_dialog('new_vector_dialog');
-    croak "new_vector_dialog for Geo::Vector::Layer does not exist" unless $d;
-    $d->get_widget('new_vector_dialog')->set_title("Create a new OGR vector layer");
-    $d->get_widget('new_vector_dialog')->signal_connect(delete_event => \&cancel_new_vector, $self);
+    my $self = { gui => $gui };
 
+    # bootstrap:
+    my($dialog, $boot) = Gtk2::Ex::Geo::Layer::bootstrap_dialog
+	($self, $gui, 'new_dialog', "Create new vector",
+	 {
+	     new_dialog => [delete_event => \&cancel_new_copy, $self],
+	     new_vector_add_button => [clicked=>\&add_field_to_schema, $self],
+	     new_vector_delete_button => [clicked=>\&delete_field_from_schema, $self],
+	     new_vector_cancel_button => [clicked => \&cancel_new_vector, $self],
+	     new_vector_ok_button => [clicked => \&ok_new_vector, $self],
+	 },
+	);
+    
     my $model = Gtk2::ListStore->new('Glib::String');
     $model->set ($model->append, 0, '');
     my @drivers;
@@ -29,59 +36,46 @@ sub open {
     for my $n (sort @drivers) {
 	$model->set ($model->append, 0, $n);
     }
-    my $combo = $d->get_widget('new_vector_driver_combobox');
+    my $combo = $dialog->get_widget('new_vector_driver_combobox');
     $combo->set_model($model);
     my $renderer = Gtk2::CellRendererText->new;
     $combo->pack_start ($renderer, TRUE);
     $combo->add_attribute ($renderer, text => 0);
     $combo->set_active(0);
-
+    
     $model = Gtk2::ListStore->new('Glib::String');
     $model->set ($model->append, 0, '');
     for my $data_source (sort keys %{$gui->{resources}{datasources}}) {
 	$model->set ($model->append, 0, $data_source);
     }
-    $combo = $d->get_widget('new_vector_data_source_combobox');
+    $combo = $dialog->get_widget('new_vector_data_source_combobox');
     $combo->set_model($model);
     $renderer = Gtk2::CellRendererText->new;
     $combo->pack_start ($renderer, TRUE);
     $combo->add_attribute ($renderer, text => 0);
     $combo->set_active(0);
-
-    $d->get_widget('new_vector_open_button')
+    
+    $dialog->get_widget('new_vector_open_button')
 	->signal_connect( clicked => sub {
 	    my(undef, $self) = @_;
-	    my $entry = $self->{new_vector_dialog}->get_widget('new_vector_folder_entry');
+	    my $entry = $self->{new_dialog}->get_widget('new_vector_folder_entry');
 	    file_chooser('Select folder', 'select_folder', $entry);
 			  }, $self );
-
-    $d->get_widget('new_vector_layer_entry')->set_text('x');
+    
+    $dialog->get_widget('new_vector_layer_entry')->set_text('x');
     
     $model = Gtk2::ListStore->new('Glib::String');
     for my $type (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
 	$model->set ($model->append, 0, $type);
     }
-    $combo = $d->get_widget('new_vector_geometry_type_combobox');
+    $combo = $dialog->get_widget('new_vector_geometry_type_combobox');
     $combo->set_model($model);
     $renderer = Gtk2::CellRendererText->new;
     $combo->pack_start ($renderer, TRUE);
     $combo->add_attribute ($renderer, text => 0);
     $combo->set_active(0);
-
-    $self->{schema} = schema_to_treeview($self, $d->get_widget('new_vector_schema_treeview'), 1);
-
-    $d->get_widget('new_vector_add_button')
-	->signal_connect( clicked=>\&add_field_to_schema, $self);
-    $d->get_widget('new_vector_delete_button')
-	->signal_connect( clicked=>\&delete_field_from_schema, $self);
-
-    $d->get_widget('new_vector_cancel_button')
-	->signal_connect(clicked => \&cancel_new_vector, $self);
-    $d->get_widget('new_vector_ok_button')
-	->signal_connect(clicked => \&ok_new_vector, $self);
     
-    $d->get_widget('new_vector_dialog')->show_all;
-    $d->get_widget('new_vector_dialog')->present;
+    $self->{schema} = schema_to_treeview($self, $dialog->get_widget('new_vector_schema_treeview'), 1);
 }
 
 sub schema_to_treeview {
@@ -164,13 +158,13 @@ sub schema_changed {
 ## @ignore
 sub cancel_new_vector {
     my $self = pop;
-    $self->{new_vector_dialog}->get_widget('new_vector_dialog')->destroy;
+    $self->{new_dialog}->get_widget('new_dialog')->destroy;
 }
 
 ## @ignore
 sub ok_new_vector {
     my $self = pop;
-    my $d = $self->{new_vector_dialog};
+    my $d = $self->{new_dialog};
     my $layer;
     my $driver = get_value_from_combo($d, 'new_vector_driver_combobox');
     $driver = $self->{drivers}{$driver};
@@ -224,7 +218,7 @@ sub ok_new_vector {
 	return;
     }
     $self->{gui}->add_layer($layer, $name, 1);
-    $d->get_widget('new_vector_dialog')->destroy;
+    $d->get_widget('new_dialog')->destroy;
 }
 
 ## @ignore
@@ -244,7 +238,7 @@ sub add_field_to_schema {
 ## @ignore
 sub delete_field_from_schema {
     my $self = pop;
-    my $treeview = $self->{new_vector_dialog}->get_widget('new_vector_schema_treeview');
+    my $treeview = $self->{new_dialog}->get_widget('new_vector_schema_treeview');
     my($path, $focus_column) = $treeview->get_cursor;
     return unless $path;
     my $iter = $self->{schema}->get_iter($path);
