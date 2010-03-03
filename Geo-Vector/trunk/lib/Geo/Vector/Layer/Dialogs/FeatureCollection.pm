@@ -187,25 +187,17 @@ sub feature_activated2 {
 	
     }
 
-    my $overlay = $gui->{overlay};
-
-    $overlay->reset_pixmap;
-
-    my $gc = Gtk2::Gdk::GC->new($overlay->{pixmap});
-    $gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
-
-    for my $f (@$features) {
-
-	next unless $f; # should not happen
-
-	my $geom = $f->GetGeometryRef();
-	next unless $geom;
-
-	$overlay->render_geometry($gc, $geom);
-	
-    }
-
-    $overlay->reset_image;
+    $gui->{overlay}->update_image(
+	sub {
+	    my($overlay, $pixmap, $gc) = @_;
+	    $gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
+	    for my $f (@$features) {
+		next unless $f; # should not happen
+		my $geom = $f->GetGeometryRef();
+		next unless $geom;
+		$overlay->render_geometry($gc, $geom);
+	    }
+	});
 
 }
 

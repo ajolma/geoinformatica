@@ -290,25 +290,18 @@ sub feature_activated {
     return unless @$features;
     $self->selected_features($features);
 
-    my $overlay = $gui->{overlay};
-    $overlay->reset_pixmap;
-
-    my $gc = Gtk2::Gdk::GC->new($overlay->{pixmap});
-    $gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
-
-    for my $f (@$features) {
-
-	next unless $f; # should not happen
-
-	my $geom = $f->GetGeometryRef();
-	next unless $geom;
-
-	$overlay->render_geometry($gc, Geo::OGC::Geometry->new(Text => $geom->ExportToWkt));
-	
-    }
-
-    $overlay->reset_image;
-
+    $gui->{overlay}->update_image(
+	sub {
+	    my($overlay, $pixmap, $gc) = @_;
+	    $gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
+	    for my $f (@$features) {
+		next unless $f; # should not happen
+		my $geom = $f->GetGeometryRef();
+		next unless $geom;
+		$overlay->render_geometry($gc, Geo::OGC::Geometry->new(Text => $geom->ExportToWkt));
+	    }
+	}
+	);
 }
 
 ##@ignore
@@ -376,6 +369,7 @@ sub copy_selected_features {
 ##@ignore
 sub vertices_of_selected_features {
     my($self, $gui) = @{$_[1]};
+    # add title to the call
     $self->open_vertices_dialog($gui);
 }
 
