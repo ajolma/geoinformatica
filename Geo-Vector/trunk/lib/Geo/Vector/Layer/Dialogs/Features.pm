@@ -13,51 +13,34 @@ use Geo::Vector::Layer::Dialogs::Copy;
 # features dialog
 sub open {
     my($self, $gui) = @_;
-    my $dialog = $self->{features_dialog};
-    unless ($dialog) {
-	$self->{features_dialog} = $dialog = $gui->get_dialog('features_dialog');
-	croak "features_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('features_dialog')
-	    ->signal_connect(delete_event => \&close_features_dialog, [$self, $gui]);
+
+    # bootstrap:
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'features_dialog', "Features of ".$self->name,
+	 {
+	     features_dialog => [delete_event => \&close_features_dialog, [$self, $gui]],
+	     from_feature_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
+	     max_features_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
+	     features_limit_checkbutton => [toggled => \&fill_features_table, [$self, $gui]],	     
+	     features_vertices_button => [clicked => \&vertices_of_selected_features, [$self, $gui]],
+	     make_selection_button => [clicked => \&make_selection, [$self, $gui]],
+	     from_drawing_button => [clicked => \&from_drawing, [$self, $gui]],
+	     copy_selected_button => [clicked => \&copy_selected_features, [$self, $gui]],
+	     zoom_to_button => [clicked => \&zoom_to_selected_features, [$self, $gui]],
+	     close_features_button => [clicked => \&close_features_dialog, [$self, $gui]],	    
+	     delete_feature_button => [clicked => \&delete_selected_features, [$self, $gui]],	     
+	     copy_to_drawing_button => [clicked => \&copy_to_drawing, [$self, $gui]],
+	     copy_from_drawing_button => [clicked => \&copy_from_drawing, [$self, $gui]],
+	 },
+	);
+    
+    if ($boot) {
 	
 	my $selection = $dialog->get_widget('feature_treeview')->get_selection;
 	$selection->set_mode('multiple');
 	$selection->signal_connect(changed => \&feature_activated, [$self, $gui]);
 	
-	$dialog->get_widget('from_feature_spinbutton')
-	    ->signal_connect(value_changed => \&fill_features_table, [$self, $gui]);
-	$dialog->get_widget('max_features_spinbutton')
-	    ->signal_connect(value_changed => \&fill_features_table, [$self, $gui]);
-
-	$dialog->get_widget('features_limit_checkbutton')
-	    ->signal_connect(toggled => \&fill_features_table, [$self, $gui]);
-	
-	$dialog->get_widget('features_vertices_button')
-	    ->signal_connect(clicked => \&vertices_of_selected_features, [$self, $gui]);
-	$dialog->get_widget('make_selection_button')
-	    ->signal_connect(clicked => \&make_selection, [$self, $gui]);
-	$dialog->get_widget('from_drawing_button')
-	    ->signal_connect(clicked => \&from_drawing, [$self, $gui]);
-	$dialog->get_widget('copy_selected_button')
-	    ->signal_connect(clicked => \&copy_selected_features, [$self, $gui]);
-	$dialog->get_widget('zoom_to_button')
-	    ->signal_connect(clicked => \&zoom_to_selected_features, [$self, $gui]);
-	$dialog->get_widget('close_features_button')
-	    ->signal_connect(clicked => \&close_features_dialog, [$self, $gui]);
-
-	$dialog->get_widget('delete_feature_button')
-	    ->signal_connect(clicked => \&delete_selected_features, [$self, $gui]);
-
-	$dialog->get_widget('copy_to_drawing_button')
-	    ->signal_connect(clicked => \&copy_to_drawing, [$self, $gui]);
-	$dialog->get_widget('copy_from_drawing_button')
-	    ->signal_connect(clicked => \&copy_from_drawing, [$self, $gui]);
-
-    } elsif (!$dialog->get_widget('features_dialog')->get('visible')) {
-	$dialog->get_widget('features_dialog')
-	    ->move(@{$self->{features_dialog_position}}) if $self->{features_dialog_position};
     }
-    $dialog->get_widget('features_dialog')->set_title("Features of ".$self->name);
 
     $dialog->get_widget('delete_feature_button')->set_sensitive($self->{update});
     $dialog->get_widget('from_drawing_button')->set_sensitive($self->{update});
@@ -125,9 +108,7 @@ sub open {
     }
     
     fill_features_table(undef, [$self, $gui]);
-    
-    $dialog->get_widget('features_dialog')->show_all;
-    $dialog->get_widget('features_dialog')->present;
+
 }
 
 sub feature_changed {

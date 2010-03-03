@@ -14,132 +14,130 @@ sub open {
     my($gui) = @_;
     my $self = {};
     $self->{gui} = $gui;
-    my $d = $self->{open_dialog} = $gui->get_dialog('open_vector_dialog');
-    croak "open_vector_dialog for Geo::Vector::Layer does not exist" unless $d;
-    $d->get_widget('open_vector_dialog')->set_title("Open a vector layer");
-    $d->get_widget('open_vector_dialog')->signal_connect(delete_event => \&cancel_open_vector, $self);
 
-    my $model = Gtk2::ListStore->new('Glib::String');
-    for my $driver (Geo::OGR::Drivers()) {
-	my @t = $driver->DataSourceTemplate;
-	next if $t[0] eq '<filename>';
-	my $n = $driver->FormatName;
-	$model->set ($model->append, 0, $n);
-    }
-    my $combo = $d->get_widget('open_vector_driver_combobox');
-    $combo->set_model($model);
-    my $renderer = Gtk2::CellRendererText->new;
-    $combo->pack_start ($renderer, TRUE);
-    $combo->add_attribute ($renderer, text => 0);
-    $combo->set_active(0);
-
-    $model = Gtk2::ListStore->new('Glib::String');
-    $model->set ($model->append, 0, 'auto');
-    for my $driver (Geo::OGR::Drivers()) {
-	my $n = $driver->GetName;
-	$model->set ($model->append, 0, $n);
-    }
-    $combo = $d->get_widget('filesystem_driver_combobox');
-    $combo->set_model($model);
-    $renderer = Gtk2::CellRendererText->new;
-    $combo->pack_start ($renderer, TRUE);
-    $combo->add_attribute ($renderer, text => 0);
-    $combo->set_active(0);
-
-    $d->get_widget('open_vector_datasource_combobox')
-	->signal_connect(changed => sub { empty_layer_data($_[1]) }, $self);
-
-    $d->get_widget('open_vector_build_connection_button')
-	->signal_connect(clicked => \&build_data_source, $self);
-
-    fill_named_data_sources_combobox($self);
+    # bootstrap:
+    my($dialog, $boot) = Gtk2::Ex::Geo::Layer::bootstrap_dialog
+	($self, $gui, 'open_dialog', "Open vector layer",
+	 {
+	     open_dialog => [delete_event => \&cancel_open_vector, $self],
+	     open_vector_delete_datasource_button => [clicked => \&delete_data_source, $self],
+	     open_vector_connect_datasource_button => [clicked => \&connect_data_source, $self],
+	     open_vector_remove_button => [clicked => \&remove_layer, $self],
+	     open_vector_schema_button => [clicked => \&show_schema, $self],
+	     open_vector_cancel_button => [clicked => \&cancel_open_vector, $self],
+	     open_vector_ok_button => [clicked => \&open_vector, $self],
+	 });
     
-    $d->get_widget('open_vector_delete_datasource_button')
-	->signal_connect(clicked => \&delete_data_source, $self);
-    $d->get_widget('open_vector_connect_datasource_button')
-	->signal_connect(clicked => \&connect_data_source, $self);
-    
-    my $treeview = $d->get_widget('open_vector_directory_treeview');
-    $treeview->set_model(Gtk2::TreeStore->new('Glib::String'));
-    my $cell = Gtk2::CellRendererText->new;
-    my $col = Gtk2::TreeViewColumn->new_with_attributes('', $cell, markup => 0);
-    $treeview->append_column($col);
-    $treeview->signal_connect(
-	button_press_event => sub 
-	{
-	    my($treeview, $event, $self) = @_;
-	    select_directory($self, $treeview) if $event->type =~ /^2button/;
-	    return 0;
-	}, $self);
-
-    $treeview->signal_connect(
-	key_press_event => sub
-	{
-	    my($treeview, $event, $self) = @_;
-	    select_directory($self, $treeview) if $event->keyval == $Gtk2::Gdk::Keysyms{Return};
-	    return 0;
-	}, $self);
-    
-    $treeview = $d->get_widget('open_vector_layer_treeview');
-    $treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
-    $treeview->get_selection->set_mode('multiple');
-    my $i = 0;
-    for my $column ('layer', 'geometry') {
-	my $cell = Gtk2::CellRendererText->new;
-	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
-	$treeview->append_column($col);
-    }
-    $treeview->signal_connect(cursor_changed => \&on_layer_treeview_cursor_changed, $self);
-    
-    $treeview = $d->get_widget('open_vector_property_treeview');
-    $treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
-    $i = 0;
-    foreach my $column ('property', 'value') {
-	my $cell = Gtk2::CellRendererText->new;
-	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
-	$treeview->append_column($col);
-    }
-    
-    $treeview = $d->get_widget('open_vector_schema_treeview');
-    $treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
-    $i = 0;
-    foreach my $column ('field', 'type') {
-	my $cell = Gtk2::CellRendererText->new;
-	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
-	$treeview->append_column($col);
-    }
-    
-    $self->{directory_toolbar} = [];
-
-    my $entry = $d->get_widget('open_vector_SQL_entry');
-    $entry->signal_connect(key_press_event => sub {
-	my($entry, $event, $history) = @_;
-	my $key = $event->keyval;
-	if ($key == $Gtk2::Gdk::Keysyms{Up}) {
-	    $entry->set_text($history->arrow_up);
-	    return 1;
-	} elsif ($key == $Gtk2::Gdk::Keysyms{Down}) {
-	    $entry->set_text($history->arrow_down);
-	    return 1;
+    if ($boot) {
+	my $model = Gtk2::ListStore->new('Glib::String');
+	for my $driver (Geo::OGR::Drivers()) {
+	    my @t = $driver->DataSourceTemplate;
+	    next if $t[0] eq '<filename>';
+	    my $n = $driver->FormatName;
+	    $model->set ($model->append, 0, $n);
 	}
-			   }, $self->{gui}{history});
-    $entry->signal_connect(changed => \&on_SQL_entry_changed, $self);
+	my $combo = $dialog->get_widget('open_vector_driver_combobox');
+	$combo->set_model($model);
+	my $renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start ($renderer, TRUE);
+	$combo->add_attribute ($renderer, text => 0);
+	$combo->set_active(0);
+	
+	$model = Gtk2::ListStore->new('Glib::String');
+	$model->set ($model->append, 0, 'auto');
+	for my $driver (Geo::OGR::Drivers()) {
+	    my $n = $driver->GetName;
+	    $model->set ($model->append, 0, $n);
+	}
+	$combo = $dialog->get_widget('filesystem_driver_combobox');
+	$combo->set_model($model);
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start ($renderer, TRUE);
+	$combo->add_attribute ($renderer, text => 0);
+	$combo->set_active(0);
+	
+	$dialog->get_widget('open_vector_datasource_combobox')
+	    ->signal_connect(changed => sub { empty_layer_data($_[1]) }, $self);
+	
+	$dialog->get_widget('open_vector_build_connection_button')
+	    ->signal_connect(clicked => \&build_data_source, $self);
+	
+	fill_named_data_sources_combobox($self);
     
-    $d->get_widget('open_vector_remove_button')->signal_connect(clicked => \&remove_layer, $self);
-    $d->get_widget('open_vector_schema_button')->signal_connect(clicked => \&show_schema, $self);
-    $d->get_widget('open_vector_cancel_button')->signal_connect(clicked => \&cancel_open_vector, $self);
-    $d->get_widget('open_vector_ok_button')->signal_connect(clicked => \&open_vector, $self);
+	my $treeview = $dialog->get_widget('open_vector_directory_treeview');
+	$treeview->set_model(Gtk2::TreeStore->new('Glib::String'));
+	my $cell = Gtk2::CellRendererText->new;
+	my $col = Gtk2::TreeViewColumn->new_with_attributes('', $cell, markup => 0);
+	$treeview->append_column($col);
+	$treeview->signal_connect(
+	    button_press_event => sub 
+	    {
+		my($treeview, $event, $self) = @_;
+		select_directory($self, $treeview) if $event->type =~ /^2button/;
+		return 0;
+	    }, $self);
+	
+	$treeview->signal_connect(
+	    key_press_event => sub
+	    {
+		my($treeview, $event, $self) = @_;
+		select_directory($self, $treeview) if $event->keyval == $Gtk2::Gdk::Keysyms{Return};
+		return 0;
+	    }, $self);
+	
+	$treeview = $dialog->get_widget('open_vector_layer_treeview');
+	$treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
+	$treeview->get_selection->set_mode('multiple');
+	my $i = 0;
+	for my $column ('layer', 'geometry') {
+	    my $cell = Gtk2::CellRendererText->new;
+	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	    $treeview->append_column($col);
+	}
+	$treeview->signal_connect(cursor_changed => \&on_layer_treeview_cursor_changed, $self);
+	
+	$treeview = $dialog->get_widget('open_vector_property_treeview');
+	$treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
+	$i = 0;
+	foreach my $column ('property', 'value') {
+	    my $cell = Gtk2::CellRendererText->new;
+	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	    $treeview->append_column($col);
+	}
+	
+	$treeview = $dialog->get_widget('open_vector_schema_treeview');
+	$treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
+	$i = 0;
+	foreach my $column ('field', 'type') {
+	    my $cell = Gtk2::CellRendererText->new;
+	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	    $treeview->append_column($col);
+	}
+	
+	$self->{directory_toolbar} = [];
 
+	my $entry = $dialog->get_widget('open_vector_SQL_entry');
+	$entry->signal_connect(key_press_event => sub {
+	    my($entry, $event, $history) = @_;
+	    my $key = $event->keyval;
+	    if ($key == $Gtk2::Gdk::Keysyms{Up}) {
+		$entry->set_text($history->arrow_up);
+		return 1;
+	    } elsif ($key == $Gtk2::Gdk::Keysyms{Down}) {
+		$entry->set_text($history->arrow_down);
+		return 1;
+	    }
+			       }, $self->{gui}{history});
+	$entry->signal_connect(changed => \&on_SQL_entry_changed, $self);
+    }
+    
     $self->{path} = $gui->{folder} if $gui->{folder};
     $self->{path} = File::Spec->rel2abs('.') unless $self->{path};
 
     fill_directory_treeview($self);
     fill_layer_treeview($self);
 
-    $d->get_widget('open_vector_update_checkbutton')->set_active(0);
-
-    $d->get_widget('open_vector_dialog')->show_all;
-    $d->get_widget('open_vector_dialog')->present;
+    $dialog->get_widget('open_vector_update_checkbutton')->set_active(0);
 
 }
 
@@ -248,14 +246,14 @@ sub open_vector {
     $self->{gui}{tree_view}->set_cursor(Gtk2::TreePath->new(0));
     $self->{gui}{overlay}->render;
     delete $self->{directory_toolbar};
-    $dialog->get_widget('open_vector_dialog')->destroy;
+    $dialog->get_widget('open_dialog')->destroy;
 }
 
 ##@ignore
 sub cancel_open_vector {
     my $self = pop;
     delete $self->{directory_toolbar};
-    $self->{open_dialog}->get_widget('open_vector_dialog')->destroy;
+    $self->{open_dialog}->get_widget('open_dialog')->destroy;
 }
 
 ##@ignore
@@ -513,7 +511,7 @@ sub build_data_source {
     }
 
     my $dialog = Gtk2::Dialog->new('Build a non-file data source', 
-				   $self->{open_dialog}->get_widget('open_vector_dialog'),
+				   $self->{open_dialog}->get_widget('open_dialog'),
 				   'destroy-with-parent',
 				   'gtk-cancel' => 'reject',
 				   'gtk-ok' => 'ok');

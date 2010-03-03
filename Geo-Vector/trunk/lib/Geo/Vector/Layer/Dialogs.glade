@@ -135,7 +135,7 @@
       </widget>
     </child>
   </widget>
-  <widget class="GtkDialog" id="open_vector_dialog">
+  <widget class="GtkDialog" id="open_dialog">
     <property name="border_width">5</property>
     <property name="default_width">740</property>
     <property name="default_height">530</property>
@@ -577,7 +577,7 @@
       </widget>
     </child>
   </widget>
-  <widget class="GtkDialog" id="copy_vector_dialog">
+  <widget class="GtkDialog" id="copy_dialog">
     <property name="border_width">5</property>
     <property name="type_hint">normal</property>
     <property name="has_separator">False</property>
@@ -2062,7 +2062,7 @@
                 <property name="visible">True</property>
                 <child>
                   <widget class="GtkCheckButton" id="properties_border_checkbutton">
-                    <property name="label" translatable="yes">draw border on polygons with color:</property>
+                    <property name="label" translatable="yes">draw border of polygons with color:</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>

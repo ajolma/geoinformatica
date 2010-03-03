@@ -91,7 +91,7 @@ sub registration {
 # @brief Upgrade (strictly) Geo::Vector objects to Geo::Vector::Layers
 sub upgrade {
     my($object) = @_;
-    if (ref($object) eq 'Geo::Vector') {
+    if (isa($object, 'Geo::Vector') and !isa($object, 'Geo::Vector::Layer')) {
 	bless($object, 'Geo::Vector::Layer');
 	$object->defaults();
 	return 1;
@@ -247,10 +247,10 @@ sub menu_items {
 sub open_features_dialog {
     my($self) = @_;
     if ( $self->{features} ) {
-	Geo::Vector::Layer::Dialogs::FeatureCollection::open(@_);
+	$self->{features_dialog} = Geo::Vector::Layer::Dialogs::FeatureCollection::open(@_);
     }
     elsif ( $self->{OGR}->{Layer} ) {
-	Geo::Vector::Layer::Dialogs::Features::open(@_);
+	$self->{features_dialog} = Geo::Vector::Layer::Dialogs::Features::open(@_);
     }
 }
 sub open_vertices_dialog {

@@ -778,6 +778,20 @@ sub schema {
     return bless $s, 'Gtk2::Ex::Geo::Schema';
 }
 
+## @method Geo::OGR::FeatureDefn defn()
+#
+# @brief Create a FeatureDefn object, which is needed to create
+# feature objects for this layer.
+#
+# @return a Geo::OGR::FeatureDefn object.
+sub defn {
+    my $self = shift;
+    my $schema = $self->schema;
+    my $defn = Geo::OGR::FeatureDefn->new();
+    $defn->Schema(%$schema);
+    return $defn;
+}
+
 ## @ignore
 sub feature_attribute {
     my($f, $a) = @_;
@@ -902,11 +916,9 @@ sub value_range {
 # @code $vector->feature($feature);
 # @endcode
 #
-# @param[in] fid The FID of the feature (or the feature, if adding)
-# @param[in] feature Feature to add (then no other parameters) or feature to update.
-# @return Feature as a hashref, whose keys are field names and
-# geometry and values are field values and a Geo::OGC::Geometry
-# object.
+# @param[in] fid The FID of the feature if updating
+# @param[in] feature Geo::OGR::Feature object to add or to update.
+# @return an Geo::OGR::Feature object
 # @exception The fid is higher than the feature count.
 sub feature {
     my ( $self, $fid, $feature ) = @_;
@@ -914,16 +926,14 @@ sub feature {
 	
 	# update at fid
 	if ( $self->{features} ) {
-	    $feature = $self->make_feature($feature);
 	    $self->{features}->[$fid] = $feature;
 	} else {
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
 	}
-    } elsif ( ref($fid) ) {
+    } elsif (ref $fid) {
 
 	# add
-	my $feature = $self->make_feature($fid);
 	if ($self->{features}) {
 	    push @{$self->{features}}, $fid;
 	} else {
@@ -933,23 +943,11 @@ sub feature {
 
 	# retrieve
 	if ( $self->{features} ) {
-	    $feature = $self->{features}->[$fid];
-	    croak "feature: index out of bounds: $fid" unless $feature;
+	    return if ($fid < 0 or $fid > $#$self->{features});
+	    return $self->{features}->[$fid];	    
 	} else {
-	    $feature = $self->{OGR}->{Layer}->GetFeature($fid);
+	    return $self->{OGR}->{Layer}->GetFeature($fid);
 	}
-
-	#my $defn = $feature->GetDefnRef;
-	#my $f = {};
-	#my $n = $defn->GetFieldCount();
-	#for my $i ( 0 .. $n - 1 ) {
-	#    my $fd   = $defn->GetFieldDefn($i);
-	#    my $name = $fd->GetName;
-	#    $f->{$name} = $feature->GetField($i);
-	#}
-	#$f->{geometry} = Geo::OGC::Geometry->new(Text => $feature->GetGeometryRef->ExportToWkt);
-
-	return $feature;
     }
 }
 
@@ -1008,7 +1006,7 @@ sub geometry {
 # and values are field values, or, for geometry, well-known text or an
 # object which responds to AsText method by returning well-known text.
 # @return Geo::OGR::Feature object.
-# @note If the parameter is already a reference to an Geo::OGR::Feature nothing
+# @note If the parameter is already a Geo::OGR::Feature object nothing
 # is done to the feature.
 sub make_feature {
     my $self = shift;
@@ -1073,13 +1071,7 @@ sub make_feature {
 ## @method void add_feature(%feature)
 #
 # @brief Adds a feature to the layer.
-# @param[in] feature a hash whose keys are field names and 'geometry'
-# and values are field values and a Geo::OGC::Geometry object.
-
-## @method void add_feature(Geo::OGR::Feature feature)
-#
-# @brief Adds a feature to the layer.
-# @param feature A Geo::OGR::Feature object.
+# @param feature As in make_feature.
 sub add_feature {
     my $self = shift;
     my $feature = $self->make_feature(@_);
@@ -1087,7 +1079,6 @@ sub add_feature {
 	push @{$self->{features}}, $feature;
     } else {
 	$self->{OGR}->{Layer}->CreateFeature($feature);
-	$self->{OGR}->{Layer}->SyncToDisk;
     }
 }
 

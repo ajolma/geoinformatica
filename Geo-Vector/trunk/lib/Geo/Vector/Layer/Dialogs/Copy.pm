@@ -15,31 +15,28 @@ use Geo::Raster::Layer qw /:all/;
 sub open {
     my($self, $gui) = @_;
 
-    my $dialog = $self->{copy_dialog};
-    unless ($dialog) {
-	$self->{copy_dialog} = $dialog = $gui->get_dialog('copy_vector_dialog');
-	croak "copy_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('copy_vector_dialog')
-	    ->signal_connect( delete_event => \&cancel_copy, [$self, $gui]);
-
+    # bootstrap:
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'copy_dialog', "Copy from ".$self->name,
+	 {
+	     copy_dialog => [delete_event => \&cancel_copy, [$self, $gui]],
+	     copy_cancel_button => [clicked => \&cancel_copy, [$self, $gui]],
+	     copy_ok_button => [clicked => \&do_copy, [$self, $gui, 1]],
+	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
+	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
+	     copy_add_button => [clicked=>\&add_to_mappings, $self],
+	     copy_delete_button => [clicked=>\&delete_from_mappings, $self],
+	 },
+	);
+    
+    if ($boot) {
 	$dialog->get_widget('copy_datasource_button')
 	    ->signal_connect( clicked=> sub {
 		my(undef, $self) = @_;
 		my $entry = $self->{copy_dialog}->get_widget('copy_datasource_entry');
 		file_chooser('Select folder', 'select_folder', $entry);
 			      }, $self);
-
-	$dialog->get_widget('copy_cancel_button')
-	    ->signal_connect(clicked => \&cancel_copy, [$self, $gui]);
-	$dialog->get_widget('copy_ok_button')
-	    ->signal_connect(clicked => \&do_copy, [$self, $gui, 1]);
-	#$entry->signal_connect(changed => \&copy_data_source_changed, [$self, $gui]);
-
-	$dialog->get_widget('from_EPSG_entry')
-	    ->signal_connect(changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]);
-	$dialog->get_widget('to_EPSG_entry')
-	    ->signal_connect(changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]);
-
+	
 	my $combo = $dialog->get_widget('copy_driver_combobox');
 	my $renderer = Gtk2::CellRendererText->new;
 	$combo->pack_start ($renderer, TRUE);
@@ -54,18 +51,7 @@ sub open {
 	$combo = $dialog->get_widget('copy_name_comboboxentry');
 	$combo->set_text_column(0);
 	$combo->signal_connect(changed => \&copy_into_changed, [$self, $gui]);
-
-	$dialog->get_widget('copy_add_button')
-	    ->signal_connect( clicked=>\&add_to_mappings, $self);
-	$dialog->get_widget('copy_delete_button')
-	    ->signal_connect( clicked=>\&delete_from_mappings, $self);
-	
-    } elsif (!$dialog->get_widget('copy_vector_dialog')->get('visible')) {
-	$dialog->get_widget('copy_vector_dialog')
-	    ->move(@{$self->{copy_dialog_position}}) if $self->{copy_dialog_position};
     }
-
-    $dialog->get_widget('copy_vector_dialog')->set_title("Copy features from layer ".$self->name);
 
     my $model = Gtk2::ListStore->new('Glib::String');
     my $i = 1;
@@ -108,9 +94,6 @@ sub open {
     $dialog->get_widget('copy_count_label')->set_label($#$s+1);
 
     copy_into_changed(undef, [$self, $gui]);
-
-    $dialog->get_widget('copy_vector_dialog')->show_all;
-    $dialog->get_widget('copy_vector_dialog')->present;
 }
 
 ## @ignore
