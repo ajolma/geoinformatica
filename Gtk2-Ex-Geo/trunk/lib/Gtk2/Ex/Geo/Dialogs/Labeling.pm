@@ -91,8 +91,7 @@ sub apply_labels {
 
     $self->labeling($labeling);
 
-    $self->{labels_dialog_position} = [$dialog->get_widget('labels_dialog')->get_position];
-    $dialog->get_widget('labels_dialog')->hide() if $close;
+    $self->hide_dialog('labels_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
 }
@@ -106,10 +105,7 @@ sub cancel_labels {
     }
 
     $self->labeling($self->{labeling_backup});
-
-    my $dialog = $self->{labels_dialog}->get_widget('labels_dialog');
-    $self->{labels_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('labels_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;

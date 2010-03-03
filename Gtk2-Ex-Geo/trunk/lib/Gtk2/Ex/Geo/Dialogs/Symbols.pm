@@ -67,8 +67,7 @@ sub apply_symbols {
     my $size = $size_spin->get_value();
     $self->symbol_size($size);
 
-    $self->{symbols_dialog_position} = [$dialog->get_widget('symbols_dialog')->get_position];
-    $dialog->get_widget('symbols_dialog')->hide() if $close;
+    $self->hide_dialog('symbols_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
 }
@@ -86,9 +85,7 @@ sub cancel_symbols {
     $self->symbol_scale(@{$self->{backup}->{symbol_scale}});
     $self->symbol_size($self->{backup}->{symbol_size});
 
-    my $dialog = $self->{symbols_dialog}->get_widget('symbols_dialog');
-    $self->{symbols_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('symbols_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;

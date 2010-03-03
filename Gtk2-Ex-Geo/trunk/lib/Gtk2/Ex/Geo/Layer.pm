@@ -323,7 +323,7 @@ sub inspect_data {
 # @param gui A Gtk2::Ex::Glue object (contains predefined dialogs).
 sub open_properties_dialog {
     my($self, $gui) = @_;
-    $gui->message("It looks like the author of the layer class ".ref($self)."was\n".
+    $gui->message("It looks like the author of the layer class ".ref($self)." was\n".
 		  "negligent enough to leave the properties dialog out.");
 }
 
@@ -939,8 +939,15 @@ sub bootstrap_dialog {
 	$self->{$dialog}->get_widget($dialog)->show_all;
     }
     $self->{$dialog}->get_widget($dialog)->set_title($title);
+    $self->{$dialog}->get_widget($dialog)->show_all;
     $self->{$dialog}->get_widget($dialog)->present;
     return wantarray ? ($self->{$dialog}, $boot) : $self->{$dialog};
+}
+
+sub hide_dialog {
+    my($self, $dialog) = @_;
+    $self->{$dialog.'_position'} = [$self->{$dialog}->get_widget($dialog)->get_position];
+    $self->{$dialog}->get_widget($dialog)->hide();
 }
 
 ## @method $dialog_visible($dialog)

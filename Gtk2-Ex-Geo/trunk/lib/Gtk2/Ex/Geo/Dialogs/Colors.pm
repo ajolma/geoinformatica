@@ -131,9 +131,7 @@ sub apply_colors {
 	put_scale_in_treeview($self, $dialog->get_widget('colors_treeview'), $palette_type);
     }
 
-    $dialog = $dialog->get_widget('colors_dialog');
-    $self->{colors_dialog_position} = [$dialog->get_position];
-    $dialog->hide() if $close;
+    $self->hide_dialog('colors_dialog') if $close;
     $gui->{overlay}->render;
 }
 
@@ -154,9 +152,7 @@ sub cancel_colors {
     $self->hue_range(@{$self->{backup}->{hue_range}});
     $self->hue($self->{backup}->{hue});
 
-    my $dialog = $self->{colors_dialog}->get_widget('colors_dialog');
-    $self->{colors_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('colors_dialog');
     $gui->{overlay}->render;
     1;
 }
