@@ -542,27 +542,30 @@ sub render_geometry {
     }
 }
 
-## @method update_image()
+## @method update_image($annotations, $user_param)
+# @param annotations A subroutine for user annotations. Called like
+# this: $annotations->($overlay, $pixmap, $gc, $user_param).
+# @param user_param User parameter for the annotations.
 # @brief Updates the image on the screen to show the changes in pixmap.
 sub update_image {
-    my($self) = @_;
+    my($self, $annotations, $user_param) = @_;
     $self->{image}->set_from_pixbuf(undef);
     $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
+    my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
     $self->signal_emit('pixmap_ready');
     if ($self->{selection}) {
-	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{selection_color}}));
 	my $style = $self->{selection_style};
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{selection});
     }
     if ($self->{drawing}) {
-	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
 	my $style = 'GDK_LINE_SOLID';
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
     }
+    $annotations->($self, $self->{pixmap}, $gc, $user_param) if $annotations;
     $self->{image}->set_from_pixmap($self->{pixmap}, undef);
 }
 
