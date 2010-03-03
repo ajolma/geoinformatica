@@ -135,7 +135,7 @@ sub registration {
 
 sub upgrade {
     my($object) = @_;
-    if (ref($object) eq 'Geo::Raster') {
+    if (isa($object, 'Geo::Raster') and !isa($object, 'Geo::Raster::Layer')) {
 	bless($object, 'Geo::Raster::Layer');
 	$object->defaults();
 	return 1;

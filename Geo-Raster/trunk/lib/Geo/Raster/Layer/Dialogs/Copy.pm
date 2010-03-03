@@ -14,33 +14,31 @@ sub open {
     my($self, $gui) = @_;
 
     # bootstrap:
-    my $dialog = $self->{copy_dialog};
-    unless ($dialog) {
-	$self->{copy_dialog} = $dialog = $gui->get_dialog('copy_dialog');
-	croak "copy_dialog for Geo::Raster does not exist" unless $dialog;
-
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'copy_dialog', "Copy ".$self->name,
+	 {
+	     copy_dialog => [delete_event => \&cancel_copy, [$self, $gui]],
+	     copy_folder_button => [clicked => \&copy_select_folder, $self],
+	     copy_cancel_button => [clicked => \&cancel_copy, [$self, $gui]],
+	     copy_ok_button => [clicked => \&do_copy, [$self, $gui, 1]],
+	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
+	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
+	 },
+	);
+    
+    if ($boot) {
 	my $combo = $dialog->get_widget('copy_driver_combobox');
 	my $renderer = Gtk2::CellRendererText->new;
 	$combo->pack_start ($renderer, TRUE);
 	$combo->add_attribute ($renderer, text => 0);
-	$combo->signal_connect(changed=>\&copy_driver_selected, [$self, $gui]);
-
-	$dialog->get_widget('copy_folder_button')
-	    ->signal_connect(clicked => \&copy_select_folder, $self);
-	
+	$combo->signal_connect(changed=>\&copy_driver_selected, [$self, $gui]);    
+    
 	$combo = $dialog->get_widget('copy_region_combobox');
 	$renderer = Gtk2::CellRendererText->new;
 	$combo->pack_start ($renderer, TRUE);
 	$combo->add_attribute ($renderer, text => 0);
 	$combo->signal_connect(changed=>\&copy_region_selected, [$self, $gui]);
-
-	$dialog->get_widget('copy_dialog')
-	    ->signal_connect(delete_event => \&cancel_copy, [$self, $gui]);
-	$dialog->get_widget('copy_cancel_button')
-	    ->signal_connect(clicked => \&cancel_copy, [$self, $gui]);
-	$dialog->get_widget('copy_ok_button')
-	    ->signal_connect(clicked => \&do_copy, [$self, $gui, 1]);
-
+    
 	for ('minx','miny','maxx','maxy','cellsize') {
 	    $dialog->get_widget('copy_'.$_.'_entry')->signal_connect(
 		changed => 
@@ -51,16 +49,8 @@ sub open {
 		    copy_info($self);
 		}, $self);
 	}
-
-	$dialog->get_widget('from_EPSG_entry')
-	    ->signal_connect(changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]);
-	$dialog->get_widget('to_EPSG_entry')
-	    ->signal_connect(changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]);
-
-    } elsif (!$dialog->get_widget('copy_dialog')->get('visible')) {
-	$dialog->get_widget('copy_dialog')->move(@{$self->{copy_dialog_position}});
     }
-    $dialog->get_widget('copy_dialog')->set_title("Copy ".$self->name);
+
     $dialog->get_widget('copy_progressbar')->set_fraction(0);
 	
     my $model = Gtk2::ListStore->new('Glib::String');

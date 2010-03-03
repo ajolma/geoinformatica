@@ -1,7 +1,7 @@
 use strict;
 use Geo::Raster;
 use Gtk2::Ex::Geo;
-use Gtk2::TestHelper tests => 16;
+use Gtk2::TestHelper tests => 15;
 eval {
     require IPC::Gnuplot;
 };
@@ -38,7 +38,7 @@ ok(1);
 eval {
     $layer->open_features_dialog($gis);
 };
-ok($@ =~ /^no features/);
+#ok($@ =~ /^no features/);
 
 $layer = Geo::Raster->new(filename => 't/data/test.png');
 $gis->add_layer($layer, 'test');
