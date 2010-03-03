@@ -823,7 +823,7 @@ sub add_layer {
 	last if $upgrade->($layer);
     }
 
-    croak "can add only Gtk2::Ex::Geo::Layer objects" unless isa($layer, 'Gtk2::Ex::Geo::Layer');
+    return unless isa($layer, 'Gtk2::Ex::Geo::Layer');
 
     my $i = $self->{overlay}->index_of_layer($name) if defined $name;
     croak "layer with name $name already exists" if defined $i;
@@ -1021,9 +1021,7 @@ sub eval_entry {
 	    if ($self->{overlay}->get_layer_by_name($g[$i])) {
 		$_gd[$i]->value_range() if isa($_gd[$i], 'Geo::Raster');
 	    } else {
-		eval "\$self->add_layer(\$$g[$i],'$g[$i]',1) if ".
-		    "isa(\$$g[$i], 'Gtk2::Ex::Geo::Layer') or isa(\$$g[$i], 'Geo::Raster') or isa(\$$g[$i], 'Geo::Vector');"
-		    if $g[$i] and $g[$i] ne 'self';
+		eval "\$self->add_layer(\$$g[$i],'$g[$i]',1);" if $g[$i] and $g[$i] ne 'self';
 	    }
 	}
 	undef @_gd;

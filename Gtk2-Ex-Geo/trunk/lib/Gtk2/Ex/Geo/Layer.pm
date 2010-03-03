@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use Carp;
 use FileHandle;
-use UNIVERSAL;
+use UNIVERSAL qw/isa/;
 use Glib qw /TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs;
 use Gtk2::Ex::Geo::Dialogs::Symbols;
@@ -245,11 +245,14 @@ sub DESTROY {
 }
 
 ##@ignore
-# this should not be necessary
+# called when the layer is removed from the GUI
+# destroy all (open) dialogs
 sub close {
     my $self = shift;
     for (keys %$self) {
-	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
+	if (isa($self->{$_}, "Gtk2::GladeXML")) {
+	    $self->{$_}->get_widget($_)->destroy;
+	}
 	delete $self->{$_};
     }
 }
@@ -320,7 +323,7 @@ sub inspect_data {
 # @param gui A Gtk2::Ex::Glue object (contains predefined dialogs).
 sub open_properties_dialog {
     my($self, $gui) = @_;
-    $gui->message("It looks like the author of this layer class was\n".
+    $gui->message("It looks like the author of the layer class ".ref($self)."was\n".
 		  "negligent enough to leave the properties dialog out.");
 }
 
@@ -330,7 +333,8 @@ sub open_properties_dialog {
 # @param gui A Gtk2::Ex::Glue object (contains predefined dialogs).
 sub open_features_dialog {
     my($self, $gui) = @_;
-    croak("no features dialog defined for class ".ref($self));
+    $gui->message("It looks like the author of the layer class ".ref($self)."was\n".
+		  "negligent enough to leave the features dialog out.");
 }
 
 ## @cmethod hashref menu_items($items)
@@ -922,19 +926,21 @@ sub render {
 # @return the GladeXML object of the dialog.
 sub bootstrap_dialog {
     my($self, $gui, $dialog, $title, $connects) = @_;
+    my $boot = 0;
     unless ($self->{$dialog}) {
 	$self->{$dialog} = $gui->get_dialog($dialog);
 	croak "$dialog does not exist" unless $self->{$dialog};
 	for (keys %$connects) {
 	    $self->{$dialog}->get_widget($_)->signal_connect(@{$connects->{$_}});
 	}
+	$boot = 1;
     } elsif (!$self->{$dialog}->get_widget($dialog)->get('visible')) {
 	$self->{$dialog}->get_widget($dialog)->move(@{$self->{$dialog.'_position'}});
 	$self->{$dialog}->get_widget($dialog)->show_all;
     }
     $self->{$dialog}->get_widget($dialog)->set_title($title);
     $self->{$dialog}->get_widget($dialog)->present;
-    return $self->{$dialog};
+    return wantarray ? ($self->{$dialog}, $boot) : $self->{$dialog};
 }
 
 ## @method $dialog_visible($dialog)
