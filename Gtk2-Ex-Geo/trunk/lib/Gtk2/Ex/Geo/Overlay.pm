@@ -94,7 +94,10 @@ sub INIT_INSTANCE {
     $self->{step} = 8;
 
     $self->{offset} = [0, 0];
-    @{$self->{bg_color}} = (255, 255, 255, 255);
+    $self->{bg_color} = [255, 255, 255, 255];
+    $self->{selection_color} = [65535, 65535, 0];
+    $self->{selection_style} = 'GDK_LINE_SOLID';
+    $self->{drawing_color} = [0, 65535, 0];
 }
 
 ## @method
@@ -546,15 +549,15 @@ sub update_image {
     $self->signal_emit('pixmap_ready');
     if ($self->{selection}) {
 	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
-	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535, 65535, 0));
-	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{selection_color}}));
+	my $style = $self->{selection_style};
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{selection});
     }
     if ($self->{drawing}) {
 	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
-	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(0, 65535, 0));
-	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
+	my $style = 'GDK_LINE_SOLID';
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
     }
@@ -959,8 +962,8 @@ sub motion_notify {
 	    $p->[1]{Y} = $wend[1];
 	}
 	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
-	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(0, 65535, 0));
-	my $style = 'GDK_LINE_SOLID'; # unless in collection each geom can have their own style
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
+	my $style = 'GDK_LINE_SOLID';
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
 
