@@ -214,9 +214,7 @@ sub do_copy {
     $gui->set_layer($new_layer);
     $gui->select_layer($name);
     $gui->{overlay}->zoom_to($new_layer);
-
-    $self->{copy_dialog_position} = [$dialog->get_widget('copy_dialog')->get_position];
-    $dialog->get_widget('copy_dialog')->hide() if $close;
+    $self->hide_dialog('copy_dialog') if $close;
     $gui->{overlay}->render;
 }
 
@@ -235,10 +233,7 @@ sub cancel_copy {
 	next unless ref CORE::eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    
-    my $dialog = $self->{copy_dialog}->get_widget('copy_dialog');
-    $self->{copy_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('copy_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;

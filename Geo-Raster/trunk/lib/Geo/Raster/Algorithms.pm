@@ -3,6 +3,7 @@
 package Geo::Raster;
 
 use strict;
+use Geo::Vector;
 
 ## @method Geo::Raster interpolate(%params)
 #

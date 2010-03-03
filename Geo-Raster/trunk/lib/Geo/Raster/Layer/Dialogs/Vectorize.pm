@@ -12,37 +12,27 @@ sub open {
     my($self, $gui) = @_;
 
     # bootstrap:
-    my $dialog = $self->{vectorize_dialog};
-    unless ($dialog) {
-	$self->{vectorize_dialog} = $dialog = $gui->get_dialog('vectorize_dialog');
-	croak "vectorize_dialog for Geo::Raster does not exist" unless $dialog;
-	$dialog->get_widget('vectorize_dialog')
-	    ->signal_connect(delete_event => \&cancel_vectorize, [$self, $gui]);
-	$dialog->get_widget('vectorize_datasource_button')->signal_connect
-	    (clicked=>\&select_directory, [$self, $dialog->get_widget('vectorize_datasource_entry')]);
-	$dialog->get_widget('vectorize_cancel_button')
-	    ->signal_connect(clicked => \&cancel_vectorize, [$self, $gui]);
-	$dialog->get_widget('vectorize_ok_button')
-	    ->signal_connect(clicked => \&apply_vectorize, [$self, $gui, 1]);
-    } elsif (!$dialog->get_widget('vectorize_dialog')->get('visible')) {
-	$dialog->get_widget('vectorize_dialog')->move(@{$self->{vectorize_dialog_position}});
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'vectorize_dialog', "Polygonize ".$self->name,
+	 {
+	     vectorize_dialog => [delete_event => \&cancel_vectorize, [$self, $gui]],
+	     vectorize_cancel_button => [clicked => \&cancel_vectorize, [$self, $gui]],
+	     vectorize_ok_button => [clicked => \&apply_vectorize, [$self, $gui, 1]],
+	 });
+    
+    if ($boot) {
+	$dialog->get_widget('vectorize_datasource_button')
+	    ->signal_connect(clicked => \&select_directory,
+			     [$dialog->get_widget('vectorize_datasource_entry')]);
+	my $combo = $dialog->get_widget('vectorize_driver_combobox');
+	my $model = $combo->get_model;
+	$model->clear;
+	$model->set($model->append, 0, "");
+	for my $driver (Geo::OGR::Drivers) {
+	    next unless $driver->TestCapability('CreateDataSource');
+	    $model->set($model->append, 0, $driver->GetName);
+	}
     }
-    $dialog->get_widget('vectorize_dialog')->set_title("Create a vector layer from ".$self->name);
-	
-    my $combo = $dialog->get_widget('vectorize_driver_combobox');
-    my $model = $combo->get_model;
-    $model->clear;
-    $model->set($model->append, 0, "");
-    for my $driver (Geo::OGR::Drivers) {
-	next unless $driver->TestCapability('CreateDataSource');
-	$model->set($model->append, 0, $driver->GetName);
-    }
-
-    $dialog->get_widget('vectorize_name_entry')->set_text('vector');
-    $dialog->get_widget('vectorize_datasource_entry')->set_text('.');
-
-    $dialog->get_widget('vectorize_dialog')->show_all;
-    $dialog->get_widget('vectorize_dialog')->present;
 }
 
 ##@ignore
@@ -65,9 +55,7 @@ sub apply_vectorize {
 	$gui->add_layer($v, $ret{layer}, 1);
 	$gui->{overlay}->render;
     }
-
-    $self->{vectorize_dialog_position} = [$dialog->get_widget('vectorize_dialog')->get_position];
-    $dialog->get_widget('vectorize_dialog')->hide() if $close;
+    $self->hide_dialog('vectorize_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
 }
@@ -80,10 +68,7 @@ sub cancel_vectorize {
 	($self, $gui) = @{$_};
     }
 
-    
-    my $dialog = $self->{vectorize_dialog}->get_widget('vectorize_dialog');
-    $self->{vectorize_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('vectorize_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;

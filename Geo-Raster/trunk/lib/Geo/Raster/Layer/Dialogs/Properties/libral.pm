@@ -13,24 +13,15 @@ sub open {
     my($self, $gui) = @_;
 
     # bootstrap:
-    my $dialog = $self->{libral_properties_dialog};
-    unless ($dialog) {
-	$self->{libral_properties_dialog} = $dialog = $gui->get_dialog('libral_properties_dialog');
-	croak "libral_properties_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('libral_properties_dialog')
-	    ->signal_connect(delete_event => \&cancel_libral_properties, [$self, $gui]);
-	$dialog->get_widget('libral_properties_apply_button')
-	    ->signal_connect(clicked => \&apply_libral_properties, [$self, $gui, 0]);
-	$dialog->get_widget('libral_properties_cancel_button')
-	    ->signal_connect(clicked => \&cancel_libral_properties, [$self, $gui]);
-	$dialog->get_widget('libral_properties_ok_button')
-	    ->signal_connect(clicked => \&apply_libral_properties, [$self, $gui, 1]);
-    } elsif (!$dialog->get_widget('libral_properties_dialog')->get('visible')) {
-	$dialog->get_widget('libral_properties_dialog')
-	    ->move(@{$self->{libral_properties_dialog_position}});
-    }
-    $dialog->get_widget('libral_properties_dialog')->set_title("Properties of ".$self->name);
-	
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'libral_properties_dialog', "Properties of ".$self->name,
+	 {
+	     libral_properties_dialog => [delete_event => \&cancel_libral_properties, [$self, $gui]],
+	     libral_properties_apply_button => [clicked => \&apply_libral_properties, [$self, $gui, 0]],
+	     libral_properties_cancel_button => [clicked => \&cancel_libral_properties, [$self, $gui]],
+	     libral_properties_ok_button => [clicked => \&apply_libral_properties, [$self, $gui, 1]],
+	 });
+
     $self->{backup}->{name} = $self->name;
     $self->{backup}->{alpha} = $self->alpha;
     $self->{backup}->{nodata_value} = $self->nodata_value;
@@ -58,9 +49,6 @@ sub open {
     @size = $self->value_range();
     my $text = defined $size[0] ? "@size" : "not available";
     $dialog->get_widget('libral_minmax_label')->set_text($text);
-    
-    $dialog->get_widget('libral_properties_dialog')->show_all;
-    $dialog->get_widget('libral_properties_dialog')->present;
 }
 
 ##@ignore
@@ -95,8 +83,7 @@ sub apply_libral_properties {
     };
     $gui->message("$@") if $@;
 
-    $self->{libral_properties_dialog_position} = [$dialog->get_widget('libral_properties_dialog')->get_position];
-    $dialog->get_widget('libral_properties_dialog')->hide() if $close;
+    $self->hide_dialog('libral_properties_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
 }
@@ -115,10 +102,7 @@ sub cancel_libral_properties {
 		  minY => $self->{backup}->{world}->[1],
 		  cell_size => $self->{backup}->{cell_size} );
     $self->nodata_value($self->{backup}->{nodata});
-    
-    my $dialog = $self->{libral_properties_dialog}->get_widget('libral_properties_dialog');
-    $self->{libral_properties_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    $self->hide_dialog('libral_properties_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;
