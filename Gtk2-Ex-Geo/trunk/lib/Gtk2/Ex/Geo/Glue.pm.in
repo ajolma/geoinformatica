@@ -564,103 +564,71 @@ sub layer_menu {
 
 	my $hide = $layer->visible() ? '_Hide' : '_Show';
 	
-	my %items = @layers ?
-	    ( '_Hide' => 
-	      {
-		  nr => 4,
-		  sub => sub {
-		      my($layers, $self) = @{$_[1]};
-		      for my $layer (@$layers) {
-			  $layer->visible(0);
-		      }
-		      $self->update;
-		      $self->{overlay}->render;
-		  }
+	my @items = @layers ?
+	    ( '_Hide' => sub {
+		my($layers, $self) = @{$_[1]};
+		for my $layer (@$layers) {
+		    $layer->visible(0);
+		}
+		$self->update;
+		$self->{overlay}->render;
 	      },
-	      '_Show' => 
-	      {
-		  nr => 4,
-		  sub => sub {
-		      my($layers, $self) = @{$_[1]};
-		      for my $layer (@$layers) {
-			  $layer->visible(1);
-		      }
-		      $self->update;
-		      $self->{overlay}->render;
+	      '_Show' => sub {
+		  my($layers, $self) = @{$_[1]};
+		  for my $layer (@$layers) {
+		      $layer->visible(1);
 		  }
+		  $self->update;
+		  $self->{overlay}->render;
 	      },
-	      '_Remove' =>
-	      {
-		  nr => 5,
-		  sub => sub {
-		      my($layers, $self) = @{$_[1]};
-		      for my $layer (@$layers) {
-			  $self->{model}->remove($layer->{_tree_index});
-			  $self->{overlay}->remove_layer_by_name($layer->name);
-		      }
-		      $self->{overlay}->render;
+	      '_Remove' => sub {
+		  my($layers, $self) = @{$_[1]};
+		  for my $layer (@$layers) {
+		      $self->{model}->remove($layer->{_tree_index});
+		      $self->{overlay}->remove_layer_by_name($layer->name);
 		  }
+		  $self->{overlay}->render;
 	      }
-	      ) 
+	    ) 
 	    :
 	    ( 
-	      '_Zoom to' => 
-	      {
-		  nr => 1,
-		  sub => sub {
-		      my($layer, $self) = @{$_[1]};
-		      $self->{overlay}->zoom_to($layer);
-		  }
+	      '_Zoom to' => sub {
+		  my($layer, $self) = @{$_[1]};
+		  $self->{overlay}->zoom_to($layer);
 	      },
-	      '_Up' =>
-	      {
-		  nr => 2,
-		  sub => sub {
-		      my($layer, $self) = @{$_[1]};
-		      $self->move_up();
-		  }
+	      '_Up' => sub {
+		  my($layer, $self) = @{$_[1]};
+		  $self->move_up();
 	      },
-	      '_Down' =>
-	      {
-		  nr => 3,
-		  sub => sub {
-		      my($layer, $self) = @{$_[1]};
-		      $self->move_down();
-		  }
+	      '_Down' => sub {
+		  my($layer, $self) = @{$_[1]};
+		  $self->move_down();
 	      },
-	      $hide => 
-	      {
-		  nr => 4,
-		  sub => sub {
-		      my($layer, $self) = @{$_[1]};
-		      $layer->visible(!$layer->visible());
-		      $self->update;
-		      $self->{overlay}->render;
-		  }
+	      $hide => sub {
+		  my($layer, $self) = @{$_[1]};
+		  $layer->visible(!$layer->visible());
+		  $self->update;
+		  $self->{overlay}->render;
 	      },
-	      '_Remove' =>
-	      {
-		  nr => 5,
-		  sub => sub {
-		      my($layer, $self) = @{$_[1]};
-		      $self->delete_selected(); 
-		  }
+	      '_Remove' => sub {
+		  my($layer, $self) = @{$_[1]};
+		  $self->delete_selected(); 
 	      }
-	      );
+	    );
 
 	# add items from the layer classes
-	$layer->menu_items(\%items) unless @layers;
-
+	$layer->menu_items(\@items) unless @layers;
+	
 	my $menu = Gtk2::Menu->new;
 	my $params = @layers ? [\@layers, $self] : [$layer, $self];
 	$i = 0;
-	for $cmd (sort {$items{$a}{nr} <=> $items{$b}{nr}} keys %items ) {
+	for (my $i =0; $i < @items; $i+=2) {
 	    my $item;
-	    unless ($items{$cmd}{sub}) {
+	    unless ($items[$i+1]) {
 		$item = Gtk2::SeparatorMenuItem->new();
 	    } else {
-		$item = Gtk2::MenuItem->new($cmd);
-		$item->signal_connect(activate => $items{$cmd}{sub}, $params);
+		$item = Gtk2::MenuItem->new($items[$i]);
+		$item->signal_connect(activate => $items[$i+1], $params);
 	    }
 	    $item->show;
 	    $menu->append($item);

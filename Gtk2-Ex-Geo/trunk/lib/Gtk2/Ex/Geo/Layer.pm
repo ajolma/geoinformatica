@@ -337,76 +337,50 @@ sub open_features_dialog {
 		  "negligent enough to leave the features dialog out.");
 }
 
-## @cmethod hashref menu_items($items)
+## @cmethod arrayref menu_items(arrayref items)
 #
-# The items hash that the object gets may contain items added by super
-# classes. The key of an item is a string, which becomes the menu
-# entry, or a string which is not used (but it needs to be unique) if
-# the item is a separator. A '_' in front of a letter makes that
-# letter a shortcut key. The value is a reference to an anonymous hash
-# with keys 'nr' and 'sub'. The nr points to a number, which is used
-# for sorting the menu. The sub points to a subroutine, which is
-# called when the menu item is selected by the user.
+# The items that the object gets may contain items added by super
+# classes. Every other item is a string, which becomes the menu entry,
+# or a string which is not used (but it needs to be unique) if the
+# item is a separator. A '_' in front of a letter makes that letter a
+# shortcut key. Every other item is anonymous sub. The sub points to a
+# subroutine, which is called when the menu item is selected by the
+# user.
 #
 # @brief Return the menu items of this layer class for the GUI.
 # @param items Menu items hash into which add more items. 
-# @return a reference to the items hash.
+# @return a reference to the items array.
 sub menu_items {
     my($self, $items) = @_;
-    $items->{x90} =
-    {
-	nr => 90,
-    };
-    $items->{'_Unselect all'} =
-    {
-	nr => 91,
-	sub => sub {
+    push @$items, (
+	1 => 0,
+	'_Unselect all' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->select;
 	    $gui->{overlay}->update_image;
 	    $self->open_features_dialog($gui) if $self->dialog_visible('features_dialog');
-	}
-    };
-    $items->{'_Symbol...'} =
-    {
-	nr => 92,
-	sub => sub {
+	},
+	'_Symbol...' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_symbols_dialog($gui);
-	}
-    };
-    $items->{'_Colors...'} =
-    {
-	nr => 93,
-	sub => sub {
+	},
+	'_Colors...' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_colors_dialog($gui);
-	}
-    };
-    $items->{'_Labeling...'} =
-    {
-	nr => 94,
-	sub => sub {
+	},
+	'_Labeling...' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_labeling_dialog($gui);
-	}
-    };
-    $items->{'_Inspect...'} =
-    {
-	nr => 95,
-	sub => sub {
+	},
+	'_Inspect...' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $gui->inspect($self->inspect_data, $self->name);
-	}
-    };
-    $items->{'_Properties...'} =
-    {
-	nr => 99,
-	sub => sub {
+	},
+	'_Properties...' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_properties_dialog($gui);
 	}
-    };
+    );
     return $items;
 }
 

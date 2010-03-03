@@ -185,62 +185,31 @@ sub open_properties_dialog {
 sub menu_items {
     my($self, $items) = @_;
     $items = $self->SUPER::menu_items($items);
-    $items->{x10} =
-    {
-	nr => 10,
-    };
-
+    push @$items, ( 1 => 0 );
     if ( $self->{features} ) {
-
-	$items->{'_Features...'} = 
-	{
-	    nr => 11,
-	    sub => sub {
+	push @$items, ( 
+	    '_Features...' => sub {
 		my($self, $gui) = @{$_[1]};
 		Geo::Vector::Layer::Dialogs::FeatureCollection::open($self, $gui);
-	    }
-	};
-
-    }
-    elsif ( $self->{OGR}->{Layer} ) {
-
-	$items->{'C_opy...'} = 
-	{
-	    nr => 11,
-	    sub => sub {
+	    });	
+    } elsif ( $self->{OGR}->{Layer} ) {
+	push @$items, ( 
+	    'C_opy...' => sub {
 		my($self, $gui) = @{$_[1]};
 		Geo::Vector::Layer::Dialogs::Copy::open($self, $gui);
-	    }
-	};
-	$items->{'_Features...'} = 
-	{
-	    nr => 11,
-	    sub => sub {
+	    },
+	    '_Features...' => sub {
 		my($self, $gui) = @{$_[1]};
 		Geo::Vector::Layer::Dialogs::Features::open($self, $gui);
-	    }
-	};
-	$items->{'_Vertices...'} = 
-	{
-	    nr => 11,
-	    sub => sub {
+	    },
+	    '_Vertices...' => sub {
 		open_vertices_dialog(@{$_[1]});
-	    }
-	};
-	$items->{'R_asterize...'} = 
-	{
-	    nr => 11,
-	    sub => sub {
+	    },
+	    'R_asterize...' => sub {
 		my($self, $gui) = @{$_[1]};
 		Geo::Vector::Layer::Dialogs::Rasterize::open($self, $gui);
-	    }
-	};
-
+	    } );
     }
-    else {
-
-    }
-
     return $items;
 }
 

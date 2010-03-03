@@ -256,62 +256,46 @@ sub open_properties_dialog {
 sub menu_items {
     my($self, $items) = @_;
     $items = $self->SUPER::menu_items($items);
-    $items->{x10} =
-    {
-	nr => 10,
-    };
-    $items->{'S_ave...'} = 
-    {
-	nr => 11,
-	sub => sub {
-	    my($self, $gui) = @{$_[1]};
-	    my $file_chooser =
-		Gtk2::FileChooserDialog->new( "Save raster '".$self->name."' as:",
-					      undef, 'save',
-					      'gtk-cancel' => 'cancel',
-					      'gtk-ok' => 'ok' );
-	    
-	    my $folder = $file_chooser->get_current_folder();
-	    $folder = $gui->{folder} if $gui->{folder};
-	    $file_chooser->set_current_folder($folder);
-	    $file_chooser->set_current_name($self->name);
-	    my $filename;
-	    if ($file_chooser->run eq 'ok') {
-		$filename = $file_chooser->get_filename;
-		$gui->{folder} = $file_chooser->get_current_folder();
+    push @$items, ( 1 => 0 );
+    push @$items, ( 'S_ave...' => sub {
+	my($self, $gui) = @{$_[1]};
+	my $file_chooser =
+	    Gtk2::FileChooserDialog->new( "Save raster '".$self->name."' as:",
+					  undef, 'save',
+					  'gtk-cancel' => 'cancel',
+					  'gtk-ok' => 'ok' );
+	
+	my $folder = $file_chooser->get_current_folder();
+	$folder = $gui->{folder} if $gui->{folder};
+	$file_chooser->set_current_folder($folder);
+	$file_chooser->set_current_name($self->name);
+	my $filename;
+	if ($file_chooser->run eq 'ok') {
+	    $filename = $file_chooser->get_filename;
+	    $gui->{folder} = $file_chooser->get_current_folder();
+	}
+	$file_chooser->destroy;
+	
+	if ($filename) {
+	    if ($self->exists($filename)) {
+		my $dialog = Gtk2::MessageDialog->new(undef, 'destroy-with-parent',
+						      'question',
+						      'yes_no',
+						      "Overwrite existing $filename?");
+		my $ret = $dialog->run;
+		$dialog->destroy;
+		return if $ret eq 'no';
 	    }
-	    $file_chooser->destroy;
-
-	    if ($filename) {
-		if ($self->exists($filename)) {
-		    my $dialog = Gtk2::MessageDialog->new(undef, 'destroy-with-parent',
-							  'question',
-							  'yes_no',
-							  "Overwrite existing $filename?");
-		    my $ret = $dialog->run;
-		    $dialog->destroy;
-		    return if $ret eq 'no';
-		}
-		$self->save($filename);
-	    }
-	}
-    } unless $self->{GDAL};
-    $items->{'C_opy...'} =
-    {
-	nr => 12,
-	sub => sub {
-	    my($self, $gui) = @{$_[1]};
-	    $self->open_copy_dialog($gui);
-	}
-    };
-    $items->{'V_ectorize...'} =
-    {
-	nr => 13,
-	sub => sub {
-	    my($self, $gui) = @{$_[1]};
-	    $self->open_vectorize_dialog($gui);
-	}
-    };
+	    $self->save($filename);
+	}}) unless $self->{GDAL};
+    push @$items, ( 'C_opy...' => sub {
+	my($self, $gui) = @{$_[1]};
+	$self->open_copy_dialog($gui);
+		    },
+		    'V_ectorize...' => sub {
+			my($self, $gui) = @{$_[1]};
+			$self->open_vectorize_dialog($gui);
+		    });
     return $items;
 }
 
