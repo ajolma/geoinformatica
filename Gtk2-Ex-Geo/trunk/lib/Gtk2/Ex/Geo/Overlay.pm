@@ -105,7 +105,7 @@ sub INIT_INSTANCE {
 sub close {
     my $self = shift;
     for (keys %$self) {
-	$self->{$_}->destroy if UNIVERSAL::isa($self->{$_}, "Gtk2::Widget");
+	$self->{$_}->destroy if isa($self->{$_}, "Gtk2::Widget");
 	delete $self->{$_};
     }
 }
@@ -121,7 +121,9 @@ sub size_allocate {
     return 0;
 }
 
-## @ignore
+## @method my_inits
+# @brief call after new
+# @todo merge into new
 sub my_inits {
     my($self, %params) = @_;
     $self->{inited} = 1;
@@ -815,6 +817,160 @@ sub button_press_event {
     return $handled;
 }
 
+## @method motion_notify()
+# @brief Updates the rubberband if rubberbanding.
+# @todo Use more visible rubberband, there's no need to use XOR.
+sub motion_notify {
+    my(undef, $event, $self) = @_;
+
+    return 0 unless $self->{layers} and @{$self->{layers}};
+
+    @{$self->{event_coordinates}} = ($event->x, $event->y);
+
+    unless ($self->{path}) {
+	$self->signal_emit('motion-notify');
+	return 0; # not handled
+    }
+
+    my $pm = $self->{pixmap};
+    my $rgc = $self->{rubberband_gc};
+    my @begin = @{$self->{path}[0]};
+    my @end = @{$self->{event_coordinates}};
+    my $w = $end[0] - $begin[0];
+    my $h = $end[1] - $begin[1];
+    my @rb = @{$self->{rubberband}} if $self->{rubberband};
+    
+    if ($self->{drawing_edit}) {
+	
+	$pm = $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
+	my @wend = $self->event_pixel2point(@end);
+	my $p = $self->{drawing_edit};
+	$p->[0]{X} = $wend[0];
+	$p->[0]{Y} = $wend[1];
+	if ($p->[1]) {
+	    $p->[1]{X} = $wend[0];
+	    $p->[1]{Y} = $wend[1];
+	}
+	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
+	my $style = 'GDK_LINE_SOLID';
+	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
+	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
+
+    } else {    
+
+	for ($self->{rubberband_mode}.' '.$self->{rubberband_geometry}) {
+	    /edit/ && do {
+		last;
+	    };
+	    /pan/ && do {
+		my $gc = Gtk2::Gdk::GC->new($pm);
+		$pm->draw_rectangle($gc, 1, 0, 0, @{$self->{viewport_size}});
+		$pm->draw_pixbuf($gc, $self->{pixbuf}, 0, 0, $w, $h, -1, -1, 'GDK_RGB_DITHER_NONE', 0, 0);
+		last;
+	    };
+	    /line/ && do {
+		$pm->draw_line($rgc, @rb) if @rb;
+		@rb = (@begin, @end);
+		$pm->draw_line($rgc, @rb);
+	    };
+	    /path/ && do {
+		my @p = @{$self->{path}}; 
+		for my $p (0..$#p-1) {
+		    $pm->draw_line($rgc, @{$p[$p]}, @{$p[$p+1]});
+		}
+		$pm->draw_line($rgc, @rb) if @rb;
+		@rb = (@{$p[$#p]}, @end);
+		for my $p (0..$#p-1) {
+		    $pm->draw_line($rgc, @{$p[$p]}, @{$p[$p+1]});
+		}
+		$pm->draw_line($rgc, @rb);
+	    };
+	    /rect/ && do {
+		$pm->draw_rectangle($rgc, FALSE, @rb) if @rb;
+		@rb = (min($begin[0], $end[0]), min($begin[1], $end[1]), abs($w), abs($h));
+		$pm->draw_rectangle($rgc, FALSE, @rb);
+	    };
+	    /ellipse/ && do {
+		$pm->draw_arc($rgc, FALSE, @rb, 0, 64*360) if @rb;
+		my $a = abs(floor($w * sqrt(2)));
+		my $b = abs(floor($h * sqrt(2)));
+		@rb = ($begin[0] - $a, $begin[1] - $b, 2*$a, 2*$b);
+		$pm->draw_arc($rgc, FALSE, @rb, 0, 64*360);
+	    };
+	    /polygon/ && do {
+		my @p = @{$self->{path}};
+		if (@p == 1) {
+		    $pm->draw_line($rgc, @rb) if @rb;
+		    @rb = (@begin, @end);
+		    $pm->draw_line($rgc, @rb);
+		} else {
+		    $pm->draw_line($rgc, @rb) if @rb and @rb == 4 and @p == 2;
+		    my @points;
+		    for my $p (@p) {
+			push @points, @$p;
+		    }
+		    push @points, @rb if @rb;
+		    $pm->draw_polygon($rgc, 1, @points);
+		    @rb = @end;
+		    pop @points;
+		    pop @points;
+		    push @points, @rb;
+		    $pm->draw_polygon($rgc, 1, @points);
+		}
+	    }
+	}
+    }
+    
+    @{$self->{rubberband}} = @rb;
+
+    $self->{image}->set_from_pixbuf(undef);
+    $self->{image}->set_from_pixmap($pm, undef);
+    
+    $self->signal_emit('motion-notify');
+    return 1; # handled
+}
+
+## @method @rubberband_value()
+# @brief Computes a value relevant to current rubberband (length or area) in world coordinates.
+# @return ($dimension, $value) $dimension is either 1 or 2
+sub rubberband_value {
+    my($self) = @_;
+
+    if ($self->{path}) {
+
+	my @p0 = $self->event_pixel2point(@{$self->{path}[0]}) if $self->{path}[0];
+	my @p1 = $self->event_pixel2point(@{$self->{event_coordinates}});
+
+	for ($self->{rubberband_geometry}) {
+	    (/line/ || /path/) && do {
+		my $ogc = new Geo::OGC::LinearRing(points => $self->{path});
+		$ogc->AddPoint(Geo::OGC::Point->new(@{$self->{event_coordinates}}));
+		$ogc->ApplyTransformation( sub { return $self->event_pixel2point(@_); } );
+		return (1, $ogc->Length);
+	    };
+	    /rect/ && do {
+		return (2, abs(($p1[0]-$p0[0])*($p1[1]-$p0[1])));
+	    };
+	    /ellipse/ && do {
+		my $a = ($p1[0]-$p0[0]) * sqrt(2);
+		my $b = ($p1[1]-$p0[1]) * sqrt(2);
+		return (2, abs(3.14159266*$a*$b));
+	    };
+	    /polygon/ && do {
+		my $ogc = new Geo::OGC::LinearRing(points => $self->{path});
+		$ogc->AddPoint(Geo::OGC::Point->new(@{$self->{event_coordinates}}));
+		$ogc->ApplyTransformation( sub { return $self->event_pixel2point(@_); } );
+		$ogc->Close;
+		return (2, undef) unless $ogc->IsSimple;
+		return (2, abs($ogc->Area));
+	    };
+	}
+    }
+}
+
+## @method delete_rubberband()
+# @brief Escapes from rubberbanding.
 sub delete_rubberband {
     my $self = shift;
     delete $self->{path};
@@ -925,158 +1081,6 @@ sub button_release_event {
 	}
     }
     return $handled;
-}
-
-## @method motion_notify()
-# @brief Updates the rubberband if rubberbanding.
-# @todo Use more visible rubberband, there's no need to use XOR.
-sub motion_notify {
-    my(undef, $event, $self) = @_;
-
-    return 0 unless $self->{layers} and @{$self->{layers}};
-
-    @{$self->{event_coordinates}} = ($event->x, $event->y);
-
-    unless ($self->{path}) {
-	$self->signal_emit('motion-notify');
-	return 0; # not handled
-    }
-
-    my $pm = $self->{pixmap};
-    my $rgc = $self->{rubberband_gc};
-    my @begin = @{$self->{path}[0]};
-    my @end = @{$self->{event_coordinates}};
-    my $w = $end[0] - $begin[0];
-    my $h = $end[1] - $begin[1];
-    my @rb = @{$self->{rubberband}} if $self->{rubberband};
-    
-    if ($self->{drawing_edit}) {
-	
-	$pm = $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
-	my @wend = $self->event_pixel2point(@end);
-	my $p = $self->{drawing_edit};
-	$p->[0]{X} = $wend[0];
-	$p->[0]{Y} = $wend[1];
-	if ($p->[1]) {
-	    $p->[1]{X} = $wend[0];
-	    $p->[1]{Y} = $wend[1];
-	}
-	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
-	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
-	my $style = 'GDK_LINE_SOLID';
-	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
-	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
-
-    } else {    
-
-	for ($self->{rubberband_mode}.' '.$self->{rubberband_geometry}) {
-	    /edit/ && do {
-		last;
-	    };
-	    /pan/ && do {
-		my $gc = Gtk2::Gdk::GC->new($pm);
-		$pm->draw_rectangle($gc, 1, 0, 0, @{$self->{viewport_size}});
-		$pm->draw_pixbuf($gc, $self->{pixbuf}, 0, 0, $w, $h, -1, -1, 'GDK_RGB_DITHER_NONE', 0, 0);
-		last;
-	    };
-	    /line/ && do {
-		$pm->draw_line($rgc, @rb) if @rb;
-		@rb = (@begin, @end);
-		$pm->draw_line($rgc, @rb);
-	    };
-	    /path/ && do {
-		my @p = @{$self->{path}}; 
-		for my $p (0..$#p-1) {
-		    $pm->draw_line($rgc, @{$p[$p]}, @{$p[$p+1]});
-		}
-		$pm->draw_line($rgc, @rb) if @rb;
-		@rb = (@{$p[$#p]}, @end);
-		for my $p (0..$#p-1) {
-		    $pm->draw_line($rgc, @{$p[$p]}, @{$p[$p+1]});
-		}
-		$pm->draw_line($rgc, @rb);
-	    };
-	    /rect/ && do {
-		$pm->draw_rectangle($rgc, FALSE, @rb) if @rb;
-		@rb = (min($begin[0], $end[0]), min($begin[1], $end[1]), abs($w), abs($h));
-		$pm->draw_rectangle($rgc, FALSE, @rb);
-	    };
-	    /ellipse/ && do {
-		$pm->draw_arc($rgc, FALSE, @rb, 0, 64*360) if @rb;
-		my $a = abs(floor($w * sqrt(2)));
-		my $b = abs(floor($h * sqrt(2)));
-		@rb = ($begin[0] - $a, $begin[1] - $b, 2*$a, 2*$b);
-		$pm->draw_arc($rgc, FALSE, @rb, 0, 64*360);
-	    };
-	    /polygon/ && do {
-		my @p = @{$self->{path}};
-		if (@p == 1) {
-		    $pm->draw_line($rgc, @rb) if @rb;
-		    @rb = (@begin, @end);
-		    $pm->draw_line($rgc, @rb);
-		} else {
-		    $pm->draw_line($rgc, @rb) if @rb and @rb == 4 and @p == 2;
-		    my @points;
-		    for my $p (@p) {
-			push @points, @$p;
-		    }
-		    push @points, @rb if @rb;
-		    $pm->draw_polygon($rgc, 1, @points);
-		    @rb = @end;
-		    pop @points;
-		    pop @points;
-		    push @points, @rb;
-			$pm->draw_polygon($rgc, 1, @points);
-		}
-	    }
-	}
-    }
-    
-    @{$self->{rubberband}} = @rb;
-
-    $self->{image}->set_from_pixbuf(undef);
-    $self->{image}->set_from_pixmap($pm, undef);
-    
-    $self->signal_emit('motion-notify');
-    return 1; # handled
-}
-
-## @method @rubberband_value()
-# @brief Computes a value relevant to current rubberband (length or area) in world coordinates.
-# @return ($dimension, $value) $dimension is either 1 or 2
-sub rubberband_value {
-    my($self) = @_;
-
-    if ($self->{path}) {
-
-	my @p0 = $self->event_pixel2point(@{$self->{path}[0]}) if $self->{path}[0];
-	my @p1 = $self->event_pixel2point(@{$self->{event_coordinates}});
-
-	for ($self->{rubberband_geometry}) {
-	    (/line/ || /path/) && do {
-		my $ogc = new Geo::OGC::LinearRing(points => $self->{path});
-		$ogc->AddPoint(Geo::OGC::Point->new(@{$self->{event_coordinates}}));
-		$ogc->ApplyTransformation( sub { return $self->event_pixel2point(@_); } );
-		return (1, $ogc->Length);
-	    };
-	    /rect/ && do {
-		return (2, abs(($p1[0]-$p0[0])*($p1[1]-$p0[1])));
-	    };
-	    /ellipse/ && do {
-		my $a = ($p1[0]-$p0[0]) * sqrt(2);
-		my $b = ($p1[1]-$p0[1]) * sqrt(2);
-		return (2, abs(3.14159266*$a*$b));
-	    };
-	    /polygon/ && do {
-		my $ogc = new Geo::OGC::LinearRing(points => $self->{path});
-		$ogc->AddPoint(Geo::OGC::Point->new(@{$self->{event_coordinates}}));
-		$ogc->ApplyTransformation( sub { return $self->event_pixel2point(@_); } );
-		$ogc->Close;
-		return (2, undef) unless $ogc->IsSimple;
-		return (2, abs($ogc->Area));
-	    };
-	}
-    }
 }
 
 ## @method @pixel2point(@pixel)

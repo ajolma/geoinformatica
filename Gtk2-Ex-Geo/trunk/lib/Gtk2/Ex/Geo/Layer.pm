@@ -168,13 +168,15 @@ sub defaults {
     $self->{PALETTE_TYPE} = 'Single color' unless exists $self->{PALETTE_TYPE};
 
     $self->{SYMBOL_TYPE} = 'No symbol' unless exists $self->{SYMBOL_TYPE};
-    $self->{SYMBOL_SIZE} = 5 unless exists $self->{SYMBOL_SIZE}; # also the max size of the symbol, if symbol_scale is used
-    $self->{SYMBOL_SCALE_MIN} = 0 unless exists $self->{SYMBOL_SCALE_MIN}; # similar to grayscale scale
+    # symbol size is also the max size of the symbol, if symbol_scale is used
+    $self->{SYMBOL_SIZE} = 5 unless exists $self->{SYMBOL_SIZE}; 
+    # symbol scale is similar to grayscale scale
+    $self->{SYMBOL_SCALE_MIN} = 0 unless exists $self->{SYMBOL_SCALE_MIN}; 
     $self->{SYMBOL_SCALE_MAX} = 0 unless exists $self->{SYMBOL_SCALE_MAX};
 
     $self->{HUE_AT_MIN} = 235 unless exists $self->{HUE_AT_MIN}; # as in libral visual.h
     $self->{HUE_AT_MAX} = 0 unless exists $self->{HUE_AT_MAX}; # as in libral visual.h
-    $self->{HUE_DIR} = 1 unless exists $self->{HUE_DIR}; # from min up to max
+    $self->{HUE_DIR} = 1 unless exists $self->{HUE_DIR}; # RGB (1) or RBG (-1)
     $self->{HUE} = -1 unless exists $self->{HUE}; # grayscale is gray scale
 
     @{$self->{SINGLE_COLOR}} = @$SINGLE_COLOR unless exists $self->{SINGLE_COLOR};
@@ -318,7 +320,8 @@ sub inspect_data {
 # @param gui A Gtk2::Ex::Glue object (contains predefined dialogs).
 sub open_properties_dialog {
     my($self, $gui) = @_;
-    croak("no properties dialog defined for class ".ref($self));
+    $gui->message("It looks like the author of this layer class was\n".
+		  "negligent enough to leave the properties dialog out.");
 }
 
 ## @method void open_features_dialog(Gtk2::Ex::Glue gui)
@@ -421,10 +424,10 @@ sub open_labeling_dialog {
 sub palette_type {
     my($self, $palette_type) = @_;
     if (defined $palette_type) {
-		croak "Unknown palette type: $palette_type" unless defined $PALETTE_TYPE{$palette_type};
-		$self->{PALETTE_TYPE} = $palette_type;
+	croak "Unknown palette type: $palette_type" unless defined $PALETTE_TYPE{$palette_type};
+	$self->{PALETTE_TYPE} = $palette_type;
     } else {
-		return $self->{PALETTE_TYPE};
+	return $self->{PALETTE_TYPE};
     }
 }
 
@@ -452,10 +455,10 @@ sub supported_palette_types {
 sub symbol_type {
     my($self, $symbol_type) = @_;
     if (defined $symbol_type) {
-		croak "Unknown symbol type: $symbol_type" unless defined $SYMBOL_TYPE{$symbol_type};
-		$self->{SYMBOL_TYPE} = $symbol_type;
+	croak "Unknown symbol type: $symbol_type" unless defined $SYMBOL_TYPE{$symbol_type};
+	$self->{SYMBOL_TYPE} = $symbol_type;
     } else {
-		return $self->{SYMBOL_TYPE};
+	return $self->{SYMBOL_TYPE};
     }
 }
 
@@ -649,7 +652,7 @@ sub color_table {
     } else 
     {
 	my $fh = new FileHandle;
-	croak "can't read from $color_table: $!\n" unless $fh->open("< $color_table");
+	croak "Can't read from $color_table: $!\n" unless $fh->open("< $color_table");
 	$self->{COLOR_TABLE} = [];
 	while (<$fh>) {
 	    next if /^#/;
@@ -702,31 +705,31 @@ sub save_color_table {
 sub color_bins {
     my($self, $color_bins) = @_;
     unless (defined $color_bins) {
-		$self->{COLOR_BINS} = [] unless $self->{COLOR_BINS};
-		return $self->{COLOR_BINS};
+	$self->{COLOR_BINS} = [] unless $self->{COLOR_BINS};
+	return $self->{COLOR_BINS};
     }
-	if (ref($color_bins) eq 'ARRAY') {
-		$self->{COLOR_BINS} = [];
-		for (@$color_bins) {
-			push @{$self->{COLOR_BINS}}, [@$_];
-		}
-	} else {
-		my $fh = new FileHandle;
-		croak "can't read from $color_bins: $!\n" unless $fh->open("< $color_bins");
-		$self->{COLOR_BINS} = [];
-		while (<$fh>) {
-		    next if /^#/;
-		    my @tokens = split /\s+/;
-		    next unless @tokens > 3;
-		    $tokens[4] = 255 unless defined $tokens[4];
-		    for (@tokens[1..4]) {
-				$_ =~ s/\D//g;
-				$_ = 0 if $_ < 0;
-				$_ = 255 if $_ > 255;
-		    }
-		    push @{$self->{COLOR_BINS}}, \@tokens;
-		}
-		$fh->close;
+    if (ref($color_bins) eq 'ARRAY') {
+	$self->{COLOR_BINS} = [];
+	for (@$color_bins) {
+	    push @{$self->{COLOR_BINS}}, [@$_];
+	}
+    } else {
+	my $fh = new FileHandle;
+	croak "can't read from $color_bins: $!\n" unless $fh->open("< $color_bins");
+	$self->{COLOR_BINS} = [];
+	while (<$fh>) {
+	    next if /^#/;
+	    my @tokens = split /\s+/;
+	    next unless @tokens > 3;
+	    $tokens[4] = 255 unless defined $tokens[4];
+	    for (@tokens[1..4]) {
+		$_ =~ s/\D//g;
+		$_ = 0 if $_ < 0;
+		$_ = 255 if $_ > 255;
+	    }
+	    push @{$self->{COLOR_BINS}}, \@tokens;
+	}
+	$fh->close;
     }
 }
 
@@ -739,9 +742,9 @@ sub color_bins {
 sub save_color_bins {
     my($self, $filename) = @_;
     my $fh = new FileHandle;
-    croak "can't write to $filename: $!\n" unless $fh->open("> $filename");
+    croak "Can't write to $filename: $!\n" unless $fh->open("> $filename");
     for my $color (@{$self->{COLOR_BINS}}) {
-		print $fh "@$color\n";
+	print $fh "@$color\n";
     }
     $fh->close;
 }
@@ -813,18 +816,25 @@ sub features {
 #
 # For the structure of the schema hash see Geo::Vector::schema
 sub schema {
-    my $schema = {};
-    return bless $schema, 'Gtk2::Ex::Geo::Schema';
+    my $schema = Gtk2::Ex::Geo::Schema->new;
+    return $schema;
 }
 
 package Gtk2::Ex::Geo::Schema;
+
+sub new {
+    my $package = shift;
+    my $self = { GeometryType => 'Unknown',
+		 Fields => [], };
+    bless $self => (ref($package) or $package);
+}
 
 ## @ignore
 sub fields {
     my $schema = shift;
     my @fields = (
 	{ Name => '.FID', Type => 'Integer' },
-	{ Name => '.GeometryType', Type => 'String' }
+	{ Name => '.GeometryType', Type => $schema->{GeometryType} }
 	);
     push @fields, { Name => '.Z', Type => 'Real' } if $schema->{GeometryType} =~ /25/;
     push @fields, @{$schema->{Fields}};
