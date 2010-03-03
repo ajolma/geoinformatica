@@ -75,7 +75,7 @@ sub _fill_hash {
 
 sub _fill_recursive {
 	my ($self, $model, $parent, $name, $ref) = @_;
-
+	return if $name eq 'buffer =>';
 	if (UNIVERSAL::isa $ref, 'HASH') {
 		_fill_hash ($self, $model, $parent, $name, $ref);
 	} elsif (UNIVERSAL::isa $ref, 'ARRAY') {

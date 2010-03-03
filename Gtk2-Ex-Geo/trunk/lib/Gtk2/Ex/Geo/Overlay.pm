@@ -44,6 +44,8 @@ use Glib::Object::Subclass
 	extent_changed => {},# deprecated
 	motion_notify => {}, # the mouse has a new location on the map
 	map_updated => {},   # deprecated
+	pixmap_ready => {},  # sent just after pixmap is ready, but selection and drawing 
+	                     # haven't been rendered, connect to this for annotations
     },
     properties => 
     [
@@ -348,18 +350,6 @@ sub zoom_to_all {
     $self->zoom_to(@size) if @size;
 }
 
-## @method set_draw_on($draw_on, $user_param)
-# @brief Sets the method that is called to annotate the pixmap
-# the $draw_on sub is called like this:
-# @code
-# $draw_on->($user_param, $pixmap);
-# @endcode
-sub set_draw_on {
-    my($self, $draw_on, $user_param) = @_;
-    $self->{draw_on} = $draw_on;
-    $self->{draw_on_user_param} = $user_param;
-}
-
 ## @ignore
 sub value_changed {
     my(undef, $self) = @_;
@@ -462,13 +452,14 @@ sub render {
     my $self = shift;
     my %opt = @_;
 
-    return unless $self->{viewport_size}->[0];
+    my $size = $self->{viewport_size};
+    return unless $size->[0];
 
     $self->signal_emit('update-layers');
 
     my @tmp = ($self->{minX}, $self->{maxY}, $self->{pixel_size}, @{$self->{offset}});
     $self->{pixbuf} = Gtk2::Ex::Geo::Canvas->new
-	($self->{layers}, @tmp, @{$self->{viewport_size}}, @{$self->{bg_color}}[0..3], $self);
+	($self->{layers}, @tmp, @{$size}, @{$self->{bg_color}}[0..3], $self);
 
     return unless $self->{pixbuf};
 
@@ -486,13 +477,13 @@ sub render {
 
     $self->{old_hadj} = $self->get_hscrollbar->get_adjustment; # prevents a warning
     $self->get_hscrollbar->set_adjustment
-	(Gtk2::Adjustment->new($self->{offset}[0], 0, $self->{canvas_size}[0], $self->{viewport_size}[0]/20,
-			       $self->{viewport_size}[0], $self->{viewport_size}[0]));
+	(Gtk2::Adjustment->new($self->{offset}[0], 0, $self->{canvas_size}[0], $size->[0]/20,
+			       $size->[0], $size->[0]));
 
     $self->{old_vadj} = $self->get_vscrollbar->get_adjustment; # prevents a warning
     $self->get_vscrollbar->set_adjustment
-	(Gtk2::Adjustment->new($self->{offset}[1], 0, $self->{canvas_size}[1], $self->{viewport_size}[1]/20,
-			       $self->{viewport_size}[1], $self->{viewport_size}[1]));
+	(Gtk2::Adjustment->new($self->{offset}[1], 0, $self->{canvas_size}[1], $size->[1]/20,
+			       $size->[1], $size->[1]));
 
     $self->signal_emit ('map-updated');
 
@@ -546,14 +537,13 @@ sub render_geometry {
     }
 }
 
-sub reset_pixmap {
-    my($self) = @_;
-    $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
-}
-
-sub reset_image {
+## @method update_image()
+# @brief Updates the image on the screen to show the changes in pixmap.
+sub update_image {
     my($self) = @_;
     $self->{image}->set_from_pixbuf(undef);
+    $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
+    $self->signal_emit('pixmap_ready');
     if ($self->{selection}) {
 	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535, 65535, 0));
@@ -569,15 +559,6 @@ sub reset_image {
 	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
     }
     $self->{image}->set_from_pixmap($self->{pixmap}, undef);
-}
-
-## @method update_image()
-# @brief Updates the image on the screen to show the changes in pixmap.
-sub update_image {
-    my($self) = @_;
-    $self->reset_pixmap;
-    $self->{draw_on}->($self->{draw_on_user_param}, $self->{pixmap}) if $self->{draw_on};
-    $self->reset_image;
 }
 
 ## @method zoom($w_offset, $h_offset, $pixel_size)

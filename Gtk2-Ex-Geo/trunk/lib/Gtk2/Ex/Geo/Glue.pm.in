@@ -129,17 +129,16 @@ sub new {
 	      $self->set_has_tooltip(0);
 	  }) if Gtk2->CHECK_VERSION(2,12,0);
     
-    $self->{overlay}->set_draw_on 
-	( sub {
-	    my($gis, $pixmap) = @_;
-	    my $overlay = $gis->{overlay};
-	    my $layer = $gis->get_selected_layer();
+    $self->{overlay}->signal_connect
+	( pixmap_ready => sub {
+	    my($overlay, $gis) = @_;
+	    my $layer = $self->get_selected_layer();
 	    if ($layer) {
-		my $gc = Gtk2::Gdk::GC->new($pixmap);
+		my $gc = Gtk2::Gdk::GC->new($overlay->{pixmap});
 		$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
 		$layer->render_selection($gc, $overlay);
 	    }
-	}, $self);
+	  }, $self);
     
     $self->{overlay}->signal_connect
 	( new_selection => 
