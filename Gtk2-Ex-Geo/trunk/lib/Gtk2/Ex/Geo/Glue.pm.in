@@ -218,23 +218,31 @@ sub register_dialogs {
     push @{$self->{dialogs}}, $dialogs;
 }
 
+sub register_command {
+    my($self, $label, $sub, $tip, $pos) =  @_;
+    my $label_widget = Gtk2::Label->new($label);
+    my $button = Gtk2::ToolButton->new($label_widget, $label);
+    my $tooltips = Gtk2::Tooltips->new;
+    $tip = $tip || '';
+    $button->set_tooltip($tooltips, $tip, '');
+    $tooltips->set_tip($button, $tip);
+    $tooltips->enable;
+    $pos = -1 unless defined $pos;
+    $self->{toolbar}->insert($button, $pos);
+    $button->signal_connect('clicked', $sub, $self);
+    $self->{commands}{$label} = $sub;
+    $button->show_all;
+}
+
 ## @method register_commands($commands)
 # @brief Extend the capabilities by adding new commands
 sub register_commands {
     my($self, $commands) = @_;
     for (sort {$commands->{$a}{nr} <=> $commands->{$b}{nr}} keys %$commands) {
-	my $label = Gtk2::Label->new($commands->{$_}{text});
-	my $button = Gtk2::ToolButton->new($label, '');
-	my $tooltips = Gtk2::Tooltips->new;
-	my $tip = $commands->{$_}{tip} || '';
-	$button->set_tooltip($tooltips, $tip, '');
-	$tooltips->set_tip($button, $tip);
-	$tooltips->enable;
-	$self->{toolbar}->insert($button, $commands->{$_}{pos});
-	$button->signal_connect('clicked', $commands->{$_}{sub}, $self);
-	$self->{commands}{$_} = $commands->{$_}{sub};
-	$label->show;
-	$button->show;
+	$self->register_command($commands->{$_}{text}, 
+				$commands->{$_}{sub}, 
+				$commands->{$_}{tip},
+				$commands->{$_}{pos});
     }
 }
 
