@@ -20,6 +20,7 @@ documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 use strict;
 use warnings;
+use UNIVERSAL qw/isa/;
 
 require Exporter;
 
@@ -52,7 +53,11 @@ sub get_value_from_combo {
     return unless $model;
     my $a = $combo->get_active();
     if ($a == -1) { # comboboxentry
-	return $combo->child->get_text;
+	if (isa($combo, 'Gtk2::ComboBoxEntry')) {
+	    return $combo->child->get_text;
+	} else {
+	    return '';
+	}
     }
     my $iter = $model->get_iter_from_string($a);
     return unless $iter;

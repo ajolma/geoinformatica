@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use Graphics::ColorUtils qw /:all/;
 use Glib qw/TRUE FALSE/;
+use Gtk2::Ex::Geo::Dialogs qw /:all/;
 
 use vars qw/$MAX_INT $MAX_REAL $COLOR_CELL_SIZE/;
 
@@ -101,7 +102,7 @@ sub apply_colors {
     my($self, $gui, $close) = @{$_[1]};
     my $dialog = $self->{colors_dialog};
     
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     $self->palette_type($palette_type);
     my $field_combo = $dialog->get_widget('color_field_combobox');
     my $field = $self->{index2field}{$field_combo->get_active()};
@@ -158,20 +159,6 @@ sub cancel_colors {
 }
 
 ##@ignore
-sub get_selected_palette_type {
-    my $self = shift;
-    my $combo = $self->{colors_dialog}->get_widget('palette_type_combobox');
-    ($self->{index2palette_type}{$combo->get_active()} or '');
-}
-
-##@ignore
-sub get_selected_color_field {
-    my $self = shift;
-    my $combo = $self->{colors_dialog}->get_widget('color_field_combobox');
-    ($self->{index2field}{$combo->get_active()} or '');
-}
-
-##@ignore
 sub get_colors {
     my($self, $gui) = @{$_[1]};
     my $table = $self->colors_from_dialog($gui);
@@ -181,7 +168,7 @@ sub get_colors {
 ##@ignore
 sub open_colors_file {
     my($self, $gui) = @{$_[1]};
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $file_chooser =
 	Gtk2::FileChooserDialog->new ("Select a $palette_type file",
 				      undef, 'open',
@@ -215,7 +202,7 @@ sub open_colors_file {
 ##@ignore
 sub save_colors_file {
     my($self, $gui) = @{$_[1]};
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $file_chooser =
 	Gtk2::FileChooserDialog->new ("Save $palette_type file as",
 				      undef, 'save',
@@ -249,7 +236,7 @@ sub save_colors_file {
 ##@ignore
 sub edit_color {
     my($self, $gui) = @{$_[1]};
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');
     my $selection = $treeview->get_selection;
     my @selected = $selection->get_selected_rows;
@@ -324,7 +311,7 @@ sub add_color {
     my @selected = $selection->get_selected_rows if $selection;
     my $at = $selected[0]->to_string if @selected;
     my $model = $treeview->get_model;
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $table = get_table_from_treeview($self);
     $at = $#$table unless defined $at;
     my $value;
@@ -380,7 +367,7 @@ sub cell_in_colors_treeview_changed {
 sub palette_type_changed {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{colors_dialog};
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     
     fill_color_field_combo($self);
 
@@ -457,7 +444,7 @@ sub palette_type_changed {
 sub create_colors_treeview {
     my($self) = @_;
 
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $tv = $self->{colors_dialog}->get_widget('colors_treeview');
     
     if ($palette_type eq 'Grayscale' or $palette_type eq 'Rainbow') {
@@ -516,7 +503,7 @@ sub create_colors_treeview {
 ##@ignore
 sub color_field_changed {
     my($self, $gui) = @{$_[1]};
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     if (($palette_type eq 'Color bins' or $palette_type eq 'Color table') and 
 	$self->{current_coloring_type} ne current_coloring_type($self)) {
 	create_colors_treeview($self);
@@ -527,7 +514,7 @@ sub color_field_changed {
 sub fill_color_scale_fields {
     my($self, $gui) = @{$_[1]};
     my @range;
-    my $field = get_selected_color_field($self);
+    my $field = get_value_from_combo($self->{colors_dialog}, 'color_field_combobox');
     eval {
 	@range = $self->value_range($field);
     };
@@ -542,7 +529,7 @@ sub fill_color_scale_fields {
 ##@ignore
 sub make_color_legend {
     my($self, $gui) = @{$_[1]};
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');
     put_scale_in_treeview($self, $treeview, $palette_type);
 }
@@ -573,7 +560,7 @@ sub fill_palette_type_combo {
 ##@ignore
 sub fill_color_field_combo {
     my($self, $palette_type) = @_;
-    $palette_type = get_selected_palette_type($self) unless $palette_type;
+    $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox') unless $palette_type;
     my $combo = $self->{colors_dialog}->get_widget('color_field_combobox');
     my $model = $combo->get_model;
     $model->clear;
@@ -599,11 +586,11 @@ sub fill_color_field_combo {
 ##@ignore
 sub current_coloring_type {
     my($self) = @_;
-    my $type = '';
-    my $field = get_selected_color_field($self);
-    return unless defined $field;
+    my $type = 'String';
+    my $field = get_value_from_combo($self->{colors_dialog}, 'color_field_combobox');
+    return 'String' unless defined $field;
     $field = $self->schema->field($field);
-    return unless $field;
+    return 'String' unless $field;
     if (!$field->{Type} or $field->{Type} eq 'Integer') {
 	$type = 'Int';
     } elsif ($field->{Type} eq 'Real') {
@@ -617,7 +604,7 @@ sub current_coloring_type {
 ##@ignore
 sub get_table_from_treeview {
     my ($self) = @_;
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');
     my $model = $treeview->get_model;
     return unless $model;
@@ -642,7 +629,7 @@ sub get_table_from_treeview {
 sub fill_colors_treeview {
     my ($self, $table) = @_;
 
-    my $palette_type = get_selected_palette_type($self);
+    my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');
     my $model = $treeview->get_model;
     return unless $model;
