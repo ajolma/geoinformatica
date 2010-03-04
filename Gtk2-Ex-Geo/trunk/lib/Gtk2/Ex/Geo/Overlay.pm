@@ -98,6 +98,8 @@ sub INIT_INSTANCE {
     $self->{selection_color} = [65535, 65535, 0];
     $self->{selection_style} = 'GDK_LINE_SOLID';
     $self->{drawing_color} = [0, 65535, 0];
+
+    $self->{layers} = [];
 }
 
 ## @method

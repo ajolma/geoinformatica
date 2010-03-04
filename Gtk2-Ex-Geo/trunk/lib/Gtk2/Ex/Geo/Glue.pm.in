@@ -234,6 +234,13 @@ sub register_command {
     $button->show_all;
 }
 
+sub de_register_command {
+    my($self, $label) =  @_;
+    $main::gis->{toolbar}->foreach(
+	sub { $main::gis->{toolbar}->remove($_[0]) if $_[0]->get_label eq $label; });
+    delete $self->{commands}{$label};
+}
+
 ## @method register_commands($commands)
 # @brief Extend the capabilities by adding new commands
 sub register_commands {
