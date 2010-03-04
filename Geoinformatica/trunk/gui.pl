@@ -116,7 +116,7 @@ sub setup{
 
     $window->add($vbox);
     $window->signal_connect("destroy", \&close_the_app);
-    $window->set_default_size(600,600);
+    $window->set_default_size(800,600);
     $window->show_all;
 
     # add logger and redirect STDOUT to it
@@ -147,12 +147,8 @@ sub setup{
     
     tie *STDOUT => "Buffer", \$buffer;
 
-    $gis->register_commands
-	( { 1 => { text => 'Output',
-		   tip => 'The printout window',
-		   pos => 0,
-		   sub => sub { $log->show_all } },
-	});
+    $gis->register_command('Output', sub { $log->show_all }, 'Output window', 0);
+    $gis->register_command('Extend', \&extend, 'Open an extension', 0);
 
 }
 
@@ -213,4 +209,37 @@ sub homedir {
 
     }
     
+}
+
+sub extend {
+    my $file_chooser =
+	Gtk2::FileChooserDialog->new ('Open an extension',
+				      undef, 'open',
+				      'gtk-cancel' => 'cancel',
+				      'gtk-ok' => 'ok');
+    
+    my $filter = Gtk2::FileFilter->new;
+    $filter->set_name("Perl modules");
+    $filter->add_pattern("*.pm");
+    $file_chooser->add_filter($filter);
+    $file_chooser->set_current_folder($gui->{folder}) if $gui->{folder};
+    my @filenames = $file_chooser->get_filenames if $file_chooser->run eq 'ok';
+    $gui->{folder} = $file_chooser->get_current_folder();   
+    $file_chooser->destroy;
+    return unless @filenames;
+    for my $filename (@filenames) {
+	my($volume,$directories,$file) = File::Spec->splitpath( $filename );
+	my $path = File::Spec->catpath( $volume, $directories, '' );
+	#$path =~ s/\/$//;
+	unshift @INC, $path;
+	delete $INC{$file};
+	require $file;
+    }
+}
+
+sub unextend {
+    my $package = shift;
+    my $sub = $package.'::remove()';
+    $sub->();
+    delete $INC{$package.'.pm'};
 }

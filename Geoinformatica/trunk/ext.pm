@@ -1,14 +1,14 @@
 # load with require ext
 # before reloading issue delete $INC{ext.pm}
 
-my @w;
-$main::gis->{toolbar}->foreach(sub {push @w, $_[0]});
-for (@w) {
-    my $l = $_->get_label;
-    $main::gis->{toolbar}->remove($_) if $l eq 'ext';
-}
+package ext;
 
+remove();
 $main::gis->register_command('ext', \&ext);
+
+sub remove {
+    $main::gis->de_register_command('ext');
+}
 
 sub ext {
     print "your vector layers:\n";
