@@ -15,14 +15,14 @@ sub open {
 
     # bootstrap:
     my($dialog, $boot) = $self->bootstrap_dialog
-	($gui, 'copy_dialog', "Copy ".$self->name,
+	($gui, 'copy_raster_dialog', "Copy ".$self->name,
 	 {
-	     copy_dialog => [delete_event => \&cancel_copy, [$self, $gui]],
-	     copy_folder_button => [clicked => \&copy_select_folder, $self],
+	     copy_raster_dialog => [delete_event => \&cancel_copy, [$self, $gui]],
 	     copy_cancel_button => [clicked => \&cancel_copy, [$self, $gui]],
 	     copy_ok_button => [clicked => \&do_copy, [$self, $gui, 1]],
 	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
 	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
+	     copy_folder_button => [clicked => \&copy_select_folder, $self],
 	 },
 	);
     
@@ -45,7 +45,7 @@ sub open {
 		sub {
 		    my(undef, $self) = @_;
 		    return if $self->{_ignore_copy_entry_change};
-		    $self->{copy_dialog}->get_widget('copy_region_combobox')->set_active(0);
+		    $self->{copy_raster_dialog}->get_widget('copy_region_combobox')->set_active(0);
 		    copy_info($self);
 		}, $self);
 	}
@@ -92,16 +92,14 @@ sub open {
 	
     $dialog->get_widget('copy_name_entry')->set_text($name);
 
-    $dialog->get_widget('copy_dialog')->show_all;
-    $dialog->get_widget('copy_dialog')->present;
-    return $dialog->get_widget('copy_dialog');
+    return $dialog->get_widget('copy_raster_dialog');
 }
 
 ##@ignore
 sub do_copy {
     my($self, $gui, $close) = @{$_[1]};
 
-    my $dialog = $self->{copy_dialog};
+    my $dialog = $self->{copy_raster_dialog};
 
     my $minx = get_number_from_entry($dialog->get_widget('copy_minx_entry'));
     my $miny = get_number_from_entry($dialog->get_widget('copy_miny_entry'));
@@ -214,7 +212,7 @@ sub do_copy {
     $gui->set_layer($new_layer);
     $gui->select_layer($name);
     $gui->{overlay}->zoom_to($new_layer);
-    $self->hide_dialog('copy_dialog') if $close;
+    $self->hide_dialog('copy_raster_dialog') if $close;
     $gui->{overlay}->render;
 }
 
@@ -233,7 +231,7 @@ sub cancel_copy {
 	next unless ref CORE::eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    $self->hide_dialog('copy_dialog');
+    $self->hide_dialog('copy_raster_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;
@@ -241,14 +239,14 @@ sub cancel_copy {
 
 sub copy_select_folder {
     my(undef, $self) = @_;
-    my $entry = $self->{copy_dialog}->get_widget('copy_folder_entry');
+    my $entry = $self->{copy_raster_dialog}->get_widget('copy_folder_entry');
     file_chooser('Select a folder', 'select_folder', $entry);
 }
 
 sub copy_driver_selected {
     my $combo = $_[0];
     my($self, $gui) = @{$_[1]};
-    my $dialog = $self->{copy_dialog};
+    my $dialog = $self->{copy_raster_dialog};
     my $model = $combo->get_model;
     my $iter = $combo->get_active_iter;
     my $driver = $model->get($iter);
@@ -261,7 +259,7 @@ sub copy_driver_selected {
 sub copy_region_selected {
     my $combo = $_[0];
     my($self, $gui) = @{$_[1]};
-    my $dialog = $self->{copy_dialog};
+    my $dialog = $self->{copy_raster_dialog};
     my $model = $combo->get_model;
     my $iter = $combo->get_active_iter;
     my $region = $model->get($iter);
@@ -282,7 +280,7 @@ sub copy_region_selected {
 sub copy_define_region {
     my $self = shift;
 
-    my $dialog = $self->{copy_dialog};
+    my $dialog = $self->{copy_raster_dialog};
     $dialog->get_widget('copy_size_label')->set_text('?');
     $dialog->get_widget('copy_memory_size_label')->set_text('?');
 
@@ -326,7 +324,7 @@ sub copy_define_region {
 
 sub copy_info {
     my($self) = @_;
-    my $dialog = $self->{copy_dialog};
+    my $dialog = $self->{copy_raster_dialog};
     my $minx = get_number_from_entry($dialog->get_widget('copy_minx_entry'));
     my $miny = get_number_from_entry($dialog->get_widget('copy_miny_entry'));
     my $maxx = get_number_from_entry($dialog->get_widget('copy_maxx_entry'));

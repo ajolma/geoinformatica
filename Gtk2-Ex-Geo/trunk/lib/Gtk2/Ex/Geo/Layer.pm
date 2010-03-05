@@ -901,20 +901,23 @@ sub render {
 sub bootstrap_dialog {
     my($self, $gui, $dialog, $title, $connects) = @_;
     my $boot = 0;
+    my $widget;
     unless ($self->{$dialog}) {
 	$self->{$dialog} = $gui->get_dialog($dialog);
 	croak "$dialog does not exist" unless $self->{$dialog};
-	for (keys %$connects) {
-	    $self->{$dialog}->get_widget($_)->signal_connect(@{$connects->{$_}});
+	$widget = $self->{$dialog}->get_widget($dialog);
+	for my $n (keys %$connects) {
+	    my $w = $self->{$dialog}->get_widget($n);
+	    $w->signal_connect(@{$connects->{$n}});
 	}
 	$boot = 1;
-    } elsif (!$self->{$dialog}->get_widget($dialog)->get('visible')) {
-	$self->{$dialog}->get_widget($dialog)->move(@{$self->{$dialog.'_position'}});
-	$self->{$dialog}->get_widget($dialog)->show_all;
+    } else {
+	$widget = $self->{$dialog}->get_widget($dialog);
+	$widget->move(@{$self->{$dialog.'_position'}}) unless $widget->get('visible');
     }
-    $self->{$dialog}->get_widget($dialog)->set_title($title);
-    $self->{$dialog}->get_widget($dialog)->show_all;
-    $self->{$dialog}->get_widget($dialog)->present;
+    $widget->set_title($title);
+    $widget->show_all;
+    $widget->present;
     return wantarray ? ($self->{$dialog}, $boot) : $self->{$dialog};
 }
 
