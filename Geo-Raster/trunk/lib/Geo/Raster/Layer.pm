@@ -150,9 +150,15 @@ sub new {
     return $self;
 }
 
+sub DESTROY {
+    my $self = shift;
+    return unless $self;
+    Geo::Raster::DESTROY($self);
+    Gtk2::Ex::Geo::Layer::DESTROY($self);
+}
+
 sub defaults {
     my($self, %params) = @_;
-
     if ($self->{GDAL}) {
 	my $band = $self->band();
 	my $color_table = $band->GetRasterColorTable;
@@ -176,6 +182,7 @@ sub defaults {
     } else {
 	$self->palette_type('Grayscale');
     }
+    $self->color_field('Cell value');
     $self->SUPER::defaults(%params);
 }
 

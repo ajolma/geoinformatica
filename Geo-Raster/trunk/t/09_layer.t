@@ -22,9 +22,9 @@ $gis->add_layer($layer);
 $window->show;
 ok(1);
 
-$layer->open_symbols_dialog($gis);
+$layer->open_symbols_dialog($gis)->destroy;
 ok(1);
-$layer->open_colors_dialog($gis);
+$layer->open_colors_dialog($gis)->destroy;
 ok(1);
 $layer->open_labeling_dialog($gis);
 ok(1);
@@ -46,9 +46,9 @@ $gis->add_layer($layer, 'test');
 $a = Geo::Raster->new(10,10);
 $gis->add_layer($a, 'test2');
 
-$layer->open_symbols_dialog($gis);
+$layer->open_symbols_dialog($gis)->destroy;
 ok(1);
-$layer->open_colors_dialog($gis);
+$layer->open_colors_dialog($gis)->destroy;
 ok(1);
 $layer->open_labeling_dialog($gis);
 ok(1);
@@ -62,6 +62,7 @@ $layer->open_vectorize_dialog($gis);
 ok(1);
 
 $gis->close();
+exit;
 
 sub setup{
     my %params = @_;
