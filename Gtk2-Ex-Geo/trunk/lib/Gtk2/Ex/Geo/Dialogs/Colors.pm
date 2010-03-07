@@ -255,6 +255,9 @@ sub hue_changed {
     my $max = get_number_from_entry($d->get_widget('max_hue_label'));
     my $dir = $d->get_widget('hue_range_combobox')->get_active == 0 ? 1 : -1; # up is 1, down is -1
     $self->hue_range($min, $max, $dir);
+    my $hue = $d->get_widget('hue_checkbutton')->get_active() ? 
+	$d->get_widget('hue_label')->get_text() : -1;
+    $self->hue($hue);
     create_colors_treeview($self);
 }
 
@@ -745,8 +748,7 @@ sub put_scale_in_treeview {
     } else {
 	$hue_max -= 360 if $hue_max > $hue_min;
     }
-    my $hue = $dialog->get_widget('hue_checkbutton')->get_active() ? 
-	$dialog->get_widget('hue_label')->get_text() : -1;
+    my $hue = $self->hue;
     return if $min eq '' or $max eq '';
     my $delta = ($max-$min)/14;
     my $x = $max;
