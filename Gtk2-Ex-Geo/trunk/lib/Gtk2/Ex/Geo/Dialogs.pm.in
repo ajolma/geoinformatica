@@ -111,6 +111,7 @@ sub get_number_from_entry {
     my $text = $entry->get_text;
     $text =~ s/\s//g;
     $text =~ s/,/./;
+    ($text) =~ /(\d+)/;
     $text;
 }
 

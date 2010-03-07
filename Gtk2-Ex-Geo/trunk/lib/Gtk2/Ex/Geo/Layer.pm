@@ -562,8 +562,10 @@ sub single_color {
 sub color_scale {
     my($self, $min, $max) = @_;
     if (defined $min) {
-	$self->{COLOR_SCALE_MIN} = $min+0;
-	$self->{COLOR_SCALE_MAX} = $max+0;
+	$min = 0 unless $min;
+	$max = 0 unless $max;
+	$self->{COLOR_SCALE_MIN} = $min;
+	$self->{COLOR_SCALE_MAX} = $max;
     }
     return ($self->{COLOR_SCALE_MIN}, $self->{COLOR_SCALE_MAX});
 }
@@ -649,6 +651,57 @@ sub color_table {
 	$fh->close;
     }
 }
+
+## @method color($index, @XRGBA)
+#
+# @brief Get or set the single color or a color in a color table or
+# bins. The index is an index to the table and not a color table index
+# or upper limit of a bin (the X is) and is not to be given to set the
+# single color.
+sub color {
+    my $self = shift;
+    my $index = shift unless $self->{PALETTE_TYPE} eq 'Single color';
+    my @color = @_ if @_;
+    if (@color) {
+	if ($self->{PALETTE_TYPE} eq 'Color table') {
+	    $self->{COLOR_TABLE}[$index] = \@color;
+	} elsif ($self->{PALETTE_TYPE} eq 'Color bins') {
+	    $self->{COLOR_BINS}[$index] = \@color;
+	} else {
+	    $self->{SINGLE_COLOR} = \@color;
+	}
+    } else {
+	if ($self->{PALETTE_TYPE} eq 'Color table') {
+	    @color = @{$self->{COLOR_TABLE}[$index]};
+	} elsif ($self->{PALETTE_TYPE} eq 'Color bins') {
+	    @color = @{$self->{COLOR_BINS}[$index]};
+	} else {
+	    @color = @{$self->{SINGLE_COLOR}};
+	}
+    }
+    return @color;
+}
+
+## @method add_color($index, @XRGBA)
+sub add_color {
+    my($self, $index, @XRGBA) = @_;
+    if ($self->{PALETTE_TYPE} eq 'Color table') {
+	splice @{$self->{COLOR_TABLE}}, $index, 0, [@XRGBA];
+    } else {
+	splice @{$self->{COLOR_BINS}}, $index, 0, [@XRGBA];
+    }
+}
+
+## @method remove_color($index)
+sub remove_color {
+    my($self, $index) = @_;
+    if ($self->{PALETTE_TYPE} eq 'Color table') {
+	splice @{$self->{COLOR_TABLE}}, $index, 1;
+    } else {
+	splice @{$self->{COLOR_BINS}}, $index, 1;
+    }
+}
+
 
 ## @method save_color_table($filename)
 #
@@ -908,6 +961,7 @@ sub bootstrap_dialog {
 	$widget = $self->{$dialog}->get_widget($dialog);
 	for my $n (keys %$connects) {
 	    my $w = $self->{$dialog}->get_widget($n);
+	    print STDERR "connect: '$n'\n";
 	    $w->signal_connect(@{$connects->{$n}});
 	}
 	$boot = 1;
