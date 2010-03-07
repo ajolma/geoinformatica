@@ -43,6 +43,8 @@ sub open {
 
 	     color_scale_min_entry => [changed => \&color_scale_changed, [$self, $gui]],
 	     color_scale_max_entry => [changed => \&color_scale_changed, [$self, $gui]],
+
+	     hue_range_combobox => [changed => \&hue_changed, $self],
 	     
 	 });
 
@@ -55,6 +57,13 @@ sub open {
 	$combo->set_model($model);
 
 	$combo = $self->{colors_dialog}->get_widget('color_field_combobox');
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
+	$model = Gtk2::ListStore->new('Glib::String');
+	$combo->set_model($model);
+
+	$combo = $self->{colors_dialog}->get_widget('hue_range_combobox');
 	$renderer = Gtk2::CellRendererText->new;
 	$combo->pack_start($renderer, TRUE);
 	$combo->add_attribute($renderer, text => 0);
@@ -81,6 +90,8 @@ sub open {
     $self->{backup}->{table} = $table;
     $self->{backup}->{bins} = $bins;
 
+    $self->{current_coloring_type} = '';
+
     # set up the controllers
 
     my $combo = $dialog->get_widget('palette_type_combobox');
@@ -95,9 +106,15 @@ sub open {
     }
     $combo->set_active($active);
 
-    fill_color_field_combo($self);
+    $combo = $dialog->get_widget('hue_range_combobox');
+    $model = $combo->get_model;
+    $model->clear;
+    for my $type ('up to', 'down to') {
+	$model->set($model->append, 0, $type);
+	$i++;
+    }
 
-    $self->{current_coloring_type} = '';    
+    fill_color_field_combo($self); 
 
     $dialog->get_widget('color_scale_min_entry')->set_text($scale[0]);
     $dialog->get_widget('color_scale_max_entry')->set_text($scale[1]);
@@ -107,6 +124,7 @@ sub open {
     $dialog->get_widget('hue_checkbutton')->set_active($self->hue > 0 ? TRUE : FALSE);
     $dialog->get_widget('hue_label')->set_text($self->hue);
     fill_colors_treeview($self);
+    return $self->{colors_dialog}->get_widget('colors_dialog');
 }
 
 # set ups
@@ -137,11 +155,7 @@ sub fill_color_field_combo {
 	$active = $i if $field->{Name} eq $self->color_field();
 	$i++;
     }
-    unless (defined $active) {
-	$active = 0;
-	$self->color_field($fields[0]->{Name});
-    }
-    $combo->set_active($active);
+    $combo->set_active($active) if defined $active;
 }
 
 # callbacks for edits
@@ -151,60 +165,60 @@ sub palette_type_changed {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{colors_dialog};
     my $palette_type = get_value_from_combo($self->{colors_dialog}, 'palette_type_combobox');
+    return unless $palette_type;
     $self->palette_type($palette_type);
 
     fill_color_field_combo($self);
 
     my $tv = $dialog->get_widget('colors_treeview');
     
-    for (qw/color_field_label color_field_combobox color_scale_min_entry color_scale_max_entry 
-            min_hue_button max_hue_button hue_range_combobox hue_checkbutton hue_button copy_colors_button 
-            open_colors_button save_colors_button edit_color_button delete_color_button add_color_button/) {
-	$dialog->get_widget($_)->set_sensitive(0);
+    for my $w (qw/color_field_label color_field_combobox 
+            color_scale_min_entry color_scale_max_entry color_legend_button
+            rainbow_label rainbow_2_label
+            min_hue_label min_hue_button max_hue_label max_hue_button hue_range_combobox 
+            hue_checkbutton hue_label hue_button 
+            edit_color_button delete_color_button add_color_button
+            copy_colors_button open_colors_button save_colors_button/) {
+	$dialog->get_widget($w)->set_sensitive(0);
     }
     $tv->set_sensitive(0);
     
     if ($palette_type ne 'Single color') {
-	for (qw/color_field_label color_field_combobox/) {
-	    $dialog->get_widget($_)->set_sensitive(1);
+	for my $w (qw/color_field_label color_field_combobox/) {
+	    $dialog->get_widget($w)->set_sensitive(1);
 	}
     }
     
     if ($palette_type eq 'Grayscale') {
-	for (qw/hue_checkbutton hue_button/) {
-	    $dialog->get_widget($_)->set_sensitive(1);
+	for my $w (qw/hue_checkbutton hue_label hue_button/) {
+	    $dialog->get_widget($w)->set_sensitive(1);
 	}
-    } elsif ($palette_type eq 'Grayscale' or $palette_type eq 'Rainbow') {
-	for (qw/min_hue_button max_hue_button hue_range_combobox/) {
-	    $dialog->get_widget($_)->set_sensitive(1);
+    } elsif ($palette_type eq 'Rainbow') {
+	for my $w (qw/rainbow_label rainbow_2_label
+                      min_hue_label min_hue_button max_hue_label max_hue_button hue_range_combobox/) {
+	    $dialog->get_widget($w)->set_sensitive(1);
 	}
     }
     
     if ($palette_type eq 'Single color') {
-	for (qw/color_scale_button color_legend_button/) {
-	    $dialog->get_widget($_)->set_sensitive(0);
-	}
 	$dialog->get_widget('edit_color_button')->set_sensitive(1);
 	$tv->set_sensitive(1);
     } elsif ($palette_type eq 'Grayscale' or $palette_type eq 'Rainbow' or $palette_type =~ 'channel') {
-	for (qw/color_scale_button color_legend_button color_scale_min_entry color_scale_max_entry/) {
-	    $dialog->get_widget($_)->set_sensitive(1);
+	for my $w (qw/color_legend_button color_scale_min_entry color_scale_max_entry/) {
+	    $dialog->get_widget($w)->set_sensitive(1);
 	}
 	$tv->set_sensitive(1);
     } elsif ($palette_type eq 'Color table') {
-	for (qw/color_scale_button color_legend_button copy_colors_button open_colors_button save_colors_button 
+	for my $w (qw/copy_colors_button open_colors_button save_colors_button 
                 edit_color_button delete_color_button add_color_button/) {
-	    $dialog->get_widget($_)->set_sensitive(1);
+	    $dialog->get_widget($w)->set_sensitive(1);
 	}
 	$tv->set_sensitive(1);
 	
     } elsif ($palette_type eq 'Color bins') {
-	for (qw/color_scale_button color_legend_button/) {
-	    $dialog->get_widget($_)->set_sensitive(0);
-	}
-	for (qw/copy_colors_button open_colors_button save_colors_button edit_color_button 
-                delete_color_button add_color_button/) {
-	    $dialog->get_widget($_)->set_sensitive(1);
+	for my $w (qw/copy_colors_button open_colors_button save_colors_button 
+                edit_color_button delete_color_button add_color_button/) {
+	    $dialog->get_widget($w)->set_sensitive(1);
 	}
 	$tv->set_sensitive(1);
     }
@@ -235,12 +249,13 @@ sub color_scale_changed {
 
 ## @ignore
 sub hue_changed {
-    my($self) = @_;
+    my(undef, $self) = @_;
     my $d = $self->{colors_dialog};
     my $min = get_number_from_entry($d->get_widget('min_hue_label'));
     my $max = get_number_from_entry($d->get_widget('max_hue_label'));
     my $dir = $d->get_widget('hue_range_combobox')->get_active == 0 ? 1 : -1; # up is 1, down is -1
     $self->hue_range($min, $max, $dir);
+    create_colors_treeview($self);
 }
 
 # button callbacks
@@ -387,8 +402,8 @@ sub edit_color {
 	if ($palette_type eq 'Single color') {
 	    $self->color(@color);
 	} else {
-	    for (@selected) {
-		my $i = $_->to_string;
+	    for my $selected (@selected) {
+		my $i = $selected->to_string;
 		$self->color($i, $x, @color);
 	    } 
 	}
@@ -397,18 +412,24 @@ sub edit_color {
 	$d->destroy;
     }
     
-    for (@selected) {
-	$selection->select_path($_);
+    for my $selected (@selected) {
+	$selection->select_path($selected);
     }
 }
 
 ##@ignore
 sub delete_color {
     my($self, $gui) = @{$_[1]};
+    my $palette_type = $self->palette_type;
+    my $table = $palette_type eq 'Color table' ?
+	$self->color_table() : 
+	( $palette_type eq 'Color bins' ? $self->color_bins() : undef );
+    return unless $table and @$table;
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');
     my $selection = $treeview->get_selection;
     my @selected = $selection->get_selected_rows if $selection;
     my $model = $treeview->get_model;
+    return unless $model;
     my $at;
     for my $selected (@selected) {
 	$at = $selected->to_string;
@@ -416,8 +437,10 @@ sub delete_color {
 	$model->remove($iter);
 	$self->remove_color($at);
     }
-    $at--;
+    #$at--;
     $at = 0 if $at < 0;
+    $at = $#$table if $at > $#$table;
+    return if $at < 0;
     $treeview->set_cursor(Gtk2::TreePath->new($at));
 }
 
@@ -429,6 +452,7 @@ sub add_color {
     my @selected = $selection->get_selected_rows if $selection;
     my $index = $selected[0]->to_string+1 if @selected;
     my $model = $treeview->get_model;
+    return unless $model;
     my $palette_type = $self->palette_type;
     my @color = (255, 255, 255, 255);
     my $table = $palette_type eq 'Color table' ? $self->color_table : $self->color_bins;
@@ -496,7 +520,7 @@ sub set_hue_range {
 	$dialog->get_widget($dir.'_hue_label')->set_text(int($color[0]));
     }
     $color_chooser->destroy;
-    hue_changed($self);
+    hue_changed(undef, $self);
 }
 
 ##@ignore
@@ -519,7 +543,7 @@ sub set_hue {
 	$dialog->get_widget('hue_checkbutton')->set_active(TRUE);
     }
     $color_chooser->destroy;
-    hue_changed($self);
+    hue_changed(undef, $self);
 }
 
 ##@ignore
@@ -586,13 +610,15 @@ sub create_colors_treeview {
     if ($palette_type eq 'Single color') {
 	$model = Gtk2::TreeStore->new(qw/Gtk2::Gdk::Pixbuf Glib::Int Glib::Int Glib::Int Glib::Int/);
     } elsif ($palette_type eq 'Color table') {
+	return unless $type;
 	$model = Gtk2::TreeStore->new("Glib::$type","Gtk2::Gdk::Pixbuf","Glib::Int","Glib::Int","Glib::Int","Glib::Int");
     } elsif ($palette_type eq 'Color bins') {
+	return unless $type;
 	$model = Gtk2::TreeStore->new("Glib::$type","Gtk2::Gdk::Pixbuf","Glib::Int","Glib::Int","Glib::Int","Glib::Int");
     }
     $treeview->set_model($model);
-    for ($treeview->get_columns) {
-	$treeview->remove_column($_);
+    for my $col ($treeview->get_columns) {
+	$treeview->remove_column($col);
     }
 
     my $i = 0;
@@ -612,7 +638,7 @@ sub create_colors_treeview {
     $column = Gtk2::TreeViewColumn->new_with_attributes('color', $cell, pixbuf => $i++);
     $treeview->append_column($column);
 
-    foreach my $c ('red','green','blue','alpha') {
+    for my $c ('red','green','blue','alpha') {
 	$cell = Gtk2::CellRendererText->new;
 	$cell->set(editable => 1);
 	$cell->signal_connect(edited => \&cell_in_colors_treeview_changed, [$self, $i-1]);
@@ -626,12 +652,13 @@ sub create_colors_treeview {
 sub current_coloring_type {
     my($self) = @_;
     my $field = $self->color_field;
-    return unless defined $field;
+    return '' unless defined $field;
     $field = $self->schema->field($field);
-    return unless $field;
+    return '' unless $field;
     return 'Int' if $field->{Type} eq 'Integer';
     return 'Double' if $field->{Type} eq 'Real';
     return 'String' if $field->{Type} eq 'String';
+    return '';
 }
 
 ##@ignore
@@ -641,6 +668,7 @@ sub fill_colors_treeview {
     my $palette_type = $self->palette_type;
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');
     my $model = $treeview->get_model;
+    return unless $model;
     $model->clear;
 
     if ($palette_type eq 'Single color') {
@@ -648,9 +676,18 @@ sub fill_colors_treeview {
 	my $iter = $model->append(undef);
 	set_color($model,$iter, undef, $self->single_color());
 
-    } else {
+    } elsif ($palette_type eq 'Color table') {
 
-	my $table = $palette_type eq 'Color table' ? $self->color_table() : $self->color_bins();
+	my $table = $self->color_table();
+
+	for my $color (@$table) {
+	    my $iter = $model->append(undef);
+	    set_color($model, $iter, @$color);
+	}
+	
+    } elsif ($palette_type eq 'Color bins') {
+
+	my $table = $self->color_bins();
 
 	for my $color (@$table) {
 	    my $iter = $model->append(undef);
@@ -686,8 +723,8 @@ sub put_scale_in_treeview {
 
     my $model = Gtk2::TreeStore->new(qw/Gtk2::Gdk::Pixbuf Glib::Double/);
     $treeview->set_model($model);
-    for ($treeview->get_columns) {
-	$treeview->remove_column($_);
+    for my $col ($treeview->get_columns) {
+	$treeview->remove_column($col);
     }
 
     my $i = 0;
@@ -760,12 +797,12 @@ sub copy_colors_dialog {
     my $model = Gtk2::TreeStore->new(qw/Glib::String/);
     $treeview->set_model($model);
 
-    for ($treeview->get_columns) {
-	$treeview->remove_column($_);
+    for my $col ($treeview->get_columns) {
+	$treeview->remove_column($col);
     }
 
     my $i = 0;
-    foreach my $column ('Layer') {
+    for my $column ('Layer') {
 	my $cell = Gtk2::CellRendererText->new;
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$treeview->append_column($col);
@@ -786,12 +823,14 @@ sub copy_colors_dialog {
     my $response = $dialog->get_widget('colors_from_dialog')->run;
 
     my $table;
+    #print STDERR "response=$response\n";
 
     if ($response eq 'ok') {
 
 	my @sel = $treeview->get_selection->get_selected_rows;
 	if (@sel) {
 	    my $i = $sel[0]->to_string if @sel;
+	    #print STDERR "index=$i, name=$names[$i]\n";
 	    my $from_layer = $gui->{overlay}->get_layer_by_name($names[$i]);
 
 	    if ($palette_type eq 'Color table') {

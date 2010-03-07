@@ -47,7 +47,7 @@ sub open {
     $scale_min->set_text($scale[0]);
     $scale_max->set_text($scale[1]);
     $size_spin->set_value($size);
-    
+    return $self->{symbols_dialog}->get_widget('symbols_dialog');
 }
 
 ##@ignore

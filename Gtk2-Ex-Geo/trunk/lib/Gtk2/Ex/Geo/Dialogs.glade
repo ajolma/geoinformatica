@@ -711,9 +711,9 @@ selected field from layer.</property>
               <widget class="GtkHBox" id="hbox3">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkLabel" id="label5">
+                  <widget class="GtkLabel" id="rainbow_label">
                     <property name="visible">True</property>
-                    <property name="label" translatable="yes">Min hue is</property>
+                    <property name="label" translatable="yes">Set rainbow hue from</property>
                   </widget>
                   <packing>
                     <property name="position">0</property>
@@ -749,9 +749,9 @@ selected field from layer.</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="label7">
+                  <widget class="GtkLabel" id="rainbow_2_label">
                     <property name="visible">True</property>
-                    <property name="label" translatable="yes">Max hue is</property>
+                    <property name="label" translatable="yes">hue</property>
                   </widget>
                   <packing>
                     <property name="position">4</property>
@@ -778,16 +778,25 @@ selected field from layer.</property>
                     <property name="position">6</property>
                   </packing>
                 </child>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHBox" id="hbox6">
+                <property name="visible">True</property>
                 <child>
                   <widget class="GtkCheckButton" id="hue_checkbutton">
-                    <property name="label" translatable="yes">Hue is</property>
+                    <property name="label" translatable="yes">Set grayscale hue to</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="draw_indicator">True</property>
                   </widget>
                   <packing>
-                    <property name="position">7</property>
+                    <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
@@ -796,7 +805,7 @@ selected field from layer.</property>
                     <property name="label" translatable="yes">label</property>
                   </widget>
                   <packing>
-                    <property name="position">8</property>
+                    <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
@@ -808,13 +817,13 @@ selected field from layer.</property>
                     <property name="use_stock">True</property>
                   </widget>
                   <packing>
-                    <property name="position">9</property>
+                    <property name="position">2</property>
                   </packing>
                 </child>
               </widget>
               <packing>
                 <property name="expand">False</property>
-                <property name="position">2</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>
@@ -831,7 +840,7 @@ selected field from layer.</property>
                 </child>
               </widget>
               <packing>
-                <property name="position">3</property>
+                <property name="position">4</property>
               </packing>
             </child>
             <child>
@@ -885,7 +894,7 @@ selected field from layer.</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
-                <property name="position">4</property>
+                <property name="position">5</property>
               </packing>
             </child>
             <child>
@@ -941,7 +950,7 @@ another layer.</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
-                <property name="position">5</property>
+                <property name="position">6</property>
               </packing>
             </child>
           </widget>

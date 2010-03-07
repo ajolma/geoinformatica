@@ -242,6 +242,12 @@ sub defaults {
 ##@ignore
 sub DESTROY {
     my $self = shift;
+    for (keys %$self) {
+	if (isa($self->{$_}, 'Gtk2::Widget')) {
+	    $self->{$_}->destroy;
+	}
+	delete $self->{$_};
+    }
 }
 
 ##@ignore
@@ -683,6 +689,7 @@ sub color {
 }
 
 ## @method add_color($index, @XRGBA)
+# @brief Add color to color table or color bins at given index.
 sub add_color {
     my($self, $index, @XRGBA) = @_;
     if ($self->{PALETTE_TYPE} eq 'Color table') {
@@ -693,6 +700,7 @@ sub add_color {
 }
 
 ## @method remove_color($index)
+# @brief Remove color from color table or color bins at given index.
 sub remove_color {
     my($self, $index) = @_;
     if ($self->{PALETTE_TYPE} eq 'Color table') {
@@ -961,7 +969,7 @@ sub bootstrap_dialog {
 	$widget = $self->{$dialog}->get_widget($dialog);
 	for my $n (keys %$connects) {
 	    my $w = $self->{$dialog}->get_widget($n);
-	    print STDERR "connect: '$n'\n";
+	    #print STDERR "connect: '$n'\n";
 	    $w->signal_connect(@{$connects->{$n}});
 	}
 	$boot = 1;
