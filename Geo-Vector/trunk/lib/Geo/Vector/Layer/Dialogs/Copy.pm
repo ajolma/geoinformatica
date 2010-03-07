@@ -24,8 +24,10 @@ sub open {
 	     copy_ok_button => [clicked => \&do_copy, [$self, $gui, 1]],
 	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
 	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
-	     copy_add_button => [clicked=>\&add_to_mappings, $self],
-	     copy_delete_button => [clicked=>\&delete_from_mappings, $self],
+	     copy_add_button => [clicked => \&add_to_mappings, $self],
+	     copy_delete_button => [clicked => \&delete_from_mappings, $self],
+	     copy_driver_combobox => [changed => \&copy_driver_changed, $self],
+	     copy_name_comboboxentry => [changed => \&copy_into_changed, [$self, $gui]],
 	 },
 	);
     
@@ -39,18 +41,16 @@ sub open {
 	
 	my $combo = $dialog->get_widget('copy_driver_combobox');
 	my $renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start ($renderer, TRUE);
-	$combo->add_attribute ($renderer, text => 0);
-	$combo->signal_connect(changed => \&copy_driver_changed, $self);
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
 
 	$combo = $dialog->get_widget('copy_datasource_combobox');
 	$renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start ($renderer, TRUE);
-	$combo->add_attribute ($renderer, text => 0);
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
 
 	$combo = $dialog->get_widget('copy_name_comboboxentry');
 	$combo->set_text_column(0);
-	$combo->signal_connect(changed => \&copy_into_changed, [$self, $gui]);
     }
 
     my $model = Gtk2::ListStore->new('Glib::String');
