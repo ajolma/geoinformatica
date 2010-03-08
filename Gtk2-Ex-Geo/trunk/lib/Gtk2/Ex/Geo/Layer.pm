@@ -343,23 +343,24 @@ sub open_features_dialog {
 		  "negligent enough to leave the features dialog out.");
 }
 
-## @cmethod arrayref menu_items(arrayref items)
+## @method arrayref menu_items()
 #
-# The items that the object gets may contain items added by super
-# classes. Every other item is a string, which becomes the menu entry,
-# or a string which is not used (but it needs to be unique) if the
-# item is a separator. A '_' in front of a letter makes that letter a
-# shortcut key. Every other item is anonymous sub. The sub points to a
-# subroutine, which is called when the menu item is selected by the
-# user.
+# @brief Return menu items for the layer menu.
 #
-# @brief Return the menu items of this layer class for the GUI.
-# @param items Menu items hash into which add more items. 
+# A menu item consists of an entry and action. The action may be an
+# anonymous subroutine or FALSE, in which case a separator item is
+# added. A '_' in front of a letter makes that letter a shortcut key
+# for the item. The final layer menu is composed of entries added by
+# Glue.pm, and all classes in the layers lineage. The subroutine is
+# called with [$self, $gui] as user data.
+#
+# @todo add machinery for multiselection.
+#
 # @return a reference to the items array.
 sub menu_items {
-    my($self, $items) = @_;
-    push @$items, (
-	1 => 0,
+    my($self) = @_;
+    my @items;
+    push @items, (
 	'_Unselect all' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->select;
@@ -387,7 +388,7 @@ sub menu_items {
 	    $self->open_properties_dialog($gui);
 	}
     );
-    return $items;
+    return @items;
 }
 
 sub open_symbols_dialog {

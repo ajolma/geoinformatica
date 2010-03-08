@@ -178,22 +178,18 @@ sub open_properties_dialog {
     }
 }
 
-## @method hashref menu_items()
-#
-# @brief Reports the class menu items (name and sub) for the GUI.
-# @return A reference to an anonymous hash.
+## @ignore
 sub menu_items {
-    my($self, $items) = @_;
-    $items = $self->SUPER::menu_items($items);
-    push @$items, ( 1 => 0 );
+    my($self) = @_;
+    my @items;
     if ( $self->{features} ) {
-	push @$items, ( 
+	push @items, ( 
 	    '_Features...' => sub {
 		my($self, $gui) = @{$_[1]};
 		Geo::Vector::Layer::Dialogs::FeatureCollection::open($self, $gui);
 	    });	
     } elsif ( $self->{OGR}->{Layer} ) {
-	push @$items, ( 
+	push @items, ( 
 	    'C_opy...' => sub {
 		my($self, $gui) = @{$_[1]};
 		Geo::Vector::Layer::Dialogs::Copy::open($self, $gui);
@@ -210,9 +206,12 @@ sub menu_items {
 		Geo::Vector::Layer::Dialogs::Rasterize::open($self, $gui);
 	    } );
     }
-    return $items;
+    push @items, ( 1 => 0 );
+    push @items, $self->SUPER::menu_items();
+    return @items;
 }
 
+## @ignore
 sub open_features_dialog {
     my($self) = @_;
     if ( $self->{features} ) {
@@ -222,9 +221,13 @@ sub open_features_dialog {
 	$self->{features_dialog} = Geo::Vector::Layer::Dialogs::Features::open(@_);
     }
 }
+
+## @ignore
 sub open_vertices_dialog {
     Geo::Vector::Layer::Dialogs::Vertices::open(@_);
 }
+
+## @ignore
 sub open_rasterize_dialog {
 }
 

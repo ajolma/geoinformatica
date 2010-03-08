@@ -133,6 +133,7 @@ sub registration {
     return { dialogs => $dialogs, commands => $commands };
 }
 
+## @ignore
 sub upgrade {
     my($object) = @_;
     if (isa($object, 'Geo::Raster') and !isa($object, 'Geo::Raster::Layer')) {
@@ -143,6 +144,7 @@ sub upgrade {
     return 0;
 }
 
+## @ignore
 sub new {
     my($package, %params) = @_;
     my $self = Geo::Raster::new($package, %params);
@@ -150,6 +152,7 @@ sub new {
     return $self;
 }
 
+## @ignore
 sub DESTROY {
     my $self = shift;
     return unless $self;
@@ -157,6 +160,7 @@ sub DESTROY {
     Gtk2::Ex::Geo::Layer::DESTROY($self);
 }
 
+## @ignore
 sub defaults {
     my($self, %params) = @_;
     if ($self->{GDAL}) {
@@ -186,6 +190,7 @@ sub defaults {
     $self->SUPER::defaults(%params);
 }
 
+## @ignore
 sub save {
     my($self, $filename, $format) = @_;
     $self->SUPER::save($filename, $format);
@@ -211,6 +216,7 @@ sub save {
     }
 }
 
+## @ignore
 sub type {
     my($self, $format) = @_;
     my $type = $self->data_type;
@@ -230,6 +236,7 @@ sub type {
     return $type;
 }
 
+## @ignore
 sub supported_palette_types {
     my($self) = @_;
     return ('Single color') unless $self->{GRID}; # may happen if not cached
@@ -241,6 +248,7 @@ sub supported_palette_types {
     }
 }
 
+## @ignore
 sub supported_symbol_types {
     my($self) = @_;
     return ('No symbol') unless $self->{GRID}; # may happen if not cached
@@ -251,6 +259,7 @@ sub supported_symbol_types {
     }
 }
 
+## @ignore
 sub open_properties_dialog {
     my($self, $gui) = @_;
     if ($self->{GDAL}) {
@@ -260,11 +269,11 @@ sub open_properties_dialog {
     }
 }
 
+## @ignore
 sub menu_items {
-    my($self, $items) = @_;
-    $items = $self->SUPER::menu_items($items);
-    push @$items, ( 1 => 0 );
-    push @$items, ( 'S_ave...' => sub {
+    my($self) = @_;
+    my @items;
+    push @items, ( 'S_ave...' => sub {
 	my($self, $gui) = @{$_[1]};
 	my $file_chooser =
 	    Gtk2::FileChooserDialog->new( "Save raster '".$self->name."' as:",
@@ -295,7 +304,7 @@ sub menu_items {
 	    }
 	    $self->save($filename);
 	}}) unless $self->{GDAL};
-    push @$items, ( 'C_opy...' => sub {
+    push @items, ( 'C_opy...' => sub {
 	my($self, $gui) = @{$_[1]};
 	$self->open_copy_dialog($gui);
 		    },
@@ -303,9 +312,12 @@ sub menu_items {
 			my($self, $gui) = @{$_[1]};
 			$self->open_vectorize_dialog($gui);
 		    });
-    return $items;
+    push @items, ( 1 => 0 );
+    push @items, $self->SUPER::menu_items();    
+    return @items;
 }
 
+## @ignore
 sub render {
     my($self, $pb) = @_;
 
@@ -356,10 +368,12 @@ sub render {
     }
 }
 
+## @ignore
 sub open_copy_dialog {
     Geo::Raster::Layer::Dialogs::Copy::open(@_);
 }
 
+## @ignore
 sub open_vectorize_dialog {
     Geo::Raster::Layer::Dialogs::Vectorize::open(@_);
 }

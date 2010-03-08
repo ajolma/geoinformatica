@@ -624,7 +624,10 @@ sub layer_menu {
 	    );
 
 	# add items from the layer classes
-	$layer->menu_items(\@items) unless @layers;
+	unless (@layers) {
+	    push @items, ( 1 => 0 );
+	    push @items, $layer->menu_items();
+	}
 	
 	my $menu = Gtk2::Menu->new;
 	my $params = @layers ? [\@layers, $self] : [$layer, $self];

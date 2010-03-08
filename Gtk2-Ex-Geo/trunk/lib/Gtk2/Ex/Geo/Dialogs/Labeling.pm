@@ -63,7 +63,7 @@ sub open {
     $dialog->get_widget('labels_min_size_entry')->set_text($labeling->{min_size});
     $dialog->get_widget('labels_incremental_checkbutton')->set_active($labeling->{incremental});
     
-    $dialog->get_widget('labels_dialog')->show_all;
+    return $dialog->get_widget('labels_dialog');
 }
 
 ##@ignore
