@@ -24,11 +24,11 @@ sub open {
 	     features_limit_checkbutton => [toggled => \&fill_features_table, [$self, $gui]],	     
 	     features_vertices_button => [clicked => \&vertices_of_selected_features, [$self, $gui]],
 	     make_selection_button => [clicked => \&make_selection, [$self, $gui]],
-	     from_drawing_button => [clicked => \&from_drawing, [$self, $gui]],
 	     copy_selected_button => [clicked => \&copy_selected_features, [$self, $gui]],
 	     zoom_to_button => [clicked => \&zoom_to_selected_features, [$self, $gui]],
 	     close_features_button => [clicked => \&close_features_dialog, [$self, $gui]],	    
 	     delete_feature_button => [clicked => \&delete_selected_features, [$self, $gui]],	     
+	     from_drawing_button => [clicked => \&from_drawing, [$self, $gui]],
 	     copy_to_drawing_button => [clicked => \&copy_to_drawing, [$self, $gui]],
 	     copy_from_drawing_button => [clicked => \&copy_from_drawing, [$self, $gui]],
 	 },
@@ -361,8 +361,8 @@ sub make_selection {
     my $features = get_selected_from_selection($treeview->get_selection);
     $features = $self->features(with_id=>[keys %$features]);
     delete $gui->{overlay}->{selection};
-    for (@$features) {
-	my $geom = $_->GetGeometryRef();
+    for my $f (@$features) {
+	my $geom = $f->GetGeometryRef();
 	next unless $geom;
 	my $g = Geo::OGC::Geometry->new(Text => $geom->ExportToWkt);
 	unless ($gui->{overlay}->{selection}) {

@@ -304,9 +304,12 @@ sub copy_into_changed {
     $cell->set(has_entry => 0);
     $cell->signal_connect(edited => \&mappings_changed, [$self, $i]);
     my $m = Gtk2::ListStore->new('Glib::String');
-    for my $name ($self->schema->field_names) {
-	next if $name =~ /^\./;
-	$m->set($m->append, 0, $name);
+    my $schema = $self->schema;
+    if ($schema) {
+	for my $name ($schema->field_names) {
+	    next if $name =~ /^\./;
+	    $m->set($m->append, 0, $name);
+	}
     }
     $cell->set(model=>$m);
     my $column = Gtk2::TreeViewColumn->new_with_attributes('From', $cell, text => $i++);
@@ -319,9 +322,12 @@ sub copy_into_changed {
     $cell->signal_connect(edited => \&mappings_changed, [$self, $i]);
     $m = Gtk2::ListStore->new('Glib::String');
     if ($into_layer) {
-	for my $name ($into_layer->schema->field_names) {
-	    next if $name =~ /^\./;
-	    $m->set($m->append, 0, $name);
+	my $schema = $into_layer->schema;
+	if ($schema) {
+	    for my $name ($schema->field_names) {
+		next if $name =~ /^\./;
+		$m->set($m->append, 0, $name);
+	    }
 	}
     }
     $cell->set(model=>$m);

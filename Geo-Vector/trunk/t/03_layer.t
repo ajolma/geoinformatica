@@ -26,6 +26,8 @@ Gtk2->init;
 Glib->install_exception_handler(\&Gtk2::Ex::Geo::exception_handler);
 
 my($window, $gis) = setup(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer/]);
+$gis->add_layer(Geo::Vector->new(features=>[]),'a');
+$gis->add_layer(Geo::Vector->new(),'b');
 
 eval {
     require IPC::Gnuplot;

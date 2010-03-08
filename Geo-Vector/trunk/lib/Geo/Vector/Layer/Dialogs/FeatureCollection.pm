@@ -4,43 +4,40 @@ package Geo::Vector::Layer::Dialogs::FeatureCollection;
 use strict;
 use warnings;
 use Carp;
+use UNIVERSAL qw(isa);
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 
 ## @ignore
 sub open {
     my($self, $gui) = @_;
-    my $dialog = $self->{feature_collection_dialog};
-    unless ($dialog) {
-	$self->{feature_collection_dialog} = $dialog = $gui->get_dialog('feature_collection_dialog');
-	croak "feature_collection_dialog for Geo::Vector does not exist" unless $dialog;
-	$dialog->get_widget('feature_collection_dialog')
-	    ->signal_connect(delete_event => \&close_feature_collection_dialog, [$self, $gui]);
-	
+
+    # bootstrap:
+    my($dialog, $boot) = $self->bootstrap_dialog
+	($gui, 'feature_collection_dialog', "Features of ".$self->name,
+	 {
+	     feature_collection_dialog => [delete_event => \&close_feature_collection_dialog, [$self, $gui]],
+	     feature_collection_from_spinbutton => [value_changed => \&fill_features_table2, [$self, $gui]],
+	     feature_collection_max_spinbutton => [value_changed => \&fill_features_table2, [$self, $gui]],	     
+
+	     feature_collection_delete_feature_button => [clicked => \&delete_selected_features, [$self, $gui]],
+	     feature_collection_from_drawing_button => [clicked => \&from_drawing, [$self, $gui]],
+	     feature_collection_copy_to_drawing_button => [clicked => \&copy_to_drawing, [$self, $gui]],
+	     feature_collection_copy_from_drawing_button => [clicked => \&copy_from_drawing, [$self, $gui]],
+
+	     feature_collection_vertices_button => [clicked => \&vertices_of_selected_features, [$self, $gui]],
+	     feature_collection_make_selection_button => [clicked => \&make_selection, [$self, $gui]],
+	     feature_collection_copy_selected_button => [clicked => \&copy_selected_features, [$self, $gui]],
+	     feature_collection_zoom_to_button => [clicked => \&zoom_to_selected_features, [$self, $gui]],
+	     feature_collection_close_button => [clicked => \&close_feature_collection_dialog, [$self, $gui]],
+	 },
+	);
+    
+    if ($boot) {	
 	my $selection = $dialog->get_widget('feature_collection_treeview')->get_selection;
 	$selection->set_mode('multiple');
 	$selection->signal_connect(changed => \&feature_activated2, [$self, $gui]);
-	
-	$dialog->get_widget('feature_collection_from_spinbutton')
-	    ->signal_connect(value_changed => \&fill_features_table2, [$self, $gui]);
-	$dialog->get_widget('feature_collection_max_spinbutton')
-	    ->signal_connect(value_changed => \&fill_features_table2, [$self, $gui]);
-
-	$dialog->get_widget('feature_collection_from_selection_button')
-	    ->signal_connect(clicked => \&from_selection, [$self, $gui]);
-	
-	$dialog->get_widget('feature_collection_zoom_to_button')
-	    ->signal_connect(clicked => \&zoom_to_selected_feature_collection, [$self, $gui]);
-	$dialog->get_widget('feature_collection_close_button')
-	    ->signal_connect(clicked => \&close_feature_collection_dialog, [$self, $gui]);
-
-    } elsif (!$dialog->get_widget('feature_collection_dialog')->get('visible')) {
-	$dialog->get_widget('feature_collection_dialog')
-	    ->move(@{$self->{feature_collection_dialog_position}}) 
-	    if $self->{feature_collection_dialog_position};
     }
-    $dialog->get_widget('feature_collection_dialog')
-	->set_title("Features of ".$self->name);
 
     my $treeview = $dialog->get_widget('feature_collection_treeview');
 
@@ -87,9 +84,8 @@ sub open {
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$treeview->append_column($col);
     }
-    
-    $dialog->get_widget('feature_collection_dialog')->show_all;
-    $dialog->get_widget('feature_collection_dialog')->present;
+
+    return $dialog->get_widget('feature_collection_dialog');
 }
 
 ##@ignore
@@ -101,6 +97,160 @@ sub close_feature_collection_dialog {
     }
     $self->hide_dialog('feature_collection_dialog');
     1;
+}
+
+##@ignore
+sub delete_selected_features {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{feature_collection_dialog};
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my $delete = get_selected_from_selection($treeview->get_selection);
+    my @features;
+    for my $i (0..$#{$self->{features}}) {
+	next if exists $delete->{$i};
+	push @features, $self->{features}[$i];
+    }
+    $self->{features} = \@features;
+    fill_features_table2(undef, [$self, $gui]);
+    $gui->{overlay}->render;
+}
+
+##@ignore
+sub from_drawing {
+    my($self, $gui) = @{$_[1]};
+    return unless $gui->{overlay}->{drawing};
+    $self->add_feature({ geometry => $gui->{overlay}->{drawing} });
+    fill_features_table2(undef, [$self, $gui]);
+    $gui->{overlay}->render;
+}
+
+##@ignore
+sub copy_to_drawing {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{feature_collection_dialog};
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    my @features = keys %$features;
+    if (@features == 0 or @features > 1) {
+	$gui->message("Select one and only one feature.");
+	return;
+    }
+    $features = $self->features(with_id=>[@features]);
+    for my $f (@$features) {
+	my $geom = $f->GetGeometryRef();
+	next unless $geom;
+	my $g = Geo::OGC::Geometry->new(Text => $geom->ExportToWkt);
+	$gui->{overlay}->{drawing} = $g;
+	last;
+    }
+    $gui->{overlay}->update_image;
+}
+
+##@ignore
+sub copy_from_drawing {
+    my($self, $gui) = @{$_[1]};
+    unless ($gui->{overlay}->{drawing}) {
+	$gui->message("Create a drawing first.");
+	return;
+    }
+    my $dialog = $self->{feature_collection_dialog};
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    my @features = keys %$features;
+    if (@features == 0 or @features > 1) {
+	$gui->message("Select one and only one feature.");
+	return;
+    }
+    $features = $self->features(with_id=>[@features]);
+    for my $f (@$features) {
+	my $geom = Geo::OGR::Geometry->create(WKT => $gui->{overlay}->{drawing}->AsText);
+	$f->SetGeometry($geom);
+	$self->feature($f->FID, $f);
+	last;
+    }
+    fill_features_table2(undef, [$self, $gui]);
+    $gui->{overlay}->render;
+}
+
+##@ignore
+sub vertices_of_selected_features {
+    my($self, $gui) = @{$_[1]};
+    # add title to the call
+    $self->open_vertices_dialog($gui);
+}
+
+##@ignore
+sub make_selection {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{feature_collection_dialog};
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    $features = $self->features(with_id=>[keys %$features]);
+    delete $gui->{overlay}->{selection};
+    for my $f (@$features) {
+	my $geom = $f->GetGeometryRef();
+	next unless $geom;
+	my $g = Geo::OGC::Geometry->new(Text => $geom->ExportToWkt);
+	unless ($gui->{overlay}->{selection}) {
+	    unless (isa($g, 'Geo::OGC::GeometryCollection')) {
+		my $coll = $g->MakeCollection;
+		$coll->AddGeometry($g);
+		$gui->{overlay}->{selection} = $coll;
+	    } else {
+		$gui->{overlay}->{selection} = $g;
+	    }
+	} else {
+	    $gui->{overlay}->{selection}->AddGeometry($g);
+	}
+    }
+    $gui->{overlay}->update_image;
+}
+
+##@ignore
+sub copy_selected_features {
+    my($self, $gui) = @{$_[1]};
+    Geo::Vector::Layer::Dialogs::Copy::open($self, $gui);
+}
+
+##@ignore
+sub zoom_to_selected_features {
+    my($self, $gui) = @{$_[1]};
+
+    my $dialog = $self->{feature_collection_dialog};
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    $features = $self->features(with_id=>[keys %$features]);
+
+    my @viewport = $gui->{overlay}->get_viewport;
+    my @extent = ();
+    
+    for (@$features) {
+
+	my $geom = $_->GetGeometryRef();
+	next unless $geom;
+
+	my $env = $geom->GetEnvelope; 
+	$extent[0] = $env->[0] if !defined($extent[0]) or $env->[0] < $extent[0];
+	$extent[1] = $env->[2] if !defined($extent[1]) or $env->[2] < $extent[1];
+	$extent[2] = $env->[1] if !defined($extent[2]) or $env->[1] > $extent[2];
+	$extent[3] = $env->[3] if !defined($extent[3]) or $env->[3] > $extent[3];
+	
+    }
+
+    if (@extent) {
+	
+	# a point?
+	if ($extent[2] - $extent[0] <= 0) {
+	    $extent[0] -= ($viewport[2] - $viewport[0])/10;
+	    $extent[2] += ($viewport[2] - $viewport[0])/10;
+	}
+	if ($extent[3] - $extent[1] <= 0) {
+	    $extent[1] -= ($viewport[3] - $viewport[1])/10;
+	    $extent[3] += ($viewport[3] - $viewport[1])/10;
+	}
+	
+	$gui->{overlay}->zoom_to(@extent);
+    }
 }
 
 ## @ignore
@@ -164,15 +314,14 @@ sub feature_activated2 {
 	$model->clear;
 
 	my @recs;
-	for my $name (sort {$schema->{$a}{VisualOrder} <=> $schema->{$b}{VisualOrder}} keys %$schema) {
+	for my $field ($schema->fields) {
 	    my @rec;
 	    my $rec = 0;
 	    push @rec, $rec++;
-	    my $n = $name;
-	    $n =~ s/^\.//;
+	    my $n = $field->{Name};
 	    push @rec, $n;
 	    push @rec, $rec++;
-	    push @rec, Geo::Vector::feature_attribute($f, $name);
+	    push @rec, Geo::Vector::feature_attribute($f, $n);
 	    push @recs,\@rec;
 	}
 
@@ -193,7 +342,7 @@ sub feature_activated2 {
 		next unless $f; # should not happen
 		my $geom = $f->GetGeometryRef();
 		next unless $geom;
-		$overlay->render_geometry($gc, $geom);
+		$overlay->render_geometry($gc, Geo::OGC::Geometry->new(Text => $geom->ExportToWkt));
 	    }
 	});
 

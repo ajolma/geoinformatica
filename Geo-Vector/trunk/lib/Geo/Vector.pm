@@ -1117,6 +1117,7 @@ sub features {
 
 	for my $fid (sort { $a <=> $b } @{$params{with_id}}) {
 	    my $x = $self->{OGR}->{Layer}->GetFeature($fid) if $self->{OGR}->{Layer};
+	    $x = $self->{features}[$fid] if ($fid >= 0 and $fid < @{$self->{features}} and $self->{features});
 	    next unless $x;
 	    $i++;
 	    next if $i < $from;
