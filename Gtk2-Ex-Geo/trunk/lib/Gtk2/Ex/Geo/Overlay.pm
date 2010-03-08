@@ -561,7 +561,7 @@ sub update_image {
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
 	my $style = 'GDK_LINE_SOLID';
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
-	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1, first =>);
+	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
     }
     if ($self->{selection}) {
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{selection_color}}));
