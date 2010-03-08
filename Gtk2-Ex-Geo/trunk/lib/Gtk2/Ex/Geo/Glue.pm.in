@@ -60,10 +60,8 @@ sub new {
 	);
     
     $self->{model} = Gtk2::TreeStore->new(qw/Glib::String Glib::String Glib::String Glib::String/);
-    $self->{tree_view} = Gtk2::TreeView->new($self->{model});
-
-    my $selection = $self->{tree_view}->get_selection;
-    $selection->set_mode('multiple');
+    $self->{tree_view} = Gtk2::TreeView->new();
+    $self->{tree_view}->set_model($self->{model});
 
     $self->{toolbar} = Gtk2::Toolbar->new();
     $self->{statusbar} = Gtk2::Statusbar->new();
@@ -76,6 +74,9 @@ sub new {
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$self->{tree_view}->append_column($col);
     }
+
+    my $selection = $self->{tree_view}->get_selection;
+    $selection->set_mode('multiple'); # does not seem to work?!?
 
     my($menu, $menu_item_setup) = overlay_menu();
 

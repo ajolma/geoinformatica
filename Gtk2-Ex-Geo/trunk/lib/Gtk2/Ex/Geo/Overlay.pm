@@ -95,7 +95,7 @@ sub INIT_INSTANCE {
 
     $self->{offset} = [0, 0];
     $self->{bg_color} = [255, 255, 255, 255];
-    $self->{selection_color} = [65535, 65535, 0];
+    $self->{selection_color} = [255*257, 178*257, 0];
     $self->{selection_style} = 'GDK_LINE_SOLID';
     $self->{drawing_color} = [0, 65535, 0];
 
@@ -554,18 +554,21 @@ sub update_image {
     $self->{image}->set_from_pixbuf(undef);
     $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
     my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
+    $self->{pixmap}->draw_line($gc, 0, 0, 0, 0); # strange bug, the first line is not drawn
     $self->signal_emit('pixmap_ready');
-    if ($self->{selection}) {
-	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{selection_color}}));
-	my $style = $self->{selection_style};
-	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
-	$self->render_geometry($gc, $self->{selection});
-    }
+    my $first = 1;
     if ($self->{drawing}) {
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
 	my $style = 'GDK_LINE_SOLID';
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
-	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
+	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1, first =>);
+    }
+    if ($self->{selection}) {
+	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{selection_color}}));
+	my $style = $self->{selection_style};
+	$style = 'GDK_LINE_SOLID';
+	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
+	$self->render_geometry($gc, $self->{selection});
     }
     $annotations->($self, $self->{pixmap}, $gc, $user_param) if $annotations;
     $self->{image}->set_from_pixmap($self->{pixmap}, undef);
