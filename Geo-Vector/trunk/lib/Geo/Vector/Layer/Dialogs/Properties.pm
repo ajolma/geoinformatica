@@ -5,8 +5,8 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw/TRUE FALSE/;
-use Geo::Vector qw/:all/;
-use Geo::Vector::Layer qw/:all/;
+use Geo::Vector;
+use Geo::Vector::Layer;
 use Geo::Vector::Layer::Dialogs::New;
 
 ## @ignore
