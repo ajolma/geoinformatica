@@ -796,12 +796,13 @@ sub defn {
 sub feature_attribute {
     my($f, $a) = @_;
     if ($a =~ /^\./) { # pseudo fields
-        my $g = $f->Geometry;
 	if ($a eq '.FID') {
 	    return $f->GetFID;
 	} elsif ($a eq '.Z') {
+	    my $g = $f->Geometry;
 	    return $g->GetZ if $g;
 	} elsif ($a eq '.GeometryType') {
+	    my $g = $f->Geometry;
 	    return $g->GeometryType if $g;
 	}
     } else {
@@ -927,6 +928,7 @@ sub feature {
 	# update at fid
 	if ( $self->{features} ) {
 	    $self->{features}->[$fid] = $feature;
+	    $feature->FID($fid);
 	} else {
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
@@ -936,6 +938,7 @@ sub feature {
 	# add
 	if ($self->{features}) {
 	    push @{$self->{features}}, $fid;
+	    $fid->FID($#{$self->{features}});
 	} else {
 	    $self->{OGR}->{Layer}->CreateFeature($fid);
 	}
@@ -1117,7 +1120,10 @@ sub features {
 
 	for my $fid (sort { $a <=> $b } @{$params{with_id}}) {
 	    my $x = $self->{OGR}->{Layer}->GetFeature($fid) if $self->{OGR}->{Layer};
-	    $x = $self->{features}[$fid] if ($fid >= 0 and $fid < @{$self->{features}} and $self->{features});
+	    if ($self->{features} and $fid >= 0 and $fid < @{$self->{features}}) {
+		$x = $self->{features}[$fid];
+		$x->FID($fid);
+	    }
 	    next unless $x;
 	    $i++;
 	    next if $i < $from;

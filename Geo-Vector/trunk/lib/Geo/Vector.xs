@@ -202,6 +202,8 @@ ral_visual_feature_table_create(perl_layer, features)
 		int i;
 		for (i = 0; i <= av_len(features); i++) {
 			SV** sv = av_fetch(features,i,0);
+			if (!SvGMAGICAL(*sv) AND SvROK(*sv))
+			   sv = hv_fetch((HV*)SvRV(*sv), "OGRFeature", 10, 0);
 			OGRFeatureH f = SV2Handle(*sv);
 			layer->features[i].feature = f;
 			OGRFeatureDefnH fed = OGR_F_GetDefnRef(f);

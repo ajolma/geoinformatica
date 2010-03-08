@@ -3,30 +3,30 @@ IV SV2Handle(SV *sv)
 	if (SvGMAGICAL(sv))
 		mg_get(sv);
 	if (!sv_isobject(sv))
-		croak("parameter is not an object");
+		croak("variable is not an object");
 	SV *tsv = (SV*)SvRV(sv);
 	if ((SvTYPE(tsv) != SVt_PVHV))
-		croak("parameter is not a hashref");
+		croak("variable is not a hashref");
 	if (!SvMAGICAL(tsv))
-		croak("parameter does not have magic");
+		croak("variable does not have magic");
 	MAGIC *mg = mg_find(tsv,'P');
 	if (!mg)
-		croak("parameter does not have right kind of magic");
+		croak("variable does not have right kind of magic");
 	sv = mg->mg_obj;
 	if (!sv_isobject(sv))
-		croak("parameter does not have really right kind of magic");
+		croak("variable does not have really right kind of magic");
 	return SvIV((SV*)SvRV(sv));
 }
 
 IV SV2Object(SV *sv, char *stash)
 {
 	if (!sv_isobject(sv)) {
-		croak("parameter is not an object");
+		croak("variable is not an object");
 		return 0;
 	}
 	sv = (SV*)SvRV(sv);
 	if (strcmp(stash,HvNAME((HV*)SvSTASH(sv)))!=0) {
-		croak("parameter is not a %s",stash);
+		croak("variable is not a %s",stash);
 		return 0;
 	}
 	return SvIV(sv);

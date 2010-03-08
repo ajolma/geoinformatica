@@ -56,6 +56,7 @@ our %pm_files =
     (
      'lib/Geo/Vector.pm'               => '$(INST_LIBDIR)/Vector.pm',
      'lib/Geo/Vector/Layer.pm'         => '$(INST_LIBDIR)/Vector/Layer.pm',
+     'lib/Geo/Vector/Feature.pm'       => '$(INST_LIBDIR)/Vector/Feature.pm',
      'lib/Geo/Vector/Layer/Dialogs.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs.pm',
      'lib/Geo/Vector/Layer/Dialogs/New.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs/New.pm',
      'lib/Geo/Vector/Layer/Dialogs/Copy.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs/Copy.pm',
@@ -65,6 +66,7 @@ our %pm_files =
      'lib/Geo/Vector/Layer/Dialogs/Features.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs/Features.pm',
      'lib/Geo/Vector/Layer/Dialogs/FeatureCollection.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs/FeatureCollection.pm',
      'lib/Geo/Vector/Layer/Dialogs/Properties.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs/Properties.pm',
+     'lib/Geo/Vector/Layer/Dialogs/Feature.pm' => '$(INST_LIBDIR)/Vector/Layer/Dialogs/Feature.pm',
      );
 
 $deps->add_pm (%pm_files);

@@ -7,6 +7,7 @@ use Carp;
 use UNIVERSAL qw(isa);
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
+use Geo::Vector::Layer::Dialogs::Feature;
 
 ## @ignore
 sub open {
@@ -17,9 +18,10 @@ sub open {
 	($gui, 'feature_collection_dialog', "Features of ".$self->name,
 	 {
 	     feature_collection_dialog => [delete_event => \&close_feature_collection_dialog, [$self, $gui]],
-	     feature_collection_from_spinbutton => [value_changed => \&fill_features_table2, [$self, $gui]],
-	     feature_collection_max_spinbutton => [value_changed => \&fill_features_table2, [$self, $gui]],	     
+	     feature_collection_from_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
+	     feature_collection_max_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],	     
 
+	     feature_collection_add_button => [clicked => \&add_feature, [$self, $gui]],
 	     feature_collection_delete_feature_button => [clicked => \&delete_selected_features, [$self, $gui]],
 	     feature_collection_from_drawing_button => [clicked => \&from_drawing, [$self, $gui]],
 	     feature_collection_copy_to_drawing_button => [clicked => \&copy_to_drawing, [$self, $gui]],
@@ -36,7 +38,7 @@ sub open {
     if ($boot) {	
 	my $selection = $dialog->get_widget('feature_collection_treeview')->get_selection;
 	$selection->set_mode('multiple');
-	$selection->signal_connect(changed => \&feature_activated2, [$self, $gui]);
+	$selection->signal_connect(changed => \&feature_activated, [$self, $gui]);
     }
 
     my $treeview = $dialog->get_widget('feature_collection_treeview');
@@ -60,11 +62,11 @@ sub open {
 	$_->signal_connect(clicked => sub {
 	    shift;
 	    my($self, $gui) = @{$_[0]};
-	    fill_features_table2(undef, [$self, $gui]);
+	    fill_features_table(undef, [$self, $gui]);
 	}, [$self, $gui]);
     }
 
-    fill_features_table2(undef, [$self, $gui]);
+    fill_features_table(undef, [$self, $gui]);
 
     $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
 
@@ -100,6 +102,12 @@ sub close_feature_collection_dialog {
 }
 
 ##@ignore
+sub add_feature {
+    my($self, $gui) = @{$_[1]};
+    Geo::Vector::Layer::Dialogs::Feature::open($self, $gui);
+}
+
+##@ignore
 sub delete_selected_features {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{feature_collection_dialog};
@@ -111,7 +119,7 @@ sub delete_selected_features {
 	push @features, $self->{features}[$i];
     }
     $self->{features} = \@features;
-    fill_features_table2(undef, [$self, $gui]);
+    fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
 
@@ -120,7 +128,7 @@ sub from_drawing {
     my($self, $gui) = @{$_[1]};
     return unless $gui->{overlay}->{drawing};
     $self->add_feature({ geometry => $gui->{overlay}->{drawing} });
-    fill_features_table2(undef, [$self, $gui]);
+    fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
 
@@ -168,7 +176,7 @@ sub copy_from_drawing {
 	$self->feature($f->FID, $f);
 	last;
     }
-    fill_features_table2(undef, [$self, $gui]);
+    fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
 
@@ -254,7 +262,7 @@ sub zoom_to_selected_features {
 }
 
 ## @ignore
-sub fill_features_table2 {
+sub fill_features_table {
     shift;
     my($self, $gui) = @{$_[0]};
 
@@ -271,31 +279,31 @@ sub fill_features_table2 {
     my $i = 1;
     my $k = 0;
     while ($i < $from+$count) {
-	my $f = $self->{features}->[$k++];
 	$i++;
 	next if $i <= $from;
-	last unless $f;
+	$k++, next if ($k < 0 or $k > $#{$self->{features}});
+	my $f = $self->{features}->[$k++]; 
 	my @rec;
 	my $rec = 0;
 
-	push @rec,$rec++;
-	push @rec,$k-1; # $f->GetFID;
+	push @rec, $rec++;
+	push @rec, $k-1; # $f->GetFID;
 	
-	push @recs,\@rec;
+	push @recs, \@rec;
     }
     $k = @recs;
 
     for my $rec (@recs) {
 	
-	my $iter = $model->insert (undef, 999999);
-	$model->set ($iter, @$rec);
+	my $iter = $model->insert(undef, 999999);
+	$model->set($iter, @$rec);
 	
     }
     
 }
 
 ## @ignore
-sub feature_activated2 {
+sub feature_activated {
     my $selection = shift;
     my($self, $gui) = @{$_[0]};
 
@@ -315,10 +323,11 @@ sub feature_activated2 {
 
 	my @recs;
 	for my $field ($schema->fields) {
+	    my $n = $field->{Name};
+	    next if $n =~ /^\./;
 	    my @rec;
 	    my $rec = 0;
-	    push @rec, $rec++;
-	    my $n = $field->{Name};
+	    push @rec, $rec++;	    
 	    push @rec, $n;
 	    push @rec, $rec++;
 	    push @rec, Geo::Vector::feature_attribute($f, $n);
