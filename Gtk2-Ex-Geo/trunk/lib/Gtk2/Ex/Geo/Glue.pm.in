@@ -300,6 +300,14 @@ sub register_class {
     $self->register_commands($params{commands}) if $params{commands};
 }
 
+## @ignore
+sub register_feature_class {
+    my($self) = shift;
+    for my $class (@_) {
+	$self->{feature_classes}{$class} = $class;
+    }
+}
+
 ## @method close
 # @brief Attempt to destroy all widgets in the GUI.
 sub close {
