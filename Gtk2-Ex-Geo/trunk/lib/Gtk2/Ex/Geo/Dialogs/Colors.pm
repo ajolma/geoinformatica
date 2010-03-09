@@ -34,6 +34,7 @@ sub open {
 	     min_hue_button => [clicked => \&set_hue_range, [$self, $gui, 'min']],
 	     max_hue_button => [clicked => \&set_hue_range, [$self, $gui, 'max']],
 	     hue_button => [clicked => \&set_hue, [$self, $gui]],
+	     border_color_button => [clicked => \&border_color_dialog, [$self]],
 	     colors_apply_button => [clicked => \&apply_colors, [$self, $gui, 0]],
 	     colors_cancel_button => [clicked => \&cancel_colors, [$self, $gui]],
 	     colors_ok_button => [clicked => \&apply_colors, [$self, $gui, 1]],
@@ -89,6 +90,7 @@ sub open {
     $self->{backup}->{hue} = $self->hue;
     $self->{backup}->{table} = $table;
     $self->{backup}->{bins} = $bins;
+    @{$self->{backup}->{border_color}} = $self->border_color;
 
     $self->{current_coloring_type} = '';
 
@@ -123,6 +125,12 @@ sub open {
     $dialog->get_widget('hue_range_combobox')->set_active($hue_range[2] == 1 ? 0 : 1);
     $dialog->get_widget('hue_checkbutton')->set_active($self->hue > 0 ? TRUE : FALSE);
     $dialog->get_widget('hue_label')->set_text($self->hue);
+    $dialog->get_widget('border_color_checkbutton')->set_active($self->border_color > 0);
+
+    my @color = $self->border_color;
+    @color = (0, 0, 0) unless @color;
+    $dialog->get_widget('border_color_label')->set_text("@color");
+
     fill_colors_treeview($self);
     return $self->{colors_dialog}->get_widget('colors_dialog');
 }
@@ -266,6 +274,10 @@ sub hue_changed {
 ##@ignore
 sub apply_colors {
     my($self, $gui, $close) = @{$_[1]};
+    my @color = split(/ /, $self->{colors_dialog}->get_widget('border_color_label')->get_text);
+    my $has_border = $self->{colors_dialog}->get_widget('border_color_checkbutton')->get_active();
+    @color = () unless $has_border;
+    $self->border_color(@color);
     $self->hide_dialog('colors_dialog') if $close;
     $gui->{overlay}->render;
 }
@@ -286,6 +298,7 @@ sub cancel_colors {
 
     $self->hue_range(@{$self->{backup}->{hue_range}});
     $self->hue($self->{backup}->{hue});
+    $self->border_color(@{$self->{backup}->{border_color}});
 
     $self->hide_dialog('colors_dialog');
     $gui->{overlay}->render;
@@ -547,6 +560,26 @@ sub set_hue {
     }
     $color_chooser->destroy;
     hue_changed(undef, $self);
+}
+
+##@ignore
+sub border_color_dialog {
+    my($self) = @{$_[1]};
+    my $dialog = $self->{colors_dialog};
+    my @color = split(/ /, $dialog->get_widget('border_color_label')->get_text);
+    my $color_chooser = Gtk2::ColorSelectionDialog->new('Choose color for the border lines in '.$self->name);
+    my $s = $color_chooser->colorsel;
+    $s->set_has_opacity_control(0);
+    my $c = Gtk2::Gdk::Color->new($color[0]*257,$color[1]*257,$color[2]*257);
+    $s->set_current_color($c);
+    #$s->set_current_alpha($color[3]*257);
+    if ($color_chooser->run eq 'ok') {
+	$c = $s->get_current_color;
+	@color = (int($c->red/257),int($c->green/257),int($c->blue/257));
+	#$color[3] = int($s->get_current_alpha()/257);
+	$dialog->get_widget('border_color_label')->set_text("@color");
+    }
+    $color_chooser->destroy;
 }
 
 ##@ignore

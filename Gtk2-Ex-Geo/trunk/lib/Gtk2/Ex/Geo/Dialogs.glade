@@ -827,6 +827,49 @@ selected field from layer.</property>
               </packing>
             </child>
             <child>
+              <widget class="GtkHBox" id="hbox7">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkCheckButton" id="border_color_checkbutton">
+                    <property name="label" translatable="yes">Draw line on the feature border with color</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="tooltip" translatable="yes">Whether to draw border lines to polygons.</property>
+                    <property name="draw_indicator">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="border_color_label">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">label</property>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="border_color_button">
+                    <property name="label">gtk-select-color</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="use_stock">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
               <widget class="GtkScrolledWindow" id="scrolledwindow1">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -840,7 +883,7 @@ selected field from layer.</property>
                 </child>
               </widget>
               <packing>
-                <property name="position">4</property>
+                <property name="position">5</property>
               </packing>
             </child>
             <child>
@@ -894,7 +937,7 @@ selected field from layer.</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
-                <property name="position">5</property>
+                <property name="position">6</property>
               </packing>
             </child>
             <child>
@@ -950,7 +993,7 @@ another layer.</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
-                <property name="position">6</property>
+                <property name="position">7</property>
               </packing>
             </child>
           </widget>
