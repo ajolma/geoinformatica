@@ -763,7 +763,7 @@ sub schema {
     my $self = shift;
     my $s;
     if (@_ == 0) {
-	return if $self->{features};
+	return Gtk2::Ex::Geo::Schema->new() if $self->{features};
 	$s = $self->{OGR}->{Layer}->Schema();
 	return bless $s, 'Gtk2::Ex::Geo::Schema';
     }
