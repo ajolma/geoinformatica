@@ -215,7 +215,7 @@ sub new {
 	    my @a = <$fh>;
 	    close $fh;
 	    my $coder = JSON::XS->new->ascii->pretty->allow_nonref;
-	    my $object = $coder->decode ("@a");
+	    my $object = $coder->decode("@a");
 	    if ($object->{type} eq 'FeatureCollection') {
 		for my $o (@{$object->{features}}) {
 		    push @{$self->{features}}, Geo::Vector::Feature->new(GeoJSON => $o);
@@ -294,6 +294,20 @@ sub new {
     schema($self, $params{schema}) if $params{schema};
     $self->{OGR}->{Layer}->SyncToDisk unless $self->{OGR}->{Driver}->{name} eq 'Memory';
     return $self;
+}
+
+## @ignore
+sub save {
+    my($self, $filename) = @_;
+    my $object = { type => 'FeatureCollection', features => [] };
+    for my $f (@{$self->{features}}) {
+	push @{$object->{features}}, $f->GeoJSON;
+    }
+    my $coder = JSON::XS->new->ascii->pretty->allow_nonref;
+    my $data = $coder->encode($object);
+    open my $fh, ">$filename";
+    print $fh $data;
+    close $fh;
 }
 
 ## @ignore

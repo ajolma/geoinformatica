@@ -18,7 +18,7 @@ sub new {
     $self->{properties}{class} = 'Feature' unless $self->{properties}{class};
     $self->{OGRDefn} = Geo::OGR::FeatureDefn->new();
     $self->{OGRFeature} = Geo::OGR::Feature->new($self->{OGRDefn});
-    $self->GeoJSONObject($params{GeoJSON}) if ($params{GeoJSON});
+    $self->GeoJSON($params{GeoJSON}) if ($params{GeoJSON});
     return $self;
 }
 
@@ -37,7 +37,7 @@ sub _Geometry {
     return $geom;
 }
 
-sub GeoJSONObject {
+sub GeoJSON {
     my($self, $object) = @_;
     if ($object) {
 	if ($object->{type} eq 'Feature') {
@@ -58,17 +58,19 @@ sub GeoJSONObject {
 	    $to->{$field} = $from->{$field};
 	}
 	my $geom = $self->{OGRFeature}->GetGeometryRef();
-	if ($geom->GeometryType =~ /Collection/) {
+	my $type = $geom->GeometryType;
+	$type =~ s/25D//;
+	if ($type =~ /Collection/) {
+	    $object->{geometry}{type} = $type;
+	    $object->{geometry}{geometries} = [];
 	    for my $i (0..$geom->GetGeometryCount-1) {
 		my $g = $geom->GetGeometryRef($i);
 		my $type = $g->GeometryType;
 		$type =~ s/25D//;
 		my $geometry = { type => $type, coordinates => $g->Points };
-		push @{$object->{geometries}}, $geometry;
+		push @{$object->{geometry}{geometries}}, $geometry;
 	    }
-	} else {
-	    my $type = $geom->GeometryType;
-	    $type =~ s/25D//;
+	} else {	    
 	    $object->{geometry}{type} = $type;
 	    $object->{geometry}{coordinates} = $geom->Points;
 	}
