@@ -687,9 +687,39 @@ sub key_press_event {
     my $key = $event->keyval;
     #print STDERR "$key\n";
     if ($key == $Gtk2::Gdk::Keysyms{plus}) {
-	$self->zoom_in($event); # , $self->event_pixel2point());
+
+	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
+
+	    # find the closest point in drawing
+	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
+	    my @r = $self->{drawing}->ClosestPoint(@p);
+	    my $d = pop @r;
+	    if (@r and $d/$self->{pixel_size} < 30) {
+		$self->{drawing}->AddVertex(@r);
+		$self->update_image;
+	    }
+
+	} else {
+	    $self->zoom_in($event); # , $self->event_pixel2point());
+	}
+
     } elsif ($key == $Gtk2::Gdk::Keysyms{minus}) {
-	$self->zoom_out($event); # , $self->event_pixel2point());
+
+	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
+
+	    # find the closest vertex in drawing
+	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
+	    my @r = $self->{drawing}->ClosestVertex(@p);
+	    my $d = pop @r;
+	    if (@r and $d/$self->{pixel_size} < 30) {
+		$self->{drawing}->DeleteVertex(@r);
+		$self->update_image;
+	    }
+
+	} else {
+	    $self->zoom_out($event); # , $self->event_pixel2point());
+	}
+
     } elsif ($key == $Gtk2::Gdk::Keysyms{Right}) {
 	$self->pan($self->{viewport_size}->[0]/$self->{step}, 0, $event);
     } elsif ($key == $Gtk2::Gdk::Keysyms{Left}) {
@@ -803,8 +833,9 @@ sub button_press_event {
 	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
 	    # find the closest point in drawing
 	    my @p = $self->event_pixel2point($event->x, $event->y);
-	    my($q, $distance, $dual) = $self->{drawing}->ClosestPoint(@p);
-	    $self->{drawing_edit} = [$q, $dual] if $distance/$self->{pixel_size} < 30;
+	    my @q = $self->{drawing}->ClosestVertex(@p);
+	    my $d = pop @q;
+	    $self->{drawing_edit} = \@q if $d/$self->{pixel_size} < 30;
 	} elsif (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and 
 		 !$self->{_control_down} and
 		 !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
@@ -852,12 +883,11 @@ sub motion_notify {
 	
 	$pm = $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
 	my @wend = $self->event_pixel2point(@end);
-	my $p = $self->{drawing_edit};
-	$p->[0]{X} = $wend[0];
-	$p->[0]{Y} = $wend[1];
-	if ($p->[1]) {
-	    $p->[1]{X} = $wend[0];
-	    $p->[1]{Y} = $wend[1];
+	my @p = @{$self->{drawing_edit}};
+	my @q = $self->{drawing}->VertexAt(@p);
+	for my $q (@q) {
+	    $q->{X} = $wend[0];
+	    $q->{Y} = $wend[1];
 	}
 	my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{drawing_color}}));
@@ -1065,14 +1095,13 @@ sub button_release_event {
 		    delete $self->{rubberband};
 		}
 	    };
-	    (/measure/ or /edit/) && do {
+	    (/measure/ or /edit/) && do {		
 		if ($self->{drawing_edit}) {
-		    my $p = $self->{drawing_edit};
-		    $p->[0]{X} = $wend[0];
-		    $p->[0]{Y} = $wend[1];
-		    if ($p->[1]) {
-			$p->[1]{X} = $wend[0];
-			$p->[1]{Y} = $wend[1];
+		    my @p = @{$self->{drawing_edit}};
+		    my @q = $self->{drawing}->VertexAt(@p);
+		    for my $q (@q) {
+			$q->{X} = $wend[0];
+			$q->{Y} = $wend[1];
 		    }
 		    delete $self->{drawing_edit};
 		    $self->delete_rubberband;
