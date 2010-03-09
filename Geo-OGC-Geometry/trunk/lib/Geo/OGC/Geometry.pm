@@ -835,9 +835,25 @@ sub ApplyTransformation {
     }
 }
 
+sub ClosestVertex {
+    my($self, $x, $y) = @_;
+    return (($self->{X}-$x)**2 + ($self->{Y}-$y)**2);
+}
+
+sub VertexAt {
+    my $self = shift;
+    return ($self);
+}
+
 sub ClosestPoint {
     my($self, $x, $y) = @_;
-    return wantarray ? ($self, ($self->{X}-$x)**2 + ($self->{Y}-$y)**2, 0) : $self;
+    return (($self->{X}-$x)**2 + ($self->{Y}-$y)**2);
+}
+
+sub AddVertex {
+}
+
+sub DeleteVertex {
 }
 
 #
@@ -1039,27 +1055,58 @@ sub Reverse {
     @{$self->{Points}} = reverse @{$self->{Points}};
 }
 
+sub ClosestVertex {
+    my($self, $x, $y) = @_;
+    return unless @{$self->{Points}};
+    my($dmin) = $self->{Points}[0]->ClosestVertex($x, $y);
+    my $i = 0;
+    for my $j (1..$#{$self->{Points}}) {
+	my($d) = $self->{Points}[$j]->ClosestVertex($x, $y);
+	($i, $dmin) = ($j, $d) if $d < $dmin;
+    }
+    return ($i, $dmin);
+}
+
+sub VertexAt {
+    my($self, $i) = @_;
+    return ($self->{Points}[0], $self->{Points}[$#{$self->{Points}}])
+	if (($i == 0 or $i == $#{$self->{Points}}) and isa($self, 'Geo::OGC::LinearRing'));
+    return ($self->{Points}[$i]);
+}
+
+sub _closest_point {
+    my($x0, $y0, $x1, $y1, $x, $y) = @_;
+    my $ab2 = ($x1-$x0)*($x1-$x0) + ($y1-$y0)*($y1-$y0);
+    my $ap_ab = ($x-$x0)*($x1-$x0) + ($y-$y0)*($y1-$y0);
+    my $t = $ap_ab/$ab2;
+    if ($t < 0) {$t = 0} elsif ($t > 1) {$t = 1}
+    my $xp = $x0+$t*($x1-$x0);
+    my $yp = $y0+$t*($y1-$y0);
+    return ($xp, $yp, ($x-$xp)*($x-$xp)+($y-$yp)*($y-$yp));
+}
+
 sub ClosestPoint {
     my($self, $x, $y) = @_;
     return unless @{$self->{Points}};
-    my($p, $min) = $self->{Points}[0]->ClosestPoint($x, $y);
-    my $i = 0;
+    my($i, $pmin, $dmin);
     for my $j (1..$#{$self->{Points}}) {
-	my($q, $m) = $self->{Points}[$j]->ClosestPoint($x, $y);
-	if ($m < $min) {
-	    ($p, $min) = ($q, $m);
-	    $i = $j;
-	}
+	my($xp, $yp, $d) = 
+	    _closest_point($self->{Points}[$j-1]{X}, $self->{Points}[$j-1]{Y}, 
+			   $self->{Points}[$j]{X}, $self->{Points}[$j]{Y}, $x, $y);
+	($i, $pmin, $dmin) = ($j, Geo::OGC::Point->new($xp, $yp), $d) 
+	    if (!defined($dmin) or $d  < $dmin);
     }
-    my $dual;
-    if (isa($self, 'Geo::OGC::LinearRing')) {
-	if ($i == 0) {
-	    $dual = $self->{Points}[$#{$self->{Points}}];
-	} elsif ($i == $#{$self->{Points}}) {
-	    $dual = $self->{Points}[0];
-	}
-    }
-    return wantarray ? ($p, $min, $dual) : $p;
+    return ($i, $pmin, $dmin)
+}
+
+sub AddVertex {
+    my($self, $i, $p) = @_;
+    splice @{$self->{Points}}, $i, 0, $p;
+}
+
+sub DeleteVertex {
+    my($self, $i) = @_;
+    splice @{$self->{Points}}, $i, 1;
 }
 
 #
@@ -1989,15 +2036,50 @@ sub MakeCollection {
     return $coll;
 }
 
+sub ClosestVertex {
+    my($self, $x, $y) = @_;
+    return unless $self->{ExteriorRing};
+    my($imin, $dmin) = $self->{ExteriorRing}->ClosestVertex($x, $y);
+    my $iring = -1;
+    my $r = 0;
+    for my $ring (@{$self->{InteriorRings}}) {
+	my($i, $d) = $ring->ClosestVertex($x, $y);
+	($iring, $imin, $dmin) = ($r, $i, $d) if $d < $dmin;
+	$r++;
+    }
+    return ($iring, $imin, $dmin);
+}
+
+sub VertexAt {
+    my($self, $iring, $ivertex) = @_;
+    return $self->{ExteriorRing}->VertexAt($ivertex) if $iring < 0;
+    return $self->{InteriorRings}[$iring]->VertexAt($ivertex);
+}
+
 sub ClosestPoint {
     my($self, $x, $y) = @_;
     return unless $self->{ExteriorRing};
-    my($p, $min, $dual) = $self->{ExteriorRing}->ClosestPoint($x, $y);
+    my($imin, $pmin, $dmin) = $self->{ExteriorRing}->ClosestPoint($x, $y);
+    my $iring = -1;
+    my $r = 0;
     for my $ring (@{$self->{InteriorRings}}) {
-	my($q, $m, $d) = $ring->ClosestPoint($x, $y);
-	($p, $min, $dual) = ($q, $m, $d) if $m < $min;
+	my($i, $p, $d) = $ring->ClosestVertex($x, $y);
+	($iring, $imin, $pmin, $dmin) = ($r, $i, $p, $d) if $d < $dmin;
+	$r++;
     }
-    return wantarray ? ($p, $min, $dual) : $p;
+    return ($iring, $imin, $pmin, $dmin);
+}
+
+sub AddVertex {
+    my($self, $ring, $i, $p) = @_;
+    $self->{ExteriorRing}->AddVertex($i, $p), return if $ring < 0;
+    $self->{InteriorRings}[$ring]->AddVertex($i, $p);
+}
+
+sub DeleteVertex {
+    my($self, $ring, $i) = @_;
+    $self->{ExteriorRing}->DeleteVertex($i), return if $ring < 0;
+    $self->{InteriorRings}[$ring]->DeleteVertex($i);
 }
 
 #
@@ -2307,15 +2389,58 @@ sub Distance {
     }
 }
 
+sub ClosestVertex {
+    my($self, $x, $y) = @_;
+    return unless @{$self->{Geometries}};
+    my @rmin = $self->{Geometries}[0]->ClosestVertex($x, $y);
+    my $imin = 0;
+    my $i = 0;
+    for my $g (@{$self->{Geometries}}) {
+	$i++, next if $i == 0;
+	my @r = $g->ClosestVertex($x, $y);
+	if ($r[$#r] < $rmin[$#rmin]) {
+	    @rmin = @r;
+	    $imin = $i;
+	}
+	$i++;
+    }
+    return ($imin, @rmin);
+}
+
+sub VertexAt {
+    my $self = shift;
+    my $i = shift;
+    return $self->{Geometries}[$i]->VertexAt(@_);
+}
+
 sub ClosestPoint {
     my($self, $x, $y) = @_;
     return unless @{$self->{Geometries}};
-    my($p, $min, $dual) = $self->{Geometries}[0]->ClosestPoint($x, $y);
+    my @rmin = $self->{Geometries}[0]->ClosestPoint($x, $y);
+    my $imin = 0;
+    my $i = 0;
     for my $g (@{$self->{Geometries}}) {
-	my($q, $m, $d) = $g->ClosestPoint($x, $y);
-	($p, $min, $dual) = ($q, $m, $d) if $m < $min;
+	$i++, next if $i == 0;
+	my @r = $g->ClosestPoint($x, $y);
+	if ($r[$#r] < $rmin[$#rmin]) {
+	    @rmin = @r;
+	    $imin = $i;
+	}
+	$i++;
     }
-    return wantarray ? ($p, $min, $dual) : $p;
+    return ($imin, @rmin);
+}
+
+sub AddVertex {
+    my $self = shift;
+    my $i = shift;
+    $self->{Geometries}[$i]->AddVertex(@_);
+}
+
+sub DeleteVertex {
+    my $self = shift;
+    my $i = shift;
+    $self->{Geometries}[$i]->DeleteVertex(@_);
 }
 
 #
