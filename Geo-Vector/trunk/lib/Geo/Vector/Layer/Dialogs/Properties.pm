@@ -86,7 +86,6 @@ sub cancel_properties {
     $self->alpha($self->{backup}->{alpha});
     $self->name($self->{backup}->{name});
     $self->render_as($self->{backup}->{render_as});
-    $self->border_color(@{$self->{backup}->{border_color}});
     $self->hide_dialog('properties_dialog');
     $gui->set_layer($self);
     $gui->{overlay}->render;
