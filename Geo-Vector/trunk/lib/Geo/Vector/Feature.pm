@@ -1,47 +1,100 @@
 package Geo::Vector::Feature;
-# @brief A root class for complex features
+# @brief A root class for complex features.
 
 use strict;
 use warnings;
 use UNIVERSAL qw(isa);
 use Carp;
 use Encode;
+use Geo::GDAL;
 use Geo::OGC::Geometry;
 
 sub new {
     my $package = shift;
     my %params = @_;
-    my $self = {};
+    my $self = { properties => {} };
     bless $self => (ref($package) or $package);
-    %$self = %params;
+    $self->{properties}{class} = $params{class} if exists $params{class};
+    $self->{properties}{class} = 'Feature' unless $self->{properties}{class};
     $self->{OGRDefn} = Geo::OGR::FeatureDefn->new();
     $self->{OGRFeature} = Geo::OGR::Feature->new($self->{OGRDefn});
+    $self->GeoJSONObject($params{GeoJSON}) if ($params{GeoJSON});
     return $self;
+}
+
+sub _Geometry {
+    my($self, $object) = @_;
+    # set type 25D depending on the actual dimension
+    my $geom;
+    if ($object->{type} eq 'GeometryCollection') {
+	$geom = Geo::OGR::Geometry->create( Type => $object->{type} );
+	for my $g (@{$object->{geometries}}) {
+	    $geom->AddGeometry($self->_Geometry($g));
+	}
+    } else { # assuming a non-collection geometry
+	$geom = Geo::OGR::Geometry->create( Type => $object->{type}, Points => $object->{coordinates} );
+    }
+    return $geom;
+}
+
+sub GeoJSONObject {
+    my($self, $object) = @_;
+    if ($object) {
+	if ($object->{type} eq 'Feature') {
+	    $self->{OGRFeature}->SetGeometry( $self->_Geometry($object->{geometry}) );
+	    my $to = $self->{properties};
+	    my $from = $object->{properties};
+	    for my $field (keys %$from) {
+		$to->{$field} = $from->{$field};
+	    }
+	} else { # assuming a geometry
+	    $self->{OGRFeature}->SetGeometry( $self->_Geometry($object) );
+	}
+    } else {
+	$object->{type} = 'Feature';
+	my $from = $self->{properties};
+	my $to = $object->{properties} = {};
+	for my $field (keys %$from) {
+	    $to->{$field} = $from->{$field};
+	}
+	my $geom = $self->{OGRFeature}->GetGeometryRef();
+	if ($geom->GeometryType =~ /Collection/) {
+	    for my $i (0..$geom->GetGeometryCount-1) {
+		my $g = $geom->GetGeometryRef($i);
+		my $type = $g->GeometryType;
+		$type =~ s/25D//;
+		my $geometry = { type => $type, coordinates => $g->Points };
+		push @{$object->{geometries}}, $geometry;
+	    }
+	} else {
+	    my $type = $geom->GeometryType;
+	    $type =~ s/25D//;
+	    $object->{geometry}{type} = $type;
+	    $object->{geometry}{coordinates} = $geom->Points;
+	}
+    }
+    return $object;
 }
 
 sub Schema {
     my($self) = @_;
+    my @fields = ({ Name => 'class', Type => 'String' });
+    for my $f (sort keys %{$self->{properties}}) {
+	next if $f eq 'class';
+	push @fields, { Name => $f, Type => 'String' };
+    }
+    my $geom = $self->{OGRFeature}->GetGeometryRef;
+    my $type = $geom ? $geom->GeometryType : '';
     return {
-	Class => $self->{Class},
-	Name => '',
-	GeometryType => '',
-	Fields => [
-	    { 
-		Name => 'Class',
-		Type => 'String'
-	    },
-	    {
-		Name => 'Name',
-		Type => 'String'
-	    },
-	    ],
+	GeometryType => $type,
+	Fields => \@fields,
     }
 }
 
 sub Field {
     my($self, $field, $value) = @_;
-    $self->{$field} = $value if defined $value;
-    $self->{$field};
+    $self->{properties}{$field} = $value if defined $value;
+    $self->{properties}{$field};
 }
 *GetField = *Field;
 

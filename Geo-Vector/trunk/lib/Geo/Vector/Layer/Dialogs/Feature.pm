@@ -59,7 +59,7 @@ sub new_feature {
 	($self, $gui) = @{$_};
     }
     my $class = get_value_from_combo($self->{feature_dialog}, 'feature_class_combobox');
-    my $feature = Geo::Vector::Feature->new(Class => $class);
+    my $feature = Geo::Vector::Feature->new(class => $class);
     $self->feature($feature);
     $self->open_features_dialog($gui);
     $self->hide_dialog('feature_dialog');

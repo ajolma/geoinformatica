@@ -19,7 +19,6 @@ sub open {
 	 {
 	     properties_dialog => [delete_event => \&cancel_properties, [$self, $gui]],
 	     properties_dialog => [delete_event => \&cancel_properties, [$self, $gui]],
-	     properties_color_button => [clicked => \&border_color_dialog, [$self]],
 	     properties_apply_button => [clicked => \&apply_properties, [$self, $gui, 0]],
 	     properties_cancel_button => [clicked => \&cancel_properties, [$self, $gui]],
 	     properties_ok_button => [clicked => \&apply_properties, [$self, $gui, 1]],
@@ -34,7 +33,6 @@ sub open {
     $self->{backup}->{name} = $self->name;
     $self->{backup}->{render_as} = $self->render_as;
     $self->{backup}->{alpha} = $self->alpha;
-    @{$self->{backup}->{border_color}} = $self->border_color;
     
     $dialog->get_widget('properties_geometry_type_label')
 	->set_text($self->geometry_type or 'unknown type');
@@ -56,17 +54,6 @@ sub open {
     $dialog->get_widget('properties_name_entry')->set_text($self->name);
     $dialog->get_widget('properties_transparency_spinbutton')->set_value($self->alpha);
     
-    #my $polygon = $self->geometry_type() =~ /Polygon/; # may be undefined in some cases
-    my $polygon = 1;
-    $dialog->get_widget('properties_border_checkbutton')->set_sensitive($polygon);
-    $dialog->get_widget('properties_color_button')->set_sensitive($polygon);
-    $dialog->get_widget('properties_color_label')->set_sensitive($polygon);
-    $dialog->get_widget('properties_border_checkbutton')->set_active($self->border_color > 0);
-    
-    my @color = $self->border_color;
-    @color = (0, 0, 0) unless @color;
-    $dialog->get_widget('properties_color_label')->set_text("@color");
-
     my $t = $dialog->get_widget('properties_schema_treeview');
     Geo::Vector::Layer::Dialogs::New::schema_to_treeview(undef, $t, 0, $self->schema);
 
@@ -84,10 +71,6 @@ sub apply_properties {
     my $model = $combo->get_model;
     my $iter = $model->get_iter_from_string($combo->get_active());
     $self->render_as($model->get_value($iter));
-    my $has_border = $dialog->get_widget('properties_border_checkbutton')->get_active();
-    my @color = split(/ /, $dialog->get_widget('properties_color_label')->get_text);
-    @color = () unless $has_border;
-    $self->border_color(@color);
     $self->hide_dialog('properties_dialog') if $close;
     $gui->set_layer($self);
     $gui->{overlay}->render;
@@ -108,26 +91,6 @@ sub cancel_properties {
     $gui->set_layer($self);
     $gui->{overlay}->render;
     1;
-}
-
-##@ignore
-sub border_color_dialog {
-    my($self) = @{$_[1]};
-    my $dialog = $self->{properties_dialog};
-    my @color = split(/ /, $dialog->get_widget('properties_color_label')->get_text);
-    my $color_chooser = Gtk2::ColorSelectionDialog->new('Choose color for the border of '.$self->name);
-    my $s = $color_chooser->colorsel;
-    $s->set_has_opacity_control(0);
-    my $c = Gtk2::Gdk::Color->new($color[0]*257,$color[1]*257,$color[2]*257);
-    $s->set_current_color($c);
-    #$s->set_current_alpha($color[3]*257);
-    if ($color_chooser->run eq 'ok') {
-	$c = $s->get_current_color;
-	@color = (int($c->red/257),int($c->green/257),int($c->blue/257));
-	#$color[3] = int($s->get_current_alpha()/257);
-	$dialog->get_widget('properties_color_label')->set_text("@color");
-    }
-    $color_chooser->destroy;
 }
 
 1;

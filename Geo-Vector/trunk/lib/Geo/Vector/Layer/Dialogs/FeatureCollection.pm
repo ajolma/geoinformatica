@@ -19,7 +19,7 @@ sub open {
 	 {
 	     feature_collection_dialog => [delete_event => \&close_feature_collection_dialog, [$self, $gui]],
 	     feature_collection_from_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
-	     feature_collection_max_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],	     
+	     feature_collection_max_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
 
 	     feature_collection_add_button => [clicked => \&add_feature, [$self, $gui]],
 	     feature_collection_delete_feature_button => [clicked => \&delete_selected_features, [$self, $gui]],
@@ -333,7 +333,7 @@ sub feature_activated {
 	    push @rec, $n;
 	    push @rec, $rec++;
 	    push @rec, Geo::Vector::feature_attribute($f, $n);
-	    push @recs,\@rec;
+	    push @recs, \@rec;
 	}
 
 	for my $rec (@recs) {

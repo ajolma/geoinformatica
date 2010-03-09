@@ -324,6 +324,17 @@ sub render {
 	    Geo::Vector::ral_visual_feature_table_render( $layer, $pb ) if $pb;
 	    Geo::Vector::ral_visual_feature_table_destroy($layer);
 	}
+
+	if ( 0 and @{$self->{BORDER_COLOR}} ) { # not yet functional, waiting to exploit Geo::Vector::Feature...
+	    
+	    my @color = @{$self->{BORDER_COLOR}};
+	    push @color, 255;
+	    my $layer = Geo::Vector::ral_visual_feature_table_create( $self, $self->{features} );
+	    if ($layer) {
+		Geo::Vector::ral_visual_feature_table_render( $layer, $pb ) if $pb;
+		Geo::Vector::ral_visual_feature_table_destroy($layer);
+	    }
+	}
 	
     }
     elsif ( $self->{OGR}->{Layer} ) {

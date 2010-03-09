@@ -130,3 +130,6 @@ $g = Geo::OGR::Geometry->create(WKT => 'POINT (1 1)');
 $v = Geo::Vector->new(geometries => [$g]);
 $p = $v->geometry(0);
 ok($g->ExportToWkt eq $p->ExportToWkt, "geometries");
+
+$c = Geo::Vector->new(features=>"t/data/a.geojson");
+

@@ -34,11 +34,12 @@ POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal
 use UNIVERSAL qw(isa);
 use XSLoader;
 use File::Basename;
+use Gtk2;
 use Geo::GDAL;
 use Geo::OGC::Geometry;
-use Gtk2;
-
+use Geo::Vector::Feature;
 use Geo::Vector::Layer;
+use JSON::XS;
 
 use vars qw( @ISA %RENDER_AS );
 
@@ -205,11 +206,27 @@ sub new {
 
     if ($params{features} or $params{geometries}) {
 	$self->{features} = [];
-	for my $g (@{$params{geometries}}) {
-	    $self->geometry($g);
-	}
-	for my $f (@{$params{features}}) {
-	    $self->feature($f);
+	if ($params{geometries}) {
+	    for my $g (@{$params{geometries}}) {
+		$self->geometry($g);
+	    }
+	} elsif (-r $params{features}) {
+	    open my $fh, "<$params{features}";
+	    my @a = <$fh>;
+	    close $fh;
+	    my $coder = JSON::XS->new->ascii->pretty->allow_nonref;
+	    my $object = $coder->decode ("@a");
+	    if ($object->{type} eq 'FeatureCollection') {
+		for my $o (@{$object->{features}}) {
+		    push @{$self->{features}}, Geo::Vector::Feature->new(GeoJSON => $o);
+		}
+	    } else {
+		push @{$self->{features}}, Geo::Vector::Feature->new(GeoJSON => $object);
+	    }
+	} else {	
+	    for my $f (@{$params{features}}) {
+		$self->feature($f);
+	    }
 	}
 	return $self;
     }
