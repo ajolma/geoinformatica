@@ -681,45 +681,11 @@ sub key_press_event {
 
     return 0 unless $self->{layers} and @{$self->{layers}};
     
-    # if this were an event box handler like button press
-#    my(undef, $event, $self) = @_;
-
     my $key = $event->keyval;
-    #print STDERR "$key\n";
-    if ($key == $Gtk2::Gdk::Keysyms{plus}) {
-
-	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
-
-	    # find the closest point in drawing
-	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
-	    my @r = $self->{drawing}->ClosestPoint(@p);
-	    my $d = pop @r;
-	    if (@r and $d/$self->{pixel_size} < 30) {
-		$self->{drawing}->AddVertex(@r);
-		$self->update_image;
-	    }
-
-	} else {
-	    $self->zoom_in($event); # , $self->event_pixel2point());
-	}
-
+    if ($key == $Gtk2::Gdk::Keysyms{plus}) {	    
+	$self->zoom_in($event); # , $self->event_pixel2point());
     } elsif ($key == $Gtk2::Gdk::Keysyms{minus}) {
-
-	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
-
-	    # find the closest vertex in drawing
-	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
-	    my @r = $self->{drawing}->ClosestVertex(@p);
-	    my $d = pop @r;
-	    if (@r and $d/$self->{pixel_size} < 30) {
-		$self->{drawing}->DeleteVertex(@r);
-		$self->update_image;
-	    }
-
-	} else {
-	    $self->zoom_out($event); # , $self->event_pixel2point());
-	}
-
+	$self->zoom_out($event); # , $self->event_pixel2point());	
     } elsif ($key == $Gtk2::Gdk::Keysyms{Right}) {
 	$self->pan($self->{viewport_size}->[0]/$self->{step}, 0, $event);
     } elsif ($key == $Gtk2::Gdk::Keysyms{Left}) {
@@ -755,6 +721,35 @@ sub key_press_event {
 	    }
 	}
 	$self->delete_rubberband;
+
+    } elsif ($key == $Gtk2::Gdk::Keysyms{Insert}) {
+
+	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
+	    
+	    # find the closest point in drawing
+	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
+	    my @r = $self->{drawing}->ClosestPoint(@p);
+	    my $d = pop @r;
+	    if (@r and $d/$self->{pixel_size} < 30) {
+		$self->{drawing}->AddVertex(@r);
+		$self->update_image;
+	    }
+	}
+	
+    } elsif ($key == $Gtk2::Gdk::Keysyms{Delete}) {
+
+	if ($self->{rubberband_mode} eq 'edit' and $self->{drawing}) {
+	    
+	    # find the closest vertex in drawing
+	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
+	    my @r = $self->{drawing}->ClosestVertex(@p);
+	    my $d = pop @r;
+	    if (@r and $d/$self->{pixel_size} < 30) {
+		$self->{drawing}->DeleteVertex(@r);
+		$self->update_image;
+	    }	    
+	}
+
     } elsif ($key == $Gtk2::Gdk::Keysyms{Control_L} or $key == $Gtk2::Gdk::Keysyms{Control_R}) {
 	$self->{_control_down} = 1;
 	return 0;
