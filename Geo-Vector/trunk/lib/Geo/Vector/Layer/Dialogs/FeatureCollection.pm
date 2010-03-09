@@ -127,7 +127,9 @@ sub delete_selected_features {
 sub from_drawing {
     my($self, $gui) = @{$_[1]};
     return unless $gui->{overlay}->{drawing};
-    $self->add_feature({ geometry => $gui->{overlay}->{drawing} });
+    my $feature = Geo::Vector::Feature->new();
+    $feature->Geometry(Geo::OGR::CreateGeometryFromWkt( $gui->{overlay}->{drawing}->AsText ));
+    $self->feature($feature);
     fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
