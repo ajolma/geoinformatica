@@ -860,47 +860,23 @@ sub value_range {
     else {
 	%params      = @_;
 	$field_name = $params{field_name};
+    }    
+    
+    if ($self->{features}) {
+	return ( 0, $#{$self->{features}} )
+	    if $field_name eq '.FID';
+    } else {
+	my $schema = $self->schema()->field($field_name);
+	croak "value_range: field with name '$field_name' does not exist"
+	    unless defined $schema;
+	croak
+	    "value_range: can't use value from field '$field_name' since its' type is '$schema->{Type}'"
+	    unless $schema->{Type} eq 'Integer'
+	    or $schema->{Type}     eq 'Real';
+	
+	return ( 0, $self->{OGR}->{Layer}->GetFeatureCount - 1 )
+	    if $field_name eq '.FID';
     }
-    
-    if ( $self->{features} ) {
-	my @range;
-	for my $feature ( @{ $self->{features} } ) {
-	    my $d = $feature->GetDefnRef;
-	    my $n = $d->GetFieldCount;
-	    my $value;
-	    for my $i ( 0 .. $n - 1 ) {
-		my $fd   = $d->GetFieldDefn($i);
-		my $name = $fd->GetName;
-		next unless $name eq $field_name;
-		my $type = $fd->GetType;
-		next
-		    unless $type == $Geo::OGR::OFTInteger
-		    or $type == $Geo::OGR::OFTReal;
-		$value = $feature->GetField($i);
-	    }
-	    next unless defined $value;
-	    $range[0] =
-		defined $range[0]
-		? ( $range[0] < $value ? $range[0] : $value )
-		: $value;
-	    $range[1] =
-		defined $range[1]
-		? ( $range[1] > $value ? $range[1] : $value )
-		: $value;
-	}
-	return @range;
-    }
-    
-    my $schema = $self->schema()->field($field_name);
-    croak "value_range: field with name '$field_name' does not exist"
-	unless defined $schema;
-    croak
-	"value_range: can't use value from field '$field_name' since its' type is '$schema->{Type}'"
-	unless $schema->{Type} eq 'Integer'
-	or $schema->{Type}     eq 'Real';
-    
-    return ( 0, $self->{OGR}->{Layer}->GetFeatureCount - 1 )
-	if $field_name eq '.FID';
     
     my @range;
     
@@ -966,7 +942,7 @@ sub feature {
 
 	# retrieve
 	if ( $self->{features} ) {
-	    return if ($fid < 0 or $fid > $#$self->{features});
+	    return if ($fid < 0 or $fid > $#{$self->{features}});
 	    return $self->{features}->[$fid];	    
 	} else {
 	    return $self->{OGR}->{Layer}->GetFeature($fid);

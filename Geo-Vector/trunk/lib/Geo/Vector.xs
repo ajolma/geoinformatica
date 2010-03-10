@@ -43,18 +43,25 @@ OGRLayerH(layer)
   OUTPUT:
     RETVAL
 
-int
+SV *
 field_index(field)
 	char *field
 	CODE:
 		if (strcmp(field, ".FID") == 0)
-		   RETVAL = RAL_FIELD_FID;
+		   RETVAL = newSViv(RAL_FIELD_FID);
 		else if (strcmp(field, ".Z") == 0)
-		   RETVAL = RAL_FIELD_Z;
+		   RETVAL = newSViv(RAL_FIELD_Z);
 		else if (strcmp(field, "Fixed size") == 0)
-		   RETVAL = RAL_FIELD_FIXED_SIZE;
+		   RETVAL = newSViv(RAL_FIELD_FIXED_SIZE);
 		else
-		   RETVAL = 0;
+		   RETVAL = &PL_sv_undef;
+	OUTPUT:
+	    RETVAL
+
+int
+undefined_field_index()
+	CODE:
+            RETVAL = RAL_FIELD_UNDEFINED;
 	OUTPUT:
 	    RETVAL
 
@@ -194,11 +201,6 @@ ral_visual_feature_table_create(perl_layer, features)
 	CODE:
 		ral_visual_feature_table *layer = ral_visual_feature_table_create(av_len(features)+1);
 		RAL_CHECK(layer);
-		char *color_field_name = NULL, *symbol_size_field_name = NULL;;
-
-		RAL_FETCH(perl_layer, "COLOR_FIELD", color_field_name, SvPV_nolen, "");
-		RAL_FETCH(perl_layer, "SYMBOL_FIELD", symbol_size_field_name, SvPV_nolen, "");
-
 		int i;
 		for (i = 0; i <= av_len(features); i++) {
 			SV** sv = av_fetch(features,i,0);
@@ -207,40 +209,8 @@ ral_visual_feature_table_create(perl_layer, features)
 			OGRFeatureH f = SV2Handle(*sv);
 			layer->features[i].feature = f;
 			OGRFeatureDefnH fed = OGR_F_GetDefnRef(f);
-
-			int field = -1;
-			if (color_field_name) {
-			    if (strcmp(color_field_name, ".Z")) {
-				field = -2;
-			    } else {
-				field = OGR_FD_GetFieldIndex(fed, color_field_name);
-				if (field >= 0) {
-				    OGRFieldDefnH fid = OGR_FD_GetFieldDefn(fed, field);
-				    OGRFieldType fit = OGR_Fld_GetType(fid);
-				    if (!(fit == OFTInteger OR fit == OFTReal))
-					field = -1;
-				}
-			    }
-			}
-			RAL_STORE(perl_layer, "COLOR_FIELD_VALUE", field, newSViv);
-
-			field = -2;
-			if (symbol_size_field_name) {
-				field = OGR_FD_GetFieldIndex(fed, symbol_size_field_name);
-				if (field >= 0) {
-					OGRFieldDefnH fid = OGR_FD_GetFieldDefn(fed, field);
-					OGRFieldType fit = OGR_Fld_GetType(fid);
-					if (!(fit == OFTInteger OR fit == OFTReal))
-						field = -2;
-				} else
-					field = -2;
-			}
-			RAL_STORE(perl_layer, "SYMBOL_FIELD_VALUE", field, newSViv);
-
 			RAL_CHECK(fetch2visual(perl_layer, &layer->features[i].visualization, OGR_F_GetDefnRef(f)));
-			
 		}
-
 		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV, 0);
 		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV, 0);
 		goto ok;

@@ -295,6 +295,13 @@ sub supported_symbol_types {
     }
 }
 
+## @ignore
+sub ohoh {
+    for my $x (@_) {
+	return $x if defined $x;
+    }
+}
+
 ## @method void render($pb)
 #
 # @brief Renders the vector layer onto a memory image.
@@ -314,8 +321,10 @@ sub render {
     
     if ( $self->{features} ) {
 	
-	#$self->{COLOR_FIELD_VALUE} = -1;
-	#$self->{SYMBOL_FIELD_VALUE} = -2;
+	$self->{COLOR_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{COLOR_FIELD}),
+					  Geo::Vector::undefined_field_index());
+	$self->{SYMBOL_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{SYMBOL_FIELD}),
+					   Geo::Vector::undefined_field_index());
 	$self->{RENDER_AS}       = 'Native';
 	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };
 	
@@ -340,13 +349,12 @@ sub render {
     elsif ( $self->{OGR}->{Layer} ) {
 	
 	my $schema = $self->schema();
-	my $ci = Geo::Vector::field_index($self->{COLOR_FIELD});
-	(undef,$ci) = $schema->field($self->{COLOR_FIELD}) if $ci == 0;
-	my $si = Geo::Vector::field_index($self->{SYMBOL_FIELD});
-	(undef,$si) = $schema->field($self->{SYMBOL_FIELD}) if $si == 0;
-	
-	$self->{COLOR_FIELD_VALUE} = $ci;
-	$self->{SYMBOL_FIELD_VALUE} = $si;
+	$self->{COLOR_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{COLOR_FIELD}),
+					  $schema->field_index($self->{COLOR_FIELD}),
+					  Geo::Vector::undefined_field_index());
+	$self->{SYMBOL_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{SYMBOL_FIELD}),
+					   $schema->field_index($self->{SYMBOL_FIELD}),
+					   Geo::Vector::undefined_field_index());
 	
 	$self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};
 	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };

@@ -83,6 +83,8 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 	symbol_field_type = OFTInteger;
     else if (visual->symbol_field == RAL_FIELD_Z)
 	symbol_field_type = OFTReal;
+    else
+	symbol_field_type = OFTMaxType;
 
     switch (symbol_field_type) {
     case OFTInteger:
@@ -93,8 +95,10 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 	RAL_FETCH(perl_layer, "SYMBOL_SCALE_MIN", visual->symbol_size_double.min, SvNV, 0);
 	RAL_FETCH(perl_layer, "SYMBOL_SCALE_MAX", visual->symbol_size_double.max, SvNV, 1);
 	break;
+    case OFTMaxType:
+	break;
     default:
-	RAL_CHECKM(0, ral_msg("Invalid field type for symbol scale: %s", OGR_GetFieldTypeName(symbol_field_type)));
+	RAL_CHECKM(0, ral_msg("Invalid field (type) for symbol scale: %i", visual->symbol_field));
 	break;
     }
 
@@ -106,7 +110,8 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 	color_field_type = OFTInteger;
     else if (visual->color_field == RAL_FIELD_Z)
 	color_field_type = OFTReal;
-
+    else
+	color_field_type = OFTMaxType;
     switch (color_field_type) {
     case OFTInteger:
 	RAL_FETCH(perl_layer, "COLOR_SCALE_MIN", visual->color_int.min, SvIV, 0);
@@ -116,10 +121,11 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 	RAL_FETCH(perl_layer, "COLOR_SCALE_MIN", visual->color_double.min, SvNV, 0);
 	RAL_FETCH(perl_layer, "COLOR_SCALE_MAX", visual->color_double.max, SvNV, 1);
 	break;
+    case OFTMaxType:
     case OFTString:
 	break;
-    default:
-	RAL_CHECKM(0, ral_msg("Invalid field type for color scale: %s", OGR_GetFieldTypeName(color_field_type)));
+     default:
+	RAL_CHECKM(0, ral_msg("33Invalid field (type) for color scale: %i", visual->color_field));
 	break;
     }
 	
@@ -153,8 +159,10 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 			ral_string_color_table_set(visual->string_color_table, SvPV(*s, len), i, fetch_color(c, 1));
 		}
 		break;
+	    case OFTMaxType:
+		break;
 	    default:
-		RAL_CHECKM(0, ral_msg("Invalid field type for color table: %s", OGR_GetFieldTypeName(color_field_type)));
+		RAL_CHECKM(0, ral_msg("Invalid field (type) for color table: %i", visual->color_field));
 	    }
 	}
     }
@@ -187,6 +195,8 @@ int fetch2visual(HV *perl_layer, ral_visual *visual, OGRFeatureDefnH defn)
 			visual->double_bins->bins[i] = s ? SvNV(*s) : 0;
 		    visual->double_bins->colors[i] = fetch_color(c, 1);
 		}
+		break;
+	    case OFTMaxType:
 		break;
 	    default:
 		RAL_CHECKM(0, ral_msg("Invalid field type for color bins: %s", OGR_GetFieldTypeName(color_field_type)));

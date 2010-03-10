@@ -83,11 +83,41 @@ sub open {
     $i = 0;
     foreach my $column (@columns) {
 	my $cell = Gtk2::CellRendererText->new;
+	if ($column eq 'Value') {
+	    $cell->set(editable => 1);
+	    $cell->signal_connect(edited => \&feature_changed, [$self, $gui, $i]);
+	}
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$treeview->append_column($col);
     }
 
     return $dialog->get_widget('feature_collection_dialog');
+}
+
+sub feature_changed {
+    my($cell, $path, $new_value, $data) = @_;
+    my($self, $gui, $column) = @$data;
+
+    my $dialog = $self->{feature_collection_dialog};
+
+    my $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
+    my $model = $treeview->get_model;
+    my $iter = $model->get_iter_from_string($path);
+    my @set = ($iter, $column, $new_value);
+    $model->set(@set);
+    my($field, $value) = $model->get($iter);
+
+    $treeview = $dialog->get_widget('feature_collection_treeview');
+    ($path, $column) = $treeview->get_cursor;
+    $iter = $treeview->get_model->get_iter($path);
+    my($fid) = $treeview->get_model->get($iter);
+
+    my $f = $self->feature($fid);
+    $value = undef if $value eq '';
+    $f->SetField($field, $value);
+    $self->feature($fid, $f);
+    $self->select; # clear selection since it is a list of features read from the source
+    $gui->{overlay}->render;
 }
 
 ##@ignore

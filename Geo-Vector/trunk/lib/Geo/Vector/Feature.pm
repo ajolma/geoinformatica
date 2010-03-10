@@ -111,9 +111,10 @@ sub Geometry {
 
 sub FID {
     my($self, $fid) = @_;
-    $self->{FID} = $fid if defined $fid;
-    $self->{FID};
+    $self->{OGRFeature}->SetFID($fid) if defined $fid;
+    $self->{OGRFeature}->GetFID;
 }
+*SetFID = *FID;
 *GetFID = *FID;
 
 1;

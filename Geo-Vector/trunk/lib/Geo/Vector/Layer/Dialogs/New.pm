@@ -23,37 +23,61 @@ sub open {
 	     new_vector_ok_button => [clicked => \&ok_new_vector, $self],
 	 },
 	);
-    
-    my $model = Gtk2::ListStore->new('Glib::String');
-    $model->set ($model->append, 0, '');
-    my @drivers;
-    for my $driver (Geo::OGR::Drivers()) {
-	my $n = $driver->FormatName;
-	$n = $driver->GetName unless $n;
-	$self->{drivers}{$n} = $driver->GetName;
-	push @drivers, $n;
+
+    if ($boot) {
+	my $model = Gtk2::ListStore->new('Glib::String');
+	for my $n ('Feature collection', 'OGR Layer') {
+	    $model->set ($model->append, 0, $n);
+	}
+	my $combo = $dialog->get_widget('new_vector_class_combobox');
+	$combo->set_model($model);
+	my $renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
+	$combo->set_active(0);
+
+	$model = Gtk2::ListStore->new('Glib::String');
+	$model->set ($model->append, 0, '');
+	my @drivers;
+	for my $driver (Geo::OGR::Drivers()) {
+	    my $n = $driver->FormatName;
+	    $n = $driver->GetName unless $n;
+	    $self->{drivers}{$n} = $driver->GetName;
+	    push @drivers, $n;
+	}
+	for my $n (sort @drivers) {
+	    $model->set ($model->append, 0, $n);
+	}
+	$combo = $dialog->get_widget('new_vector_driver_combobox');
+	$combo->set_model($model);
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
+	$combo->set_active(0);
+
+	$model = Gtk2::ListStore->new('Glib::String');
+	$model->set ($model->append, 0, '');
+	for my $data_source (sort keys %{$gui->{resources}{datasources}}) {
+	    $model->set ($model->append, 0, $data_source);
+	}
+	$combo = $dialog->get_widget('new_vector_data_source_combobox');
+	$combo->set_model($model);
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
+	$combo->set_active(0);
+
+	$model = Gtk2::ListStore->new('Glib::String');
+	for my $type (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
+	    $model->set ($model->append, 0, $type);
+	}
+	$combo = $dialog->get_widget('new_vector_geometry_type_combobox');
+	$combo->set_model($model);
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start($renderer, TRUE);
+	$combo->add_attribute($renderer, text => 0);
+	$combo->set_active(0);
     }
-    for my $n (sort @drivers) {
-	$model->set ($model->append, 0, $n);
-    }
-    my $combo = $dialog->get_widget('new_vector_driver_combobox');
-    $combo->set_model($model);
-    my $renderer = Gtk2::CellRendererText->new;
-    $combo->pack_start ($renderer, TRUE);
-    $combo->add_attribute ($renderer, text => 0);
-    $combo->set_active(0);
-    
-    $model = Gtk2::ListStore->new('Glib::String');
-    $model->set ($model->append, 0, '');
-    for my $data_source (sort keys %{$gui->{resources}{datasources}}) {
-	$model->set ($model->append, 0, $data_source);
-    }
-    $combo = $dialog->get_widget('new_vector_data_source_combobox');
-    $combo->set_model($model);
-    $renderer = Gtk2::CellRendererText->new;
-    $combo->pack_start ($renderer, TRUE);
-    $combo->add_attribute ($renderer, text => 0);
-    $combo->set_active(0);
     
     $dialog->get_widget('new_vector_open_button')
 	->signal_connect( clicked => sub {
@@ -63,19 +87,8 @@ sub open {
 			  }, $self );
     
     $dialog->get_widget('new_vector_layer_entry')->set_text('x');
-    
-    $model = Gtk2::ListStore->new('Glib::String');
-    for my $type (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
-	$model->set ($model->append, 0, $type);
-    }
-    $combo = $dialog->get_widget('new_vector_geometry_type_combobox');
-    $combo->set_model($model);
-    $renderer = Gtk2::CellRendererText->new;
-    $combo->pack_start ($renderer, TRUE);
-    $combo->add_attribute ($renderer, text => 0);
-    $combo->set_active(0);
-    
     $self->{schema} = schema_to_treeview($self, $dialog->get_widget('new_vector_schema_treeview'), 1);
+    return $dialog->get_widget('new_dialog');
 }
 
 sub schema_to_treeview {
@@ -166,14 +179,20 @@ sub ok_new_vector {
     my $self = pop;
     my $d = $self->{new_dialog};
     my $layer;
+    my $class = get_value_from_combo($d, 'new_vector_class_combobox');
+    my $name = $d->get_widget('new_vector_layer_entry')->get_text;
+    $name = 'x' unless $name;
+    if ($class eq 'Feature collection') {
+	$self->{gui}->add_layer(Geo::Vector->new(features=>[]), $name, 1);
+	$self->{new_dialog}->get_widget('new_dialog')->destroy;
+	return;
+    }
     my $driver = get_value_from_combo($d, 'new_vector_driver_combobox');
     $driver = $self->{drivers}{$driver};
     my $create_options = $d->get_widget('new_vector_create_options_entry')->get_text;
     $create_options = {split(/[(=>),]/,$create_options)};
     my $data_source = get_value_from_combo($d, 'new_vector_data_source_combobox');
     $data_source = $d->get_widget('new_vector_folder_entry')->get_text unless $data_source;
-    my $name = $d->get_widget('new_vector_layer_entry')->get_text;
-    $name = 'x' unless $name;
     my $layer_options = $d->get_widget('new_vector_layer_options_entry')->get_text;
     my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
     my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;
@@ -218,7 +237,7 @@ sub ok_new_vector {
 	return;
     }
     $self->{gui}->add_layer($layer, $name, 1);
-    $d->get_widget('new_dialog')->destroy;
+    $self->{new_dialog}->get_widget('new_dialog')->destroy;
 }
 
 ## @ignore
