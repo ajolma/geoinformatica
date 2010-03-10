@@ -318,6 +318,7 @@ sub feature_activated {
     my $features = $self->features(with_id=>[keys %$ids]);
     return unless $features;
     return unless @$features;
+    $self->selected_features($features);
 
     if (@$features == 1) {
 	my @k = keys %$ids;

@@ -73,35 +73,15 @@ sub fill_vtv {
     my $vertices = 0;
 	
     my $features = $self->selected_features;
-    if (@$features) {
-	for my $f (@$features) {
-	    my $geom = $f->GetGeometryRef();
-	    my $fid = $f->GetFID;
-	    my $name = $geom->GetGeometryName;
-	    my $vertices2 = $vertices;
-	    my $d = get_geom_data($self, $gui, $geom, \$vertex, \$vertices2, $from, $count);
-	    push @data,["Feature (fid=$fid) ($name)",$d,$fid] if $vertices2 > $vertices;
-	    $vertices = $vertices2;
-	    last if $vertices >= $count;
-	}
-    } else {
-	my $l = $self->{OGR}->{Layer};
-	if ($l) {
-	    my @r = $gui->{overlay}->get_viewport; #_of_selection;
-	    #@r = $gui->{overlay}->get_viewport unless @r;
-	    $l->SetSpatialFilterRect(@r);
-	    $l->ResetReading();
-	    while (my $f = $l->GetNextFeature) {
-		my $geom = $f->GetGeometryRef();
-		my $fid = $f->GetFID;
-		my $name = $geom->GetGeometryName;
-		my $vertices2 = $vertices;
-		my $d = get_geom_data($self, $gui, $geom, \$vertex, \$vertices2, $from, $count);
-		push @data,["Feature (fid=$fid) ($name)",$d,$fid] if $vertices2 > $vertices;
-		$vertices = $vertices2;
-		last if $vertices >= $count;
-	    }
-	}
+    for my $f (@$features) {
+	my $geom = $f->Geometry();
+	my $fid = $f->GetFID;
+	my $name = $geom->GetGeometryName;
+	my $vertices2 = $vertices;
+	my $d = get_geom_data($self, $gui, $geom, \$vertex, \$vertices2, $from, $count);
+	push @data,["Feature (fid=$fid) ($name)",$d,$fid] if $vertices2 > $vertices;
+	$vertices = $vertices2;
+	last if $vertices >= $count;
     }
 
     my $i = 0;
@@ -208,8 +188,9 @@ sub vertices_activated {
 		$selected = $selected->to_string;
 		next unless exists $GIDS->{$selected};
 		my @path = split(/:/, $GIDS->{$selected});
-		my $f = $self->{OGR}->{Layer}->GetFeature($path[0]);
-		my $geom = $f->GetGeometryRef();
+		my $f = $self->features( with_id => [$path[0]] );
+		next unless @$f;
+		my $geom = $f->[0]->Geometry();
 		for my $i (1..$#path-1) {
 		    $geom = $geom->GetGeometryRef($path[$i]);
 		}
