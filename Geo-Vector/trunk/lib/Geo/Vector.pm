@@ -820,7 +820,7 @@ sub feature_attribute {
 	    return $f->GetFID;
 	} elsif ($a eq '.Z') {
 	    my $g = $f->Geometry;
-	    return $g->GetZ if $g;
+	    return $g->GeometryType =~ /^Point/ ? $g->GetZ : undef;
 	} elsif ($a eq '.GeometryType') {
 	    my $g = $f->Geometry;
 	    return $g->GeometryType if $g;
@@ -862,6 +862,15 @@ sub value_range {
 	$field_name = $params{field_name};
     }    
     
+    if ($field_name eq '.Z') {
+	my($zmin, $zmax);
+	$self->init_iterate(%params);
+	while (my $f = $self->next_feature()) {
+	    ($zmin, $zmax) = z_range($f->Geometry()->Points, $zmin, $zmax);
+	}
+	return ($zmin, $zmax);
+    }
+
     if ($self->{features}) {
 	return ( 0, $#{$self->{features}} )
 	    if $field_name eq '.FID';
@@ -893,6 +902,22 @@ sub value_range {
 		  : $value;
     }
     return @range;
+}
+
+## @ignore
+sub z_range {
+    my($points, $zmin, $zmax) = @_;
+    unless (ref($points->[0])) { # single point [x,y,z]
+	if (@$points > 2) {
+	    $zmin = $points->[2] if (!defined($zmin) or $points->[2] < $zmin);
+	    $zmax = $points->[2] if (!defined($zmax) or $points->[2] > $zmax);
+	}
+	return ($zmin, $zmax);
+    }
+    for my $p (@$points) {
+	($zmin, $zmax) = z_range($p, $zmin, $zmax);
+    }
+    return ($zmin, $zmax);
 }
 
 ## @method hashref feature($fid, $feature)
