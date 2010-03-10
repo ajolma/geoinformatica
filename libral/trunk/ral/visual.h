@@ -199,6 +199,7 @@ typedef ral_double_color_bins *ral_double_color_bins_handle;
 ral_double_color_bins_handle RAL_CALL ral_double_color_bins_create(int n);
 void RAL_CALL ral_double_color_bins_destroy(ral_double_color_bins **bins);
 
+#define RAL_FIELD_UNDEFINED -10
 #define RAL_FIELD_FIXED_SIZE -3
 #define RAL_FIELD_Z -2
 #define RAL_FIELD_FID -1

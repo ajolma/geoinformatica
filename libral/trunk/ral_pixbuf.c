@@ -1112,8 +1112,7 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_double, y);   
 	    break;							
 	default:							
-	    RAL_CHECKM(0, ral_msg("Invalid field type for grayscale palette: %s.", 
-				  OGR_GetFieldTypeName(feature->color_field_type)));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for grayscale palette: %i.", feature->color_field_type));
 	}
 	break;
     }					
@@ -1136,8 +1135,7 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	case OFTString:							
 	    break;							
 	default:							
-	    RAL_CHECKM(0, ral_msg("Invalid field type for rainbow palette: %s.", 
-				  OGR_GetFieldTypeName(feature->color_field_type)));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for rainbow palette: %i.", feature->color_field_type));
 	}								
 	break;			
     }
@@ -1147,8 +1145,7 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	case OFTInteger:						
 	    break;							
 	default:							
-	    RAL_CHECKM(0, ral_msg("Invalid field type for color table palette: %s.", 
-				  OGR_GetFieldTypeName(feature->color_field_type)));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for color table palette: %i.", feature->color_field_type));
 	}								
 	break;								
     case RAL_PALETTE_COLOR_BINS:					
@@ -1157,8 +1154,7 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	case OFTReal:
 	    break;
 	default:
-	    RAL_CHECKM(0, ral_msg("Invalid field type for color bins palette: %s.", 
-				  OGR_GetFieldTypeName(feature->color_field_type)));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for color bins palette: %i.", feature->color_field_type));
 	}
 	break;
     default:
@@ -1444,8 +1440,7 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_double, y);
 	break;
     default:
-	RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %s.", 
-			      OGR_GetFieldTypeName(feature.symbol_size_field_type)));
+	RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", feature.symbol_size_field_type));
     }
 
     RAL_CHECK(ral_setup_color_interpolator(layer->visualization, defn, &feature));
@@ -1654,8 +1649,7 @@ int ral_render_visual_feature_table(ral_pixbuf *pb, ral_visual_feature_table *t)
 	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_double, y);
 	    break;
 	default:
-	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %s.", 
-				  OGR_GetFieldTypeName(feature.symbol_size_field_type)));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", feature.symbol_size_field_type));
 	}
 
 	RAL_CHECK(ral_setup_color_interpolator(t->features[i].visualization, defn, &feature));
