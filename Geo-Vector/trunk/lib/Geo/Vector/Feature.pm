@@ -99,6 +99,7 @@ sub Field {
     $self->{properties}{$field};
 }
 *GetField = *Field;
+*SetField = *Field;
 
 sub Geometry {
     my($self, $geom) = @_;

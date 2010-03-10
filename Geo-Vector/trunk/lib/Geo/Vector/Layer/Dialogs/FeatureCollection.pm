@@ -116,7 +116,9 @@ sub delete_selected_features {
     my @features;
     for my $i (0..$#{$self->{features}}) {
 	next if exists $delete->{$i};
-	push @features, $self->{features}[$i];
+	my $f = $self->{features}[$i];
+	push @features, $f;
+	$f->FID($#features);
     }
     $self->{features} = \@features;
     fill_features_table(undef, [$self, $gui]);
@@ -234,9 +236,9 @@ sub zoom_to_selected_features {
     my @viewport = $gui->{overlay}->get_viewport;
     my @extent = ();
     
-    for (@$features) {
+    for my $f (@$features) {
 
-	my $geom = $_->GetGeometryRef();
+	my $geom = $f->Geometry();
 	next unless $geom;
 
 	my $env = $geom->GetEnvelope; 

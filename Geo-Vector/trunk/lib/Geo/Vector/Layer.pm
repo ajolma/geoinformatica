@@ -215,10 +215,10 @@ sub menu_items {
 sub open_features_dialog {
     my($self) = @_;
     if ( $self->{features} ) {
-	$self->{features_dialog} = Geo::Vector::Layer::Dialogs::FeatureCollection::open(@_);
+	Geo::Vector::Layer::Dialogs::FeatureCollection::open(@_);
     }
     elsif ( $self->{OGR}->{Layer} ) {
-	$self->{features_dialog} = Geo::Vector::Layer::Dialogs::Features::open(@_);
+	Geo::Vector::Layer::Dialogs::Features::open(@_);
     }
 }
 

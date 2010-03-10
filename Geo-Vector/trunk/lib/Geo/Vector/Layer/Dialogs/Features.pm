@@ -44,7 +44,7 @@ sub open {
 
     $dialog->get_widget('delete_feature_button')->set_sensitive($self->{update});
     $dialog->get_widget('from_drawing_button')->set_sensitive($self->{update});
-    $dialog->get_widget('copy_to_drawing_button')->set_sensitive($self->{update});
+    #$dialog->get_widget('copy_to_drawing_button')->set_sensitive($self->{update});
     $dialog->get_widget('copy_from_drawing_button')->set_sensitive($self->{update});
 	
     my @editable;
@@ -108,6 +108,8 @@ sub open {
     }
     
     fill_features_table(undef, [$self, $gui]);
+
+    return $dialog->get_widget('features_dialog');
 
 }
 

@@ -530,7 +530,8 @@ sub buffer {
     $params{schema} = $self->schema() if $params{copy_attributes};
     my $new = Geo::Vector->new(%params);
     my $out = $new->{OGR}->{Layer};
-    my $defn = $out->GetLayerDefn() if $out;
+    croak "buffer: the resulting layer must be an OGR layer" unless $out;
+    my $defn = $out->GetLayerDefn();
     $self->init_iterate;
     while (my $feature = $self->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
@@ -544,13 +545,9 @@ sub buffer {
 	    }
 	}
 	$f->SetGeometry($buf);
-	if ($out) {
-	    $out->CreateFeature($f);
-	} else {
-	    push @{$new->{features}}, $f;
-	}
+	$out->CreateFeature($f);
     }
-    $out->SyncToDisk unless $new->driver eq 'Memory';
+    #$out->SyncToDisk unless $new->driver eq 'Memory';
     return $new;
 }
 
@@ -568,13 +565,14 @@ sub within {
     $params{schema} = $self->schema();
     my $new = Geo::Vector->new(%params);
     my $out = $new->{OGR}->{Layer};
+    croak "within: the resulting layer must be an OGR layer" unless $out;
     my @c;
     $other->init_iterate;
     while (my $feature = $other->next_feature()) {
 	my $geom = $feature->GetGeometry();
 	push @c, $geom;
     }
-    my $defn = $out->GetLayerDefn() if $out;
+    my $defn = $out->GetLayerDefn();
     $self->init_iterate;
     while (my $feature = $self->next_feature()) {
 	my $geom = $feature->GetGeometryRef();
@@ -586,7 +584,7 @@ sub within {
 	    }
 	}
 	next unless $within;
-	$defn = $feature->GetDefnRef unless $out;
+	$defn = $feature->GetDefnRef;
 	my $f = Geo::OGR::Feature->new($defn);
 	if ($params{schema}) {
 	    for my $name ($params{schema}->field_names) {
@@ -595,13 +593,9 @@ sub within {
 	    }
 	}
 	$f->SetGeometry($geom);
-	if ($out) {
-	    $out->CreateFeature($f);
-	} else {
-	    push @{$new->{features}}, $f;
-	}
+	$out->CreateFeature($f);
     }
-    $out->SyncToDisk unless $new->driver eq 'Memory';
+    #$out->SyncToDisk unless $new->driver eq 'Memory';
     return $new;
 }
 
@@ -646,9 +640,8 @@ sub add {
 	next unless $dst_geometry_type eq 'Unknown' or 
 	    $dst_geometry_type =~ /$geom->GeometryType/;
 
+	my $f = $self->feature();
 	my $src_defn = $feature->GetDefnRef;
-	my $defn = $dst_defn ? $dst_defn : $src_defn;
-	my $f = Geo::OGR::Feature->new($defn);
 	my $n = $src_defn->GetFieldCount();
 	for my $i ( 0 .. $n - 1 ) {
 	    my $fd   = $src_defn->GetFieldDefn($i);
@@ -665,14 +658,10 @@ sub add {
 	    transform_points($points, $params{transformation});
 	    $geom->Points($points);
 	}
-	$f->SetGeometry($geom);
-	if ($dst_layer) {
-	    $dst_layer->CreateFeature($f);
-	} else {
-	    push @{$self->{features}}, $f;
-	}
+	$f->Geometry($geom);
+	$self->feature($f);
     }
-    $dst_layer->SyncToDisk unless $self->driver eq 'Memory';
+    #$dst_layer->SyncToDisk unless $self->driver eq 'Memory';
     return $self if defined wantarray;
 }
 
@@ -973,7 +962,7 @@ sub feature {
 	} else {
 	    $self->{OGR}->{Layer}->CreateFeature($fid);
 	}
-    } else {
+    } elsif (defined $fid) {
 
 	# retrieve
 	if ( $self->{features} ) {
@@ -981,6 +970,14 @@ sub feature {
 	    return $self->{features}->[$fid];	    
 	} else {
 	    return $self->{OGR}->{Layer}->GetFeature($fid);
+	}
+    } else {
+
+	# create new
+	if ( $self->{features} ) {
+	    return Geo::Vector::Feature->new();	    
+	} else {
+	    return Geo::OGR::Feature->new($self->{OGR}->{Layer}->GetLayerDefn());
 	}
     }
 }
