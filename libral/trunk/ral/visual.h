@@ -50,14 +50,14 @@ typedef ral_color_table *ral_color_table_handle;
 ral_color_table_handle RAL_CALL ral_color_table_create(int n);
 void RAL_CALL ral_color_table_destroy(ral_color_table **table);
 
-#define RAL_COLOR_TABLE_GET(table, key, color)	\
-    {						\
-	int i;					\
-	if (table) for (i = 0; i < (table)->n; i++)	\
-	    if ((table)->keys[i] == (key)) {	\
-		(color) = (table)->colors[i];	\
-		break;				\
-	    }					\
+#define RAL_COLOR_TABLE_GET(table, key, color)			\
+    {								\
+	int i;							\
+	if (table) for (i = 0; i < (table)->n; i++)		\
+		       if ((table)->keys[i] == (key)) {		\
+			   (color) = (table)->colors[i];	\
+			   break;				\
+		       }					\
     }
 
 /**\brief a hash, where the keys are strings and values are colors */
@@ -76,12 +76,12 @@ int RAL_CALL ral_string_color_table_set(ral_string_color_table *table, char *key
 #define RAL_STRING_COLOR_TABLE_GET(table, key, color)			\
     {									\
 	int i;								\
-	if (table) for (i = 0; i < (table)->n; i++) {				\
-	    if ((table)->keys[i] AND strcmp((table)->keys[i], (key)) == 0) { \
-		(color) = (table)->colors[i];				\
-		break;							\
+	if (table) for (i = 0; i < (table)->n; i++) {			\
+		if ((table)->keys[i] AND strcmp((table)->keys[i], (key)) == 0) { \
+		    (color) = (table)->colors[i];			\
+		    break;						\
+		}							\
 	    }								\
-	}								\
     }
 
 /**\brief a hash, where the keys are bins defined with RAL_INTEGERs and values are colors */
@@ -102,7 +102,7 @@ void RAL_CALL ral_integer_color_bins_destroy(ral_integer_color_bins **bins);
 #define RAL_COLOR_BINS_GET(color_bins, value, color)			\
     {									\
 	int i = 0;							\
-	if (color_bins) { \
+	if (color_bins) {						\
             while ( (value) > (color_bins)->bins[i] AND i < (color_bins)->n - 1 ) \
 	        i++;							\
 	    (color) = (color_bins)->colors[i];}				\
