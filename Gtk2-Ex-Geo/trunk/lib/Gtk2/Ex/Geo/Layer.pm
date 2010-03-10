@@ -896,21 +896,30 @@ sub field_names {
 sub field {
     my($schema, $field_name) = @_;
     if ($field_name eq '.FID') {
-	return wantarray ? ({ Name => '.FID', Type => 'Integer' }, -3) : 
-	{ Name => '.FID', Type => 'Integer' };
+	return { Name => '.FID', Type => 'Integer' };
     }
     if ($field_name eq '.GeometryType') {
-	return wantarray ? ({ Name => '.GeometryType', Type => 'String' }, -2) : 
-	{ Name => '.GeometryType', Type => 'String' };
+	return { Name => '.GeometryType', Type => 'String' };
     }
     if ($field_name eq '.Z') {
-	return wantarray ? ({ Name => '.Z', Type => 'Real' }, -1) : 
-	{ Name => '.Z', Type => 'Real' };
+	return { Name => '.Z', Type => 'Real' };
     }
     my $i = 0;
     for my $f (@{$schema->{Fields}}) {
 	if ($field_name eq $f->{Name}) {
-	    return wantarray ? ($f, $i) : $f;
+	    return $f;
+	}
+	$i++;
+    }
+}
+
+## @ignore
+sub field_index {
+    my($schema, $field_name) = @_;
+    my $i = 0;
+    for my $f (@{$schema->{Fields}}) {
+	if ($field_name eq $f->{Name}) {
+	    return $i;
 	}
 	$i++;
     }
