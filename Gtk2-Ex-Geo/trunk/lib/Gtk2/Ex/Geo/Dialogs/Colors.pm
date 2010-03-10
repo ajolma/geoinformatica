@@ -7,6 +7,7 @@ use Carp;
 use Graphics::ColorUtils qw /:all/;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw /:all/;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 
 use vars qw/$MAX_INT $MAX_REAL $COLOR_CELL_SIZE/;
 
@@ -324,14 +325,8 @@ sub copy_colors {
 sub open_colors_file {
     my($self, $gui) = @{$_[1]};
     my $palette_type = $self->palette_type;
-    my $file_chooser =
-	Gtk2::FileChooserDialog->new ("Select a $palette_type file",
-				      undef, 'open',
-				      'gtk-cancel' => 'cancel',
-				      'gtk-ok' => 'ok');
-    if ($file_chooser->run eq 'ok') {
-	my $filename = $file_chooser->get_filename;
-	$file_chooser->destroy;
+    my $filename = file_chooser("Select a $palette_type file", 'open');
+    if ($filename) {
 	if ($palette_type eq 'Color table') {
 	    eval {
 		$self->color_table($filename);
@@ -346,8 +341,6 @@ sub open_colors_file {
 	} else {
 	    fill_colors_treeview($self);
 	}
-    } else {
-	$file_chooser->destroy;
     }
 }
 
@@ -355,15 +348,8 @@ sub open_colors_file {
 sub save_colors_file {
     my($self, $gui) = @{$_[1]};
     my $palette_type = $self->palette_type;
-    my $file_chooser =
-	Gtk2::FileChooserDialog->new ("Save $palette_type file as",
-				      undef, 'save',
-				      'gtk-cancel' => 'cancel',
-				      'gtk-ok' => 'ok');
-    my $filename;
-    if ($file_chooser->run eq 'ok') {
-	$filename = $file_chooser->get_filename;
-	$file_chooser->destroy;
+    my $filename = file_chooser("Save $palette_type file as", 'save');
+    if ($filename) {
 	if ($palette_type eq 'Color table') {
 	    eval {
 		$self->save_color_table($filename); 
@@ -376,8 +362,6 @@ sub save_colors_file {
 	if ($@) {
 	    $gui->message("$@");
 	}
-    } else {
-	$file_chooser->destroy;
     }
 }
 

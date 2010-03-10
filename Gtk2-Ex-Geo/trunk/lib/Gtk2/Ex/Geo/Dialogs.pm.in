@@ -21,6 +21,7 @@ documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 use strict;
 use warnings;
 use UNIVERSAL qw/isa/;
+#use URI::Escape;
 
 require Exporter;
 
@@ -92,17 +93,18 @@ sub file_chooser {
 				      'gtk-cancel' => 'cancel',
 				      'gtk-ok' => 'ok');
     $file_chooser->set_current_folder($folder) if $folder;
-    my $uri;
+    my $filename;
     if ($file_chooser->run eq 'ok') {
 	$folder = $file_chooser->get_current_folder();
-	$uri = $file_chooser->get_uri;
-	$uri =~ s/^file:\/\///;
-	$uri =~ s/^\/// if $uri =~ /^\/\w:/; # hack for windows
-	$entry->set_text($uri) if $entry;
+	$filename = $file_chooser->get_filename;
+	#$filename =~ s/^file:\/\///;
+	#$filename =~ s/^\/// if $filename =~ /^\/\w:/; # hack for windows
+	$entry->set_text($filename) if $entry;
     }
-
     $file_chooser->destroy;
-    return $uri;
+    #$filename = filename_unescape($filename);
+    #print STDERR "$filename\n";
+    return $filename;
 }
 
 ##@ignore
