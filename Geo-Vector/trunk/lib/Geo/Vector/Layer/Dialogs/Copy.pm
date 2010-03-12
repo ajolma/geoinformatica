@@ -49,8 +49,8 @@ sub open {
 	$combo->pack_start($renderer, TRUE);
 	$combo->add_attribute($renderer, text => 0);
 
-	$combo = $dialog->get_widget('copy_name_comboboxentry');
-	$combo->set_text_column(0);
+	#$combo = $dialog->get_widget('copy_name_comboboxentry');
+ 
     }
 
     my $model = Gtk2::ListStore->new('Glib::String');
@@ -88,6 +88,7 @@ sub open {
     $combo = $dialog->get_widget('copy_name_comboboxentry');
     $combo->child->set_text('copy');
     $combo->set_model($model);
+    $combo->set_text_column(0);
 
     $dialog->get_widget('copy_datasource_entry')->set_text('');
     my $s = $self->selected_features;
