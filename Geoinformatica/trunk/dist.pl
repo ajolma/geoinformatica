@@ -13,18 +13,19 @@ use Cwd;
 use File::Spec;
 
 my $DIST = getcwd() . "/Geoinformatica";
+my $DEV = "c:/src";
 
 # sources:
 my $PERL = "c:/Geoinformatica"; # Perl with needed modules
 my $GTK_RUNTIME = "c:/GTK-runtime"; # GTK runtime
 my $GTK = "c:/GTK";
 my $MINGW = "c:/MinGW";
-my $EXPAT = "c:/Program Files/Expat 2.0.1";
+my $EXPAT = ''; # "c:/Program Files/Expat 2.0.1";
 my $LOCAL = "c:/msys/1.0/local";
 my $GNUPLOT = "c:/Program Files/gnuplot";
-my $GDAL = "c:/dev/gdal";
-my $LIBRAL = "c:/dev/geoinformatica/libral/trunk";
-my $PERL_MOD_DOC = "c:/dev/geoinformatica/Geo-Raster/trunk/html";
+my $GDAL = "$DEV/gdal";
+my $LIBRAL = "$DEV/geoinformatica/libral/trunk";
+my $PERL_MOD_DOC = "$DEV/geoinformatica/Geo-Raster/trunk/html";
 my $LIBRAL_DOC = "$LIBRAL/html";
 my $PERL_GDAL_DOC = "$GDAL/swig/perl/html";
 
@@ -77,14 +78,16 @@ for (qw/libpq.dll/)
 { 
     copy("$LOCAL/pgsql/lib/$_", "$DIST/bin/$_");
 }
-for (glob("'$EXPAT/bin/*.dll'")) {
-    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
-    copy($_, "$DIST/bin/$file");
-}
-# here must have '
-for (glob("'$EXPAT/*.*'")) {
-    my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
-    copy($_, "$DIST/share/doc/expat/$file");
+if ($EXPAT) {
+    for (glob("'$EXPAT/bin/*.dll'")) {
+	my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+	copy($_, "$DIST/bin/$file");
+    } 
+    # here must have '
+    for (glob("'$EXPAT/*.*'")) {
+	my($vol,$dirs,$file) = File::Spec->splitpath( $_ );
+	copy($_, "$DIST/share/doc/expat/$file");
+    }
 }
 # here can't have '
 for (glob("$LOCAL/bin/*.dll")) {
@@ -97,7 +100,7 @@ for (qw/README lesser.txt/)
 { 
     copy("$LIBRAL/$_", "$DIST/share/doc/libral/$_");
 }
-copy("c:/dev/geoinformatica/Geoinformatica/trunk/gui.pl", "$DIST/bin/gui.pl");
+copy("$DEV/geoinformatica/Geoinformatica/trunk/gui.pl", "$DIST/bin/gui.pl");
 
 # devel
 
