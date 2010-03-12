@@ -478,6 +478,12 @@ sub ApplyTransformation {
     croak "ApplyTransformation method for class ".ref($self)." is not implemented";
 }
 
+## @method LastPolygon()
+# @brief Returns last (latest added) polygon or undef
+sub LastPolygon {
+    return undef;
+}
+
 #
 #    SpatialReferenceSystem
 #
@@ -1680,6 +1686,13 @@ sub IsCCW {
 	       $self->{Points}[$n]{X}, $self->{Points}[$n]{Y}) == 1;
 }
 
+## @method Rotate()
+# @brief Makes clockwise from counterclockwise and vice versa.
+sub Rotate {
+    my($self) = @_;
+    @{$self->{Points}} = reverse @{$self->{Points}};
+}
+
 #
 #    Surface
 #
@@ -2063,7 +2076,7 @@ sub ClosestPoint {
     my $iring = -1;
     my $r = 0;
     for my $ring (@{$self->{InteriorRings}}) {
-	my($i, $p, $d) = $ring->ClosestVertex($x, $y);
+	my($i, $p, $d) = $ring->ClosestPoint($x, $y);
 	($iring, $imin, $pmin, $dmin) = ($r, $i, $p, $d) if $d < $dmin;
 	$r++;
     }
@@ -2080,6 +2093,13 @@ sub DeleteVertex {
     my($self, $ring, $i) = @_;
     $self->{ExteriorRing}->DeleteVertex($i), return if $ring < 0;
     $self->{InteriorRings}[$ring]->DeleteVertex($i);
+}
+
+## @method LastPolygon()
+# @brief Returns self
+sub LastPolygon {
+    my($self) = @_;
+    return $self;
 }
 
 #
@@ -2441,6 +2461,16 @@ sub DeleteVertex {
     my $self = shift;
     my $i = shift;
     $self->{Geometries}[$i]->DeleteVertex(@_);
+}
+
+## @method LastPolygon()
+# @brief Returns last polygon or undef
+sub LastPolygon {
+    my($self) = @_;
+    for (my $i = $#{$self->{Geometries}}; $i >= 0; $i--) {
+	my $polygon = $self->{Geometries}[$i]->LastPolygon;
+	return $polygon if $polygon;
+    }
 }
 
 #
