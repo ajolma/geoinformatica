@@ -34,12 +34,12 @@ POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal
 use UNIVERSAL qw(isa);
 use XSLoader;
 use File::Basename;
-use Gtk2;
 use Geo::GDAL;
 use Geo::OGC::Geometry;
 use Geo::Vector::Feature;
 use Geo::Vector::Layer;
 use JSON::XS;
+use Gtk2;
 
 use vars qw( @ISA %RENDER_AS );
 
