@@ -14,6 +14,8 @@ use Carp;
 use Glib qw/TRUE FALSE/;
 use Geo::OGC::Geometry;
 
+use vars qw / $EDIT_SNAP_DISTANCE /;
+
 our $VERSION = '0.62'; # same as Geo.pm
 
 =pod
@@ -27,13 +29,7 @@ documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 =cut
 
-my %visual_keys = ($Gtk2::Gdk::Keysyms{plus}=>1,
-		   $Gtk2::Gdk::Keysyms{minus}=>1,
-		   $Gtk2::Gdk::Keysyms{Right}=>1,
-		   $Gtk2::Gdk::Keysyms{Left}=>1,
-		   $Gtk2::Gdk::Keysyms{Up}=>1,
-		   $Gtk2::Gdk::Keysyms{Down}=>1);
-
+$EDIT_SNAP_DISTANCE = 5;
 
 use Glib::Object::Subclass
     Gtk2::ScrolledWindow::,
@@ -698,7 +694,7 @@ sub key_press_event {
     } elsif ($key == $Gtk2::Gdk::Keysyms{Escape}) {
 	$self->delete_rubberband;
     } elsif ($key == $Gtk2::Gdk::Keysyms{Return}) {
-	if (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and $self->{path}) {
+	if ($self->draw_mode and $self->{path}) {
 	    if ($self->{rubberband_geometry} eq 'polygon') {
 		if (@{$self->{path}} > 2) {
 		    my $geom = new Geo::OGC::Polygon;
@@ -731,7 +727,7 @@ sub key_press_event {
 	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
 	    my @r = $self->{drawing}->ClosestPoint(@p);
 	    my $d = pop @r;
-	    if (@r and $d/$self->{pixel_size} < 30) {
+	    if (@r and $d/$self->{pixel_size} < $EDIT_SNAP_DISTANCE) {
 		$self->{drawing}->AddVertex(@r);
 		$self->update_image;
 	    }
@@ -745,19 +741,27 @@ sub key_press_event {
 	    my @p = $self->event_pixel2point(@{$self->{event_coordinates}});
 	    my @r = $self->{drawing}->ClosestVertex(@p);
 	    my $d = pop @r;
-	    if (@r and $d/$self->{pixel_size} < 30) {
+	    if (@r and $d/$self->{pixel_size} < $EDIT_SNAP_DISTANCE) {
 		$self->{drawing}->DeleteVertex(@r);
 		$self->update_image;
 	    }	    
 	}
 
-    } elsif ($key == $Gtk2::Gdk::Keysyms{Control_L} or $key == $Gtk2::Gdk::Keysyms{Control_R}) {
+    } elsif (($key == $Gtk2::Gdk::Keysyms{Control_L} or $key == $Gtk2::Gdk::Keysyms{Control_R}) and
+	     $self->draw_mode) {
 	$self->{_control_down} = 1;
     } elsif (($key == $Gtk2::Gdk::Keysyms{Shift_L} or $key == $Gtk2::Gdk::Keysyms{Shift_R}) and
+	     $self->draw_mode and
 	     ($self->{drawing} and $self->{drawing}->LastPolygon)) {
 	$self->{_shift_down} = 1;
     }
     return 0;
+}
+
+## @ignore
+sub draw_mode {
+    my($self) = @_;
+    return ($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw');
 }
 
 ## @method key_release_event($event)
@@ -845,9 +849,8 @@ sub button_press_event {
 	    my @p = $self->event_pixel2point($event->x, $event->y);
 	    my @q = $self->{drawing}->ClosestVertex(@p);
 	    my $d = pop @q;
-	    $self->{drawing_edit} = \@q if $d/$self->{pixel_size} < 30;
-	} elsif (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and 
-		 !($self->{_control_down} or $self->{_shift_down}) and
+	    $self->{drawing_edit} = \@q if $d/$self->{pixel_size} < $EDIT_SNAP_DISTANCE;
+	} elsif ($self->draw_mode and !($self->{_control_down} or $self->{_shift_down}) and
 		 !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
 	    )
 	{
