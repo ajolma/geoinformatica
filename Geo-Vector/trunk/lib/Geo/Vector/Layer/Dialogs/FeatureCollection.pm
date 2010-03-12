@@ -83,10 +83,10 @@ sub open {
     $i = 0;
     foreach my $column (@columns) {
 	my $cell = Gtk2::CellRendererText->new;
-	if ($column eq 'Value') {
+	#if ($column eq 'Value') {
 	    $cell->set(editable => 1);
 	    $cell->signal_connect(edited => \&feature_changed, [$self, $gui, $i]);
-	}
+	#}
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$treeview->append_column($col);
     }
@@ -100,23 +100,49 @@ sub feature_changed {
 
     my $dialog = $self->{feature_collection_dialog};
 
-    my $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my($p, $c) = $treeview->get_cursor;
     my $model = $treeview->get_model;
-    my $iter = $model->get_iter_from_string($path);
-    my @set = ($iter, $column, $new_value);
-    $model->set(@set);
+    my $iter = $model->get_iter($p);
+    my($fid) = $model->get($iter);
+
+    my $feature = $self->feature($fid);
+
+    $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
+    $model = $treeview->get_model;
+    $iter = $model->get_iter_from_string($path);
     my($field, $value) = $model->get($iter);
 
-    $treeview = $dialog->get_widget('feature_collection_treeview');
-    ($path, $column) = $treeview->get_cursor;
-    $iter = $treeview->get_model->get_iter($path);
-    my($fid) = $treeview->get_model->get($iter);
+    return if $field eq 'FID';
+    return if $field eq 'Geometry type';
+    return if lc($field) eq 'class';
 
-    my $f = $self->feature($fid);
-    $value = undef if $value eq '';
-    $f->SetField($field, $value);
-    $self->feature($fid, $f);
+    my @set = ($iter, $column, $new_value);
+    $model->set(@set);
+
+    if ($column == 0) {
+	$field = $new_value;
+	$value = $value;
+    } else {
+	$field = $field;
+	$value = $new_value;
+    }
+    return if $field eq 'add field';
+    
+    #$value = undef if $value eq '';
+    if ($value eq 'xxx') {
+	$feature->DeleteField($field);
+    } else {
+	$feature->SetField($field, $value);
+    }
+
+    my @k = sort keys %{$feature->{properties}};
+    print STDERR "$fid: $field => $value prop=@k\n";
+
+    $self->feature($fid, $feature);
     $self->select; # clear selection since it is a list of features read from the source
+    $self->select( with_id => [$fid] );
+    $dialog->get_widget('feature_collection_treeview')->set_cursor($p);
     $gui->{overlay}->render;
 }
 
@@ -210,7 +236,7 @@ sub copy_from_drawing {
 	$self->feature($f->FID, $f);
 	last;
     }
-    fill_features_table(undef, [$self, $gui]);
+    #fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
 
@@ -351,23 +377,22 @@ sub feature_activated {
     $self->selected_features($features);
 
     if (@$features == 1) {
-	my @k = keys %$ids;
-	my $f = $features->[0];
-	my $schema = $self->schema($k[0]);
+	my $row = $features->[0]->Row;
+
 	$model->clear;
 
-	my @recs;
-	for my $field ($schema->fields) {
-	    my $n = $field->{Name};
-	    next if $n =~ /^\./;
-	    my @rec;
-	    my $rec = 0;
-	    push @rec, $rec++;	    
-	    push @rec, $n;
-	    push @rec, $rec++;
-	    push @rec, Geo::Vector::feature_attribute($f, $n);
-	    push @recs, \@rec;
+	my $g = $row->{Geometry};
+	my @recs = ( [ 0, 'FID', 1, $row->{FID} ], 
+		     [ 0, 'Geometry type', 1, $g ? $g->GeometryType : '' ],
+		     [ 0, 'Class', 1, $row->{class} ], 
+	    );
+	for (sort {$a cmp $b} keys %$row) {
+	    next if /^FID/;
+	    next if /^Geometry/;
+	    next if /^class/;
+	    push @recs, [ 0, $_, 1, $row->{$_} ];
 	}
+	push @recs, [ 0, 'add field', 1, '' ];
 
 	for my $rec (@recs) {
 	

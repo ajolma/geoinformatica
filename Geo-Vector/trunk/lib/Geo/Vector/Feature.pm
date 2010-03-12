@@ -93,6 +93,11 @@ sub Schema {
     }
 }
 
+sub DeleteField {
+    my($self, $field) = @_;
+    delete $self->{properties}{$field};
+}
+
 sub Field {
     my($self, $field, $value) = @_;
     $self->{properties}{$field} = $value if defined $value;
