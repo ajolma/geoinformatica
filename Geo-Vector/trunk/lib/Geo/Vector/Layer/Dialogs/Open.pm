@@ -217,11 +217,11 @@ sub open_vector {
 	my $layer;
 	my $encoding = 'utf8' if $data_source =~ /^Pg:/; # not really the case always but...
 	eval {
-	    my %params = ( data_source=>$data_source,
-			   open=>$name,
-			   sql=>$sql,
-			   update=>$update,
-			   encoding=>$encoding );
+	    my %params = ( data_source => $data_source,
+			   open        => $name,
+			   sql         => $sql,
+			   update      => $update,
+			   encoding    => $encoding );
 	    $params{driver} = $driver unless $driver eq 'auto';
 	    $layer = Geo::Vector::Layer->new(%params);
 	};

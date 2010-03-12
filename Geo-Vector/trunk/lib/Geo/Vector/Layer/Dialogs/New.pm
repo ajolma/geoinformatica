@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
+use Geo::GDAL;
 
 ## @ignore
 sub open {
@@ -67,8 +68,18 @@ sub open {
 	$combo->add_attribute($renderer, text => 0);
 	$combo->set_active(0);
 
+	# replace with @Geo::OGR::Geometry::GEOMETRY_TYPES
+	# when new GDAL comes out
+
+	my @GEOMETRY_TYPES = qw/Unknown 
+			Point LineString Polygon
+			MultiPoint MultiLineString MultiPolygon GeometryCollection
+			None LinearRing
+			Point25D LineString25D Polygon25D
+			MultiPoint25D MultiLineString25D MultiPolygon25D GeometryCollection25D/;
+
 	$model = Gtk2::ListStore->new('Glib::String');
-	for my $type (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
+	for my $type (@GEOMETRY_TYPES) {
 	    $model->set ($model->append, 0, $type);
 	}
 	$combo = $dialog->get_widget('new_vector_geometry_type_combobox');
@@ -104,13 +115,21 @@ sub schema_to_treeview {
     my $column = Gtk2::TreeViewColumn->new_with_attributes('Name', $cell, text => $i++);
     $treeview->append_column($column);
 
+    # replace with @Geo::OGR::FieldDefn::FIELD_TYPES
+    # and @Geo::OGR::FieldDefn::JUSTIFY_TYPES
+    # when new GDAL comes out
+
+    my @FIELD_TYPES = qw/Integer IntegerList Real RealList String StringList
+		         WideString WideStringList Binary Date Time DateTime/;
+    my @JUSTIFY_TYPES = qw/Undefined Left Right/;
+
     $cell = Gtk2::CellRendererCombo->new;
     $cell->set(editable => $editable);
     $cell->set(text_column => 0);
     $cell->set(has_entry => 0);
     $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
     my $m = Gtk2::ListStore->new('Glib::String');
-    for my $type (@Geo::OGR::FieldDefn::FIELD_TYPES) {
+    for my $type (@FIELD_TYPES) {
 	$m->set($m->append, 0, $type);
     }
     $cell->set(model=>$m);
@@ -123,7 +142,7 @@ sub schema_to_treeview {
     $cell->set(has_entry => 0);
     $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
     $m = Gtk2::ListStore->new('Glib::String');
-    for my $type (@Geo::OGR::FieldDefn::JUSTIFY_TYPES) {
+    for my $type (@JUSTIFY_TYPES) {
 	$m->set($m->append, 0, $type);
     }
     $cell->set(model=>$m);
