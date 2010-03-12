@@ -221,7 +221,7 @@ sub register_dialogs {
 
 sub register_command {
     my($self, $label, $sub, $tip, $pos) =  @_;
-    my $label_widget = Gtk2::Label->new($label);
+    my $label_widget = Gtk2::Label->new($label) if Gtk2->CHECK_VERSION(2, 18, 0);
     my $button = Gtk2::ToolButton->new($label_widget, $label);
     my $tooltips = Gtk2::Tooltips->new;
     $tip = $tip || '';
@@ -540,24 +540,25 @@ sub layer_menu {
 
     my $layer;
     my @layers;
-    my $column;
+    my $column = '';
 
     my $selection = $self->{tree_view}->get_selection;
     my @rows = $selection->get_selected_rows;
 
     if (@rows < 2) {
 	my @res = $self->{tree_view}->get_path_at_pos($event->x, $event->y);
+	my $s = $res[0] ? $res[0]->to_string : '';
+	#print STDERR "res=@res, $s\n";
 	return unless defined $res[0];
-	$self->{tree_view}->set_cursor(Gtk2::TreePath->new($res[0]->to_string));
-	$layer = $self->{overlay}->get_layer_by_index($res[0]->to_string);
+	$self->{tree_view}->set_cursor(Gtk2::TreePath->new($s));
+	$layer = $self->{overlay}->get_layer_by_index($s);
 	return unless $layer;
-	$column = $res[1]->get_title;
+	$column = $res[1]->get_title if $res[1];
     } else {
 	for my $r (@rows) {
 	    $layer = $self->{overlay}->get_layer_by_index($r->to_string);
 	    push @layers, $layer;
 	}
-	$column = '';
     }
     
     if ($event->button == 3) {
