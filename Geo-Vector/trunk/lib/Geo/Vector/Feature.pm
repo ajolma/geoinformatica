@@ -117,4 +117,22 @@ sub FID {
 *SetFID = *FID;
 *GetFID = *FID;
 
+sub Row {
+    my($self, %row) = @_;
+    for my $key (keys %row) {
+	if ($key eq 'FID') {
+	    $self->FID($row{FID});
+	} elsif ($key eq 'Geometry') {
+	    $self->Geometry($row{Geometry});
+	} else {
+	    $self->Field($row{$key});
+	}
+    }
+    %row = ( FID => $self->FID, Geometry => $self->Geometry );
+    for my $key (keys %{$self->{properties}}) {
+	$row{$key} = $self->{properties}{$key};
+    }
+    return \%row;
+}
+
 1;
