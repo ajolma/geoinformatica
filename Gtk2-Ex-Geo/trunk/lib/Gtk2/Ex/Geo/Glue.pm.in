@@ -697,8 +697,10 @@ sub show_information {
     } else {
 	$val = '';
     }
+
+    my $mode = $self->{overlay}->rubberband_mode();
  
-    $self->{statusbar}->push(0, "$self->{overlay}->{rubberband_mode} $location $value$val");
+    $self->{statusbar}->push(0, "$mode $location $value$val");
 }
 
 ## @ignore

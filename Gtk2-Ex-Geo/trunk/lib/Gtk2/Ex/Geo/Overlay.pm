@@ -682,6 +682,7 @@ sub key_press_event {
     return 0 unless $self->{layers} and @{$self->{layers}};
     
     my $key = $event->keyval;
+    #print STDERR "key=$key\n";
     if ($key == $Gtk2::Gdk::Keysyms{plus}) {	    
 	$self->zoom_in($event); # , $self->event_pixel2point());
     } elsif ($key == $Gtk2::Gdk::Keysyms{minus}) {
@@ -752,7 +753,9 @@ sub key_press_event {
 
     } elsif ($key == $Gtk2::Gdk::Keysyms{Control_L} or $key == $Gtk2::Gdk::Keysyms{Control_R}) {
 	$self->{_control_down} = 1;
-	return 0;
+    } elsif (($key == $Gtk2::Gdk::Keysyms{Shift_L} or $key == $Gtk2::Gdk::Keysyms{Shift_R}) and
+	     ($self->{drawing} and $self->{drawing}->LastPolygon)) {
+	$self->{_shift_down} = 1;
     }
     return 0;
 }
@@ -764,9 +767,10 @@ sub key_press_event {
 sub key_release_event {
     my($self, $event) = @_;
     my $key = $event->keyval;
-    if ($key == $Gtk2::Gdk::Keysyms{Control_L} or 
-	$key == $Gtk2::Gdk::Keysyms{Control_R}) {
+    if ($key == $Gtk2::Gdk::Keysyms{Control_L} or $key == $Gtk2::Gdk::Keysyms{Control_R}) {
 	$self->{_control_down} = 0;
+    } elsif ($key == $Gtk2::Gdk::Keysyms{Shift_L} or $key == $Gtk2::Gdk::Keysyms{Shift_R}) {
+	$self->{_shift_down} = 0;
     }
 }
 
@@ -774,12 +778,23 @@ sub add_to_selection {
     my($self, $geom) = @_;
     my $store = ($self->{rubberband_mode} eq 'select') ? 'selection' : 'drawing';
     if ($self->{_control_down}) {
+	
+	# create first a multi something, then fall back to collection if need be
+
 	if (!$self->{$store} or !isa($self->{$store}, 'Geo::OGC::GeometryCollection')) {
 	    my $coll = Geo::OGC::GeometryCollection->new;
 	    $coll->AddGeometry($self->{$store}) if $self->{$store};
 	    $self->{$store} = $coll;
 	}
 	$self->{$store}->AddGeometry($geom) if $geom;
+    } elsif ($self->{_shift_down}) {
+	my $polygon = $self->{$store}->LastPolygon;
+	if ($polygon and isa($geom, 'Geo::OGC::Polygon')) {
+	    $geom = $geom->ExteriorRing;
+	    # exterior is ccw, interior is cw
+	    $geom->Rotate;
+	    $polygon->AddInteriorRing($geom);
+	}
     } else {
 	$self->{$store} = $geom;
     }
@@ -832,7 +847,7 @@ sub button_press_event {
 	    my $d = pop @q;
 	    $self->{drawing_edit} = \@q if $d/$self->{pixel_size} < 30;
 	} elsif (($self->{rubberband_mode} eq 'select' or $self->{rubberband_mode} eq 'draw') and 
-		 !$self->{_control_down} and
+		 !($self->{_control_down} or $self->{_shift_down}) and
 		 !($self->{rubberband_geometry} eq 'polygon' or $self->{rubberband_geometry} eq 'path')
 	    )
 	{
@@ -962,6 +977,14 @@ sub motion_notify {
     
     $self->signal_emit('motion-notify');
     return 1; # handled
+}
+
+sub rubberband_mode {
+    my($self) = @_;
+    my $mode = $self->{rubberband_mode};
+    $mode .= ", add to collection" if $self->{_control_down};
+    $mode .= ", add a hole" if $self->{_shift_down};
+    return $mode;
 }
 
 ## @method @rubberband_value()
