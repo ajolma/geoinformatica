@@ -263,9 +263,9 @@ sub supported_symbol_types {
 sub open_properties_dialog {
     my($self, $gui) = @_;
     if ($self->{GDAL}) {
-	Geo::Raster::Layer::Dialogs::Properties::GDAL::open($self, $gui);
+	return Geo::Raster::Layer::Dialogs::Properties::GDAL::open($self, $gui);
     } else {
-	Geo::Raster::Layer::Dialogs::Properties::libral::open($self, $gui);
+	return Geo::Raster::Layer::Dialogs::Properties::libral::open($self, $gui);
     }
 }
 
@@ -370,12 +370,12 @@ sub render {
 
 ## @ignore
 sub open_copy_dialog {
-    Geo::Raster::Layer::Dialogs::Copy::open(@_);
+    return Geo::Raster::Layer::Dialogs::Copy::open(@_);
 }
 
 ## @ignore
 sub open_vectorize_dialog {
-    Geo::Raster::Layer::Dialogs::Vectorize::open(@_);
+    return Geo::Raster::Layer::Dialogs::Vectorize::open(@_);
 }
 
 ##@ignore

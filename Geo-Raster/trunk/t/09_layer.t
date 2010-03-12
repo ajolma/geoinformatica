@@ -28,15 +28,15 @@ $layer->open_colors_dialog($gis)->destroy;
 ok(1);
 $layer->open_labeling_dialog($gis)->destroy;
 ok(1);
-$layer->open_properties_dialog($gis);
+$layer->open_properties_dialog($gis)->destroy;
 ok(1);
-$layer->open_copy_dialog($gis);
+$layer->open_copy_dialog($gis)->destroy;
 ok(1);
-$layer->open_vectorize_dialog($gis);
+$layer->open_vectorize_dialog($gis)->destroy;
 ok(1);
 
 eval {
-    $layer->open_features_dialog($gis);
+    $layer->open_features_dialog($gis)->destroy;
 };
 #ok($@ =~ /^no features/);
 
@@ -52,13 +52,13 @@ $layer->open_colors_dialog($gis)->destroy;
 ok(1);
 $layer->open_labeling_dialog($gis)->destroy;
 ok(1);
-$a->open_properties_dialog($gis);
+$a->open_properties_dialog($gis)->destroy;
 ok(1);
 $layer->open_properties_dialog($gis)->destroy;
 ok(1);
 #$layer->open_copy_dialog($gis)->destroy;
 ok(1);
-$layer->open_vectorize_dialog($gis);
+$layer->open_vectorize_dialog($gis)->destroy;
 ok(1);
 
 $gis->close();

@@ -49,6 +49,8 @@ sub open {
     @size = $self->value_range();
     my $text = defined $size[0] ? "@size" : "not available";
     $dialog->get_widget('libral_minmax_label')->set_text($text);
+
+    return $dialog->get_widget('libral_properties_dialog');
 }
 
 ##@ignore

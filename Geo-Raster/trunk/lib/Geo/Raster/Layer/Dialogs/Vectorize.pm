@@ -29,10 +29,11 @@ sub open {
 	$model->clear;
 	$model->set($model->append, 0, "");
 	for my $driver (Geo::OGR::Drivers) {
-	    next unless $driver->TestCapability('CreateDataSource');
+	    next unless $driver->TestCapability('Create');
 	    $model->set($model->append, 0, $driver->GetName);
 	}
     }
+    return $dialog->get_widget('vectorize_dialog');
 }
 
 ##@ignore
