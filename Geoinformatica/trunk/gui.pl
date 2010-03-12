@@ -14,6 +14,9 @@ eval {
 my $have_gnuplot = not $@;
 use File::Spec;
 
+my @version = Gtk2->get_version_info;
+print "GTK+ version is @version\n";
+
 my $OS = $Config::Config{'osname'};
 
 require Win32::TieRegistry if $OS eq 'MSWin32';
