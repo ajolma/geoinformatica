@@ -2478,7 +2478,7 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkComboBox" id="feature_class_combobox">
+                  <widget class="GtkComboBoxEntry" id="feature_class_comboboxentry">
                     <property name="visible">True</property>
                   </widget>
                   <packing>

@@ -26,10 +26,10 @@ sub open {
     
     if ($boot) {
 	my $model = Gtk2::ListStore->new('Glib::String');
-	for my $class ('river','house') {
-	    $model->set ($model->append, 0, $class);
-	}
-	my $combo = $dialog->get_widget('feature_class_combobox');
+	#for my $class ('') {
+	#    $model->set ($model->append, 0, $class);
+	#}
+	my $combo = $dialog->get_widget('feature_class_comboboxentry');
 	$combo->set_model($model);
 	my $renderer = Gtk2::CellRendererText->new;
 	$combo->pack_start($renderer, TRUE);
@@ -58,7 +58,7 @@ sub new_feature {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    my $class = get_value_from_combo($self->{feature_dialog}, 'feature_class_combobox');
+    my $class = get_value_from_combo($self->{feature_dialog}, 'feature_class_comboboxentry');
     my $feature = Geo::Vector::Feature->new(class => $class);
     $self->feature($feature);
     $self->select(with_id => [$feature->FID]);
