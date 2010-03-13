@@ -96,7 +96,7 @@ sub set_geom_data {
     my($self, $data, $path, $gid, $tree_store, $iter) = @_;
     
     my $iter2 = $tree_store->append($iter);
-    $tree_store->set ($iter2,0 => $data->[0]);
+    $tree_store->set($iter2, 0 => $data->[0]);
     
     if ($data->[1]) {
 
@@ -188,14 +188,15 @@ sub vertices_activated {
 		$selected = $selected->to_string;
 		next unless exists $GIDS->{$selected};
 		my @path = split(/:/, $GIDS->{$selected});
-		my $f = $self->features( with_id => [$path[0]] );
-		next unless @$f;
-		my $geom = $f->[0]->Geometry();
-		for my $i (1..$#path-1) {
-		    $geom = $geom->GetGeometryRef($path[$i]);
+		my $fid = shift @path;
+		my $f = $self->feature($fid);
+		next unless $f;
+		my $g = $f->Geometry();
+		my $p = $g->Points;
+		for (@path) {
+		    $p = $p->[$_];
 		}
-		my @p = ($geom->GetX($path[$#path]), $geom->GetY($path[$#path]));
-		@p = $overlay->point2pixmap_pixel(@p);
+		my @p = $overlay->point2pixmap_pixel(@$p);
 		$pixmap->draw_line($gc, $p[0]-4, $p[1], $p[0]+4, $p[1]);
 		$pixmap->draw_line($gc, $p[0], $p[1]-4, $p[0], $p[1]+4);
 	    }
