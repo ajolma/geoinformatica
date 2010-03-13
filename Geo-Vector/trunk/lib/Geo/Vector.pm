@@ -967,8 +967,9 @@ sub feature {
 
 	# retrieve
 	if ( $self->{features} ) {
-	    return if ($fid < 0 or $fid > $#{$self->{features}});
-	    return $self->{features}->[$fid];	    
+	    for my $f (@{$self->{features}}) {
+		return $f if $f->FID == $fid;
+	    }
 	} else {
 	    return $self->{OGR}->{Layer}->GetFeature($fid);
 	}
