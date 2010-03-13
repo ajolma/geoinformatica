@@ -9,21 +9,23 @@ use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs::Feature;
 
+my $DIALOG = 'feature_collection_dialog';
+
 ## @ignore
 sub open {
     my($self, $gui) = @_;
 
     # bootstrap:
     my($dialog, $boot) = $self->bootstrap_dialog
-	($gui, 'feature_collection_dialog', "Features of ".$self->name,
+	($gui, $DIALOG, "Features of ".$self->name,
 	 {
-	     feature_collection_dialog => [delete_event => \&close_feature_collection_dialog, [$self, $gui]],
+	     $DIALOG => [delete_event => \&close_feature_collection_dialog, [$self, $gui]],
 	     feature_collection_from_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
 	     feature_collection_max_spinbutton => [value_changed => \&fill_features_table, [$self, $gui]],
 
 	     feature_collection_add_button => [clicked => \&add_feature, [$self, $gui]],
 	     feature_collection_delete_feature_button => [clicked => \&delete_selected_features, [$self, $gui]],
-	     feature_collection_from_drawing_button => [clicked => \&from_drawing, [$self, $gui]],
+	     feature_collection_from_drawing_button => [clicked => \&create_from_drawing, [$self, $gui]],
 	     feature_collection_copy_to_drawing_button => [clicked => \&copy_to_drawing, [$self, $gui]],
 	     feature_collection_copy_from_drawing_button => [clicked => \&copy_from_drawing, [$self, $gui]],
 
@@ -91,14 +93,17 @@ sub open {
 	$treeview->append_column($col);
     }
 
-    return $dialog->get_widget('feature_collection_dialog');
+    $treeview = $dialog->get_widget('feature_collection_treeview');
+    feature_activated($treeview->get_selection, [$self, $gui]);
+
+    return $dialog->get_widget($DIALOG);
 }
 
 sub feature_changed {
     my($cell, $path, $new_value, $data) = @_;
     my($self, $gui, $column) = @$data;
 
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
 
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my($p, $c) = $treeview->get_cursor;
@@ -153,7 +158,7 @@ sub close_feature_collection_dialog {
 	next unless ref eq 'ARRAY';
 	($self, $gui) = @{$_};
     }
-    $self->hide_dialog('feature_collection_dialog');
+    $self->hide_dialog($DIALOG);
     1;
 }
 
@@ -166,28 +171,37 @@ sub add_feature {
 ##@ignore
 sub delete_selected_features {
     my($self, $gui) = @{$_[1]};
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $delete = get_selected_from_selection($treeview->get_selection);
     my @features;
-    for my $i (0..$#{$self->{features}}) {
-	next if exists $delete->{$i};
-	my $f = $self->{features}[$i];
-	push @features, $f;
-	$f->FID($#features);
+    my $now;
+    my $select;
+    my $feature;
+    for $feature (@{$self->{features}}) {
+	my $fid = $feature->FID;
+	$now = 1, next if exists $delete->{$fid};
+	if ($now) {
+	    $select = $fid;
+	    $now = 0;
+	}
+	push @features, $feature;
     }
+    $select = $feature->FID if $feature and !$select;
     $self->{features} = \@features;
+    $self->select(with_id => [$select]) if defined $select;
     fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
 
 ##@ignore
-sub from_drawing {
+sub create_from_drawing {
     my($self, $gui) = @{$_[1]};
     return unless $gui->{overlay}->{drawing};
     my $feature = Geo::Vector::Feature->new();
     $feature->Geometry(Geo::OGR::CreateGeometryFromWkt( $gui->{overlay}->{drawing}->AsText ));
     $self->feature($feature);
+    $self->select(with_id => [$feature->FID]);
     fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
@@ -195,7 +209,7 @@ sub from_drawing {
 ##@ignore
 sub copy_to_drawing {
     my($self, $gui) = @{$_[1]};
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $features = get_selected_from_selection($treeview->get_selection);
     my @features = keys %$features;
@@ -221,7 +235,7 @@ sub copy_from_drawing {
 	$gui->message("Create a drawing first.");
 	return;
     }
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $features = get_selected_from_selection($treeview->get_selection);
     my @features = keys %$features;
@@ -236,7 +250,6 @@ sub copy_from_drawing {
 	$self->feature($f->FID, $f);
 	last;
     }
-    #fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
 
@@ -250,7 +263,7 @@ sub vertices_of_selected_features {
 ##@ignore
 sub make_selection {
     my($self, $gui) = @{$_[1]};
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $features = get_selected_from_selection($treeview->get_selection);
     $features = $self->features(with_id=>[keys %$features]);
@@ -284,7 +297,7 @@ sub copy_selected_features {
 sub zoom_to_selected_features {
     my($self, $gui) = @{$_[1]};
 
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $features = get_selected_from_selection($treeview->get_selection);
     $features = $self->features(with_id=>[keys %$features]);
@@ -326,38 +339,28 @@ sub fill_features_table {
     shift;
     my($self, $gui) = @{$_[0]};
 
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
 
     my $from = $dialog->get_widget('feature_collection_from_spinbutton')->get_value_as_int;
     my $count = $dialog->get_widget('feature_collection_max_spinbutton')->get_value_as_int;
 
-    my $model = $dialog->get_widget('feature_collection_treeview')->get_model;
-
+    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    my $selection = $treeview->get_selection;
+    my $model = $treeview->get_model;
+    my %selected = map { $_->FID => 1 } @{$self->selected_features};
     $model->clear;
 
-    my @recs;
     my $i = 1;
-    my $k = 0;
+    my $j = 0;
     while ($i < $from+$count) {
 	$i++;
 	next if $i <= $from;
-	$k++, next if ($k < 0 or $k > $#{$self->{features}});
-	my $f = $self->{features}->[$k++]; 
-	my @rec;
-	my $rec = 0;
-
-	push @rec, $rec++;
-	push @rec, $k-1; # $f->GetFID;
-	
-	push @recs, \@rec;
-    }
-    $k = @recs;
-
-    for my $rec (@recs) {
-	
+	$j++, next if ($j > $#{$self->{features}});
+	my $f = $self->{features}->[$j++]; 	
+	my $fid = $f->FID;
 	my $iter = $model->insert(undef, 999999);
-	$model->set($iter, @$rec);
-	
+	$model->set($iter, 0, $fid);
+	$selection->select_iter($iter) if $selected{$fid};
     }
     
 }
@@ -367,39 +370,37 @@ sub feature_activated {
     my $selection = shift;
     my($self, $gui) = @{$_[0]};
 
-    my $dialog = $self->{feature_collection_dialog};
+    my $dialog = $self->{$DIALOG};
     my $model = $dialog->get_widget('feature_collection_attributes_treeview')->get_model;
+    return unless $model;
+    $model->clear;
 
     my $ids = get_selected_from_selection($selection);
-    my $features = $self->features(with_id=>[keys %$ids]);
-    return unless $features;
-    return unless @$features;
+    my @ids = keys %$ids;
+    return unless @ids == 1;
+
+    my $features = $self->features(with_id=>[@ids]);
+    return unless $features and @$features == 1;
     $self->selected_features($features);
 
-    if (@$features == 1) {
-	my $row = $features->[0]->Row;
-
-	$model->clear;
-
-	my $g = $row->{Geometry};
-	my @recs = ( [ 0, 'FID', 1, $row->{FID} ], 
-		     [ 0, 'Geometry type', 1, $g ? $g->GeometryType : '' ],
-		     [ 0, 'Class', 1, $row->{class} ], 
-	    );
-	for (sort {$a cmp $b} keys %$row) {
-	    next if /^FID/;
-	    next if /^Geometry/;
-	    next if /^class/;
-	    push @recs, [ 0, $_, 1, $row->{$_} ];
-	}
-	push @recs, [ 0, 'add field', 1, '' ];
-
-	for my $rec (@recs) {
+    my $row = $features->[0]->Row;
+    my $g = $row->{Geometry};
+    my @recs = ( # [ 0, 'FID', 1, $row->{FID} ], 
+		 [ 0, 'Geometry type', 1, $g ? $g->GeometryType : '' ],
+		 [ 0, 'Class', 1, $row->{class} ], 
+	);
+    for (sort {$a cmp $b} keys %$row) {
+	next if /^FID/;
+	next if /^Geometry/;
+	next if /^class/;
+	push @recs, [ 0, $_, 1, $row->{$_} ];
+    }
+    push @recs, [ 0, 'add field', 1, '' ];
+    
+    for my $rec (@recs) {
 	
-	    my $iter = $model->insert (undef, 999999);
-	    $model->set ($iter, @$rec);
-	    
-	}
+	my $iter = $model->insert (undef, 999999);
+	$model->set ($iter, @$rec);
 	
     }
 
