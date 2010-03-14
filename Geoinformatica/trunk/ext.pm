@@ -6,11 +6,25 @@ package ext;
 remove();
 $main::gis->register_command('ext', \&ext);
 
+#my @buffer = <ext::DATA>;
+my @buffer = `cat /home/ajolma/dev/geoinformatica/Geoinformatica/trunk/ext.glade`;
+pop @buffer unless $buffer[$#buffer] =~ /^\</; # remove the extra content
+shift @buffer if $buffer[0] =~ /^\s*$/;
+$main::gis->register_dialogs(Gtk2::Ex::Geo::DialogMaster->new(buffer => \@buffer));
+
 sub remove {
     $main::gis->de_register_command('ext');
 }
 
 sub ext {
+
+    my $self = {};
+    my($dialog, $boot) = Gtk2::Ex::Geo::Layer::bootstrap_dialog
+	($self, $main::gis, 'overlay_dialog', "Overlay",
+	 {}, []);
+    return;
+    
+
     print "your vector layers:\n";
     my @layers;
     for my $l ($main::gis->layers) {
@@ -87,3 +101,4 @@ sub compute_overlay {
 }
 
 1;
+__DATA__
