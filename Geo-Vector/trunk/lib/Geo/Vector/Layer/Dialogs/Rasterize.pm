@@ -21,17 +21,18 @@ sub open {
 	     rasterize_dialog => [delete_event => \&cancel_rasterize, [$self, $gui]],
 	     rasterize_cancel_button => [clicked => \&cancel_rasterize, [$self, $gui]],
 	     rasterize_ok_button => [clicked => \&apply_rasterize, [$self, $gui, 1]],
-	 });
+	 },
+	[
+	 'rasterize_value_field_combobox',
+	 'rasterize_like_combobox',
+	]);
     
     if ($boot) {
 	Geo::Vector::Layer::Dialogs::fill_render_as_combobox(
 	    $dialog->get_widget('rasterize_render_as_combobox') );
 
 	my $combobox = $dialog->get_widget('rasterize_value_field_combobox');
-	my $renderer = Gtk2::CellRendererText->new;
-	$combobox->pack_start($renderer, TRUE);
-	$combobox->add_attribute($renderer, text => 0);
-	my $model = Gtk2::ListStore->new('Glib::String');
+	my $model = $combobox->get_model();
 	$model->set ($model->append, 0, 'Draw with value 1');
 	if ($self->{OGR}->{Layer}) {
 	    my $schema = $self->{OGR}->{Layer}->GetLayerDefn();
@@ -43,19 +44,16 @@ sub open {
 		}
 	    }
 	}
-	$combobox->set_model($model);
+	$combobox->set_active(0);
 
 	$combobox = $dialog->get_widget('rasterize_like_combobox');
-	$renderer = Gtk2::CellRendererText->new;
-	$combobox->pack_start($renderer, TRUE);
-	$combobox->add_attribute($renderer, text => 0);
-	$model = Gtk2::ListStore->new('Glib::String');
+	$model = $combobox->get_model();
 	$model->set($model->append, 0, "Use current view");
 	for my $layer (@{$gui->{overlay}->{layers}}) {
 	    next unless isa($layer, 'Geo::Raster');
 	    $model->set($model->append, 0, $layer->name);
 	}
-	$combobox->set_model($model);
+	$combobox->set_active(0);
     }
 	
     $dialog->get_widget('rasterize_name_entry')->set_text('r');

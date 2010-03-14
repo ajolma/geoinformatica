@@ -205,6 +205,7 @@ sub new {
     $params{geometry_type} = $params{schema}{GeometryType} if ref $params{schema};
 
     if ($params{features} or $params{geometries}) {
+	$self->{update} = 1;
 	$self->{features} = [];
 	if ($params{geometries}) {
 	    for my $g (@{$params{geometries}}) {
@@ -953,6 +954,12 @@ sub feature {
 	} else {
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
+	}
+	my $features = $self->selected_features();
+	if (@$features) {
+	    my @fids;
+	    for (@$features) {push @fids, $_->GetFID}
+	    $self->select( with_id => \@fids );
 	}
     } elsif (ref $fid) {
 

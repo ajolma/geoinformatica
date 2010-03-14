@@ -25,34 +25,31 @@ sub open {
 	     open_vector_schema_button => [clicked => \&show_schema, $self],
 	     open_vector_cancel_button => [clicked => \&cancel_open_vector, $self],
 	     open_vector_ok_button => [clicked => \&open_vector, $self],
-	 });
+	 },
+	 [
+	  'open_vector_driver_combobox',
+	  'filesystem_driver_combobox',
+	 ]
+	);
     
     if ($boot) {
-	my $model = Gtk2::ListStore->new('Glib::String');
+	my $combo = $dialog->get_widget('open_vector_driver_combobox');
+	my $model = $combo->get_model();
 	for my $driver (Geo::OGR::Drivers()) {
 	    my @t = $driver->DataSourceTemplate;
 	    next if $t[0] eq '<filename>';
 	    my $n = $driver->FormatName;
 	    $model->set ($model->append, 0, $n);
 	}
-	my $combo = $dialog->get_widget('open_vector_driver_combobox');
-	$combo->set_model($model);
-	my $renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start ($renderer, TRUE);
-	$combo->add_attribute ($renderer, text => 0);
 	$combo->set_active(0);
 	
-	$model = Gtk2::ListStore->new('Glib::String');
+	$combo = $dialog->get_widget('filesystem_driver_combobox');
+	$model = $combo->get_model();
 	$model->set ($model->append, 0, 'auto');
 	for my $driver (Geo::OGR::Drivers()) {
 	    my $n = $driver->GetName;
 	    $model->set ($model->append, 0, $n);
 	}
-	$combo = $dialog->get_widget('filesystem_driver_combobox');
-	$combo->set_model($model);
-	$renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start ($renderer, TRUE);
-	$combo->add_attribute ($renderer, text => 0);
 	$combo->set_active(0);
 	
 	$dialog->get_widget('open_vector_datasource_combobox')

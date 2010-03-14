@@ -22,21 +22,22 @@ sub open {
 	     feature_cancel_button => [clicked => \&close_feature_dialog, [$self, $gui]],
 	     feature_ok_button => [clicked => \&new_feature, [$self, $gui]],
 	 },
+	 [
+	  'feature_class_comboboxentry'
+	 ]
 	);
     
     if ($boot) {
-	my $model = Gtk2::ListStore->new('Glib::String');
-	#for my $class ('') {
-	#    $model->set ($model->append, 0, $class);
-	#}
-	my $combo = $dialog->get_widget('feature_class_comboboxentry');
-	$combo->set_model($model);
-	my $renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start($renderer, TRUE);
-	$combo->add_attribute($renderer, text => 0);
-	$combo->set_active(0);
     }
 
+    my $combo = $dialog->get_widget('feature_class_comboboxentry');
+    my $model = $combo->get_model();
+    $model->clear;
+    #for my $class ('Feature') {
+	#$model->set($model->append, 0, $class);
+    #}
+    $combo->child->set_text('Feature');
+    
     return $dialog->get_widget('feature_dialog');
 }
 

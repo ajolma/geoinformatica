@@ -13,7 +13,9 @@ my $DIALOG = 'feature_collection_dialog';
 
 ## @ignore
 sub open {
-    my($self, $gui) = @_;
+    my($self, $gui, $soft_open) = @_;
+
+    return if $soft_open and !$self->dialog_visible($DIALOG);
 
     # bootstrap:
     my($dialog, $boot) = $self->bootstrap_dialog
@@ -34,7 +36,7 @@ sub open {
 	     feature_collection_copy_selected_button => [clicked => \&copy_selected_features, [$self, $gui]],
 	     feature_collection_zoom_to_button => [clicked => \&zoom_to_selected_features, [$self, $gui]],
 	     feature_collection_close_button => [clicked => \&close_feature_collection_dialog, [$self, $gui]],
-	 },
+	 }	 
 	);
     
     if ($boot) {	
@@ -105,17 +107,13 @@ sub feature_changed {
 
     my $dialog = $self->{$DIALOG};
 
-    my $treeview = $dialog->get_widget('feature_collection_treeview');
-    my($p, $c) = $treeview->get_cursor;
+    my $features = $self->selected_features();
+    return unless @$features == 1;
+    my $feature = $features->[0];
+
+    my $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
     my $model = $treeview->get_model;
-    my $iter = $model->get_iter($p);
-    my($fid) = $model->get($iter);
-
-    my $feature = $self->feature($fid);
-
-    $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
-    $model = $treeview->get_model;
-    $iter = $model->get_iter_from_string($path);
+    my $iter = $model->get_iter_from_string($path);
     my($field, $value) = $model->get($iter);
 
     return if $field eq 'FID';
@@ -141,14 +139,10 @@ sub feature_changed {
 	$feature->SetField($field, $value);
     }
 
-    my @k = sort keys %{$feature->{properties}};
-    print STDERR "$fid: $field => $value prop=@k\n";
-
-    $self->feature($fid, $feature);
-    $self->select; # clear selection since it is a list of features read from the source
-    $self->select( with_id => [$fid] );
-    $dialog->get_widget('feature_collection_treeview')->set_cursor($p);
+    $self->feature($feature->GetFID, $feature);
     $gui->{overlay}->render;
+    $treeview = $dialog->get_widget('feature_collection_treeview');
+    feature_activated($treeview->get_selection, [$self, $gui]);
 }
 
 ##@ignore
@@ -251,6 +245,7 @@ sub copy_from_drawing {
 	last;
     }
     $gui->{overlay}->render;
+    feature_activated($treeview->get_selection, [$self, $gui]);
 }
 
 ##@ignore
@@ -347,9 +342,9 @@ sub fill_features_table {
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $selection = $treeview->get_selection;
     my $model = $treeview->get_model;
-    my %selected = map { $_->FID => 1 } @{$self->selected_features};
     $model->clear;
 
+    my %selected = map { $_->FID => 1 } @{$self->selected_features};
     my $i = 1;
     my $j = 0;
     while ($i < $from+$count) {
@@ -360,7 +355,11 @@ sub fill_features_table {
 	my $fid = $f->FID;
 	my $iter = $model->insert(undef, 999999);
 	$model->set($iter, 0, $fid);
-	$selection->select_iter($iter) if $selected{$fid};
+	if ($selected{$fid}) {
+	    $selection->select_iter($iter);
+	} else {
+	    $selection->unselect_iter($iter);
+	}
     }
     
 }

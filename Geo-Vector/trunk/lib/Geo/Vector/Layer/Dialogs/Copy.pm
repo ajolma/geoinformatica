@@ -29,6 +29,11 @@ sub open {
 	     copy_driver_combobox => [changed => \&copy_driver_changed, $self],
 	     copy_name_comboboxentry => [changed => \&copy_into_changed, [$self, $gui]],
 	 },
+	 [
+	  'copy_driver_combobox',
+	  'copy_datasource_combobox',
+	  'copy_name_comboboxentry'
+	 ]
 	);
     
     if ($boot) {
@@ -37,23 +42,12 @@ sub open {
 		my(undef, $self) = @_;
 		my $entry = $self->{copy_dialog}->get_widget('copy_datasource_entry');
 		file_chooser('Select folder', 'select_folder', $entry);
-			      }, $self);
-	
-	my $combo = $dialog->get_widget('copy_driver_combobox');
-	my $renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start($renderer, TRUE);
-	$combo->add_attribute($renderer, text => 0);
-
-	$combo = $dialog->get_widget('copy_datasource_combobox');
-	$renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start($renderer, TRUE);
-	$combo->add_attribute($renderer, text => 0);
-
-	#$combo = $dialog->get_widget('copy_name_comboboxentry');
- 
+			      }, $self); 
     }
 
-    my $model = Gtk2::ListStore->new('Glib::String');
+    my $combo = $dialog->get_widget('copy_driver_combobox');
+    my $model = $combo->get_model();
+    $model->clear;
     my $i = 1;
     my $active = 0;
     $model->set($model->append, 0, ''); # create into existing data source 
@@ -64,21 +58,21 @@ sub open {
 	$model->set($model->append, 0, $name);
 	$i++;
     }
-    my $combo = $dialog->get_widget('copy_driver_combobox');
-    $combo->set_model($model);
     $combo->set_active($active);
     copy_driver_changed($combo, $self);
 
-    $model = Gtk2::ListStore->new('Glib::String');
-    $model->set ($model->append, 0, '');
+    $combo = $dialog->get_widget('copy_datasource_combobox');
+    $model = $combo->get_model();
+    $model->clear;
+    $model->set($model->append, 0, '');
     for my $data_source (sort keys %{$self->{gui}{resources}{datasources}}) {
 	$model->set ($model->append, 0, $data_source);
     }
-    $combo = $dialog->get_widget('copy_datasource_combobox');
-    $combo->set_model($model);
     $combo->set_active(0);
 
-    $model = Gtk2::ListStore->new('Glib::String');
+    $combo = $dialog->get_widget('copy_name_comboboxentry');
+    $model = $combo->get_model();
+    $model->clear;
     for my $layer (@{$gui->{overlay}->{layers}}) {
 	my $n = $layer->name();
 	next unless isa($layer, 'Geo::Vector');
@@ -86,9 +80,7 @@ sub open {
 	next if $n eq $self->name();
 	$model->set($model->append, 0, $n);
     }
-    $combo = $dialog->get_widget('copy_name_comboboxentry');
     $combo->child->set_text('copy');
-    $combo->set_model($model);
     $combo->set_text_column(0);
 
     $dialog->get_widget('copy_datasource_entry')->set_text('');

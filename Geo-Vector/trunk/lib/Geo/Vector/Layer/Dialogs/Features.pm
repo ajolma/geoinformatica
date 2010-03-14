@@ -12,7 +12,9 @@ use Geo::Vector::Layer::Dialogs::Copy;
 ## @ignore
 # features dialog
 sub open {
-    my($self, $gui) = @_;
+    my($self, $gui, $soft_open) = @_;
+
+    return if $soft_open and !$self->dialog_visible('features_dialog');
 
     # bootstrap:
     my($dialog, $boot) = $self->bootstrap_dialog
