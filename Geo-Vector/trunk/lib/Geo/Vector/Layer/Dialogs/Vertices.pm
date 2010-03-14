@@ -176,31 +176,31 @@ sub vertices_activated {
     my $selection = $_[0];
     my($self, $gui) = @{$_[1]};
 
-    my @sel = $selection->get_selected_rows;
-    return unless @sel;
+    $self->{SELECTED_GIDS} = [];
+    for my $row ($selection->get_selected_rows) {
+	push @{$self->{SELECTED_GIDS}}, $row->to_string;
+    }
 
-    $gui->{overlay}->update_image(
-	sub {
-	    my($overlay, $pixmap, $gc) = @_;
-	    my $GIDS = $self->{GIDS};
-	    $gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535, 0, 0));
-	    for my $selected (@sel) {
-		$selected = $selected->to_string;
-		next unless exists $GIDS->{$selected};
-		my @path = split(/:/, $GIDS->{$selected});
-		my $fid = shift @path;
-		my $f = $self->feature($fid);
-		next unless $f;
-		my $g = $f->Geometry();
-		my $p = $g->Points;
-		for (@path) {
-		    $p = $p->[$_];
-		}
-		my @p = $overlay->point2pixmap_pixel(@$p);
-		$pixmap->draw_line($gc, $p[0]-4, $p[1], $p[0]+4, $p[1]);
-		$pixmap->draw_line($gc, $p[0], $p[1]-4, $p[0], $p[1]+4);
-	    }
-	});
+    $gui->{overlay}->update_image(\&show_vertices, $self) if @{$self->{SELECTED_GIDS}};
+}
+
+sub show_vertices {
+    my($overlay, $pixmap, $gc, $layer) = @_;
+    $gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535, 0, 0));
+    for my $selected (@{$layer->{SELECTED_GIDS}}) {
+	next unless exists $layer->{GIDS}->{$selected};
+	my @path = split(/:/, $layer->{GIDS}->{$selected});
+	my $fid = shift @path;
+	my $f = $layer->feature($fid);
+	next unless $f;
+	my $p = $f->Geometry()->Points;
+	for (@path) {
+	    $p = $p->[$_];
+	}
+	my @p = $overlay->point2pixmap_pixel(@$p);
+	$pixmap->draw_line($gc, $p[0]-4, $p[1], $p[0]+4, $p[1]);
+	$pixmap->draw_line($gc, $p[0], $p[1]-4, $p[0], $p[1]+4);
+    }
 }
 
 1;
