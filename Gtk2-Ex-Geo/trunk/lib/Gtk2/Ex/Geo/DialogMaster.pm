@@ -22,7 +22,7 @@ BEGIN {
 
 =head1 NAME
 
-Gtk2::Ex::Geo::DialogMaster - A class which maintains a set of dialogs taken from __DATA__
+Gtk2::Ex::Geo::DialogMaster - A class which maintains a set of glade dialogs
 
 The <a href="http://map.hut.fi/doc/Geoinformatica/html/">
 documentation of Gtk2::Ex::Geo</a> is written in doxygen format.

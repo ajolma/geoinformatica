@@ -333,12 +333,13 @@ sub open_properties_dialog {
 		  "negligent enough to leave the properties dialog out.");
 }
 
-## @method void open_features_dialog(Gtk2::Ex::Glue gui)
+## @method void open_features_dialog($gui, $soft_open)
 # 
 # @brief A request to invoke a features dialog for this layer object.
 # @param gui A Gtk2::Ex::Glue object (contains predefined dialogs).
+# @param soft_open Whether to "soft open", i.e., reset an already open dialog.
 sub open_features_dialog {
-    my($self, $gui) = @_;
+    my($self, $gui, $soft_open) = @_;
     $gui->message("It looks like the author of the layer class ".ref($self)."was\n".
 		  "negligent enough to leave the features dialog out.");
 }
@@ -365,7 +366,7 @@ sub menu_items {
 	    my($self, $gui) = @{$_[1]};
 	    $self->select;
 	    $gui->{overlay}->update_image;
-	    $self->open_features_dialog($gui) if $self->dialog_visible('features_dialog');
+	    $self->open_features_dialog($gui, 1);
 	},
 	'_Symbol...' => sub {
 	    my($self, $gui) = @{$_[1]};
@@ -968,22 +969,54 @@ sub render {
     my($self, $pb, $cr, $overlay, $viewport) = @_;
 }
 
-## @method $bootstrap_dialog($gui, $dialog, $title, $bootstrap)
+## @method $bootstrap_dialog($gui, $dialog, $title, $connects)
 #
 # @brief Bootstrap the requested dialog.
-# @return the GladeXML object of the dialog.
+#
+# The requested dialog is asked from a Glue object, stored into the
+# layer, and presented. 
+#
+# @param gui A Gtk2::Ex::Geo::Glue object
+# @param dialog A name by which the GladeXML object is stored into the
+# layer. Also the name of the dialog widget in one of the glade
+# resources given to Glue object as Gtk2::Ex::Geo::DialogMaster
+# objects. Note that the name must be globally unique.
+# @param title Title for the dialog.
+# @param connects A hash of widget names linked to an array of signal
+# name, subroutine, and user data.
+# @param combos A list of simple combos that need a model and a text
+# renderer in boot up.
+#
+# @return the GladeXML object of the dialog or the object and a
+# boolean telling whether the dialog was just booted, and may need
+# further boot up.
 sub bootstrap_dialog {
-    my($self, $gui, $dialog, $title, $connects) = @_;
+    my($self, $gui, $dialog, $title, $connects, $combos) = @_;
     my $boot = 0;
     my $widget;
     unless ($self->{$dialog}) {
 	$self->{$dialog} = $gui->get_dialog($dialog);
 	croak "$dialog does not exist" unless $self->{$dialog};
 	$widget = $self->{$dialog}->get_widget($dialog);
-	for my $n (keys %$connects) {
-	    my $w = $self->{$dialog}->get_widget($n);
-	    #print STDERR "connect: '$n'\n";
-	    $w->signal_connect(@{$connects->{$n}});
+	if ($connects) {
+	    for my $n (keys %$connects) {
+		my $w = $self->{$dialog}->get_widget($n);
+		#print STDERR "connect: '$n'\n";
+		$w->signal_connect(@{$connects->{$n}});
+	    }
+	}
+	if ($combos) {
+	    for my $n (@$combos) {
+		my $combo = $self->{$dialog}->get_widget($n);
+		unless (isa($combo, 'Gtk2::ComboBoxEntry')) {
+		    my $renderer = Gtk2::CellRendererText->new;
+		    $combo->pack_start($renderer, TRUE);
+		    $combo->add_attribute($renderer, text => 0);
+		}
+		my $model = Gtk2::ListStore->new('Glib::String');
+		$combo->set_model($model);
+		$combo->set_text_column(0) if isa($combo, 'Gtk2::ComboBoxEntry');
+	    }
 	}
 	$boot = 1;
     } else {
