@@ -700,7 +700,7 @@
                     <child>
                       <widget class="GtkLabel" id="copy_file_source_label">
                         <property name="visible">True</property>
-                        <property name="label" translatable="yes">Store in folder:</property>
+                        <property name="label" translatable="yes">Store in file or folder:</property>
                       </widget>
                       <packing>
                         <property name="position">1</property>

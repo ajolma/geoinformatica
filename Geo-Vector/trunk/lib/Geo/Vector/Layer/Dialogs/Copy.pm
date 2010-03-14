@@ -82,6 +82,7 @@ sub open {
     for my $layer (@{$gui->{overlay}->{layers}}) {
 	my $n = $layer->name();
 	next unless isa($layer, 'Geo::Vector');
+	next unless $layer->{update};
 	next if $n eq $self->name();
 	$model->set($model->append, 0, $n);
     }
@@ -118,57 +119,35 @@ sub do_copy {
     my($self, $gui) = @{$_[1]};
     my $dialog = $self->{copy_dialog};
 
-    my $into_layer;
-    my $name = $dialog->get_widget('copy_name_comboboxentry')->child->get_text;
-    for my $layer (@{$gui->{overlay}->{layers}}) {
-	my $n = $layer->name();
-	next unless isa($layer, 'Geo::Vector');
-	if ($n eq $name) {
-	    $into_layer = $layer;
-	    last;
-	}
-    }
-
-    my %ret = ( selected_features => $self->selected_features ) 
+    my %params = ( selected_features => $self->selected_features ) 
 	unless $dialog->get_widget('copy_all_checkbutton')->get_active;
 
-    unless ($into_layer) {
-
-	my $data_source;
+    my $into = $dialog->get_widget('copy_name_comboboxentry')->get_active_text;
+    croak "Store into?" unless $into;
+    my $into_layer = $gui->layer($into);
+    if ($into_layer) {
+	croak $into_layer->name." is not a vector layer" unless isa($into_layer, 'Geo::Vector');
+    } else {
 	my $combo = $dialog->get_widget('copy_datasource_combobox');
 	my $active = $combo->get_active();
 	if ($active > 0) {
 	    my $model = $combo->get_model;
 	    my $iter = $model->get_iter_from_string($active);
-	    $data_source = $model->get($iter, 0);
+	    my $store = $model->get($iter, 0);
+	    $params{data_source} = $self->{gui}{resources}{datasources}{$store};
 	} else {
-	    $data_source = $dialog->get_widget('copy_datasource_entry')->get_text;
+	    $params{data_source} = $dialog->get_widget('copy_datasource_entry')->get_text;
+	    $params{driver} = $dialog->get_widget('copy_driver_combobox')->get_active_text;
 	}
-
-	$ret{create} = $name;
-	$ret{data_source} = $data_source;
-	$ret{driver} = $dialog->get_widget('copy_driver_combobox')->get_active_text;
-
-	if (!($ret{create} =~ /^\w+$/) or $gui->layer($ret{create})) {
-	    $gui->message("Layer with name '$ret{create}' is already open or the name is not valid.");
-	    return;
-	}
-    
-	my $layers;
-	
-	unless ($ret{driver} ne 'Memory') {
+	$params{create} = $into;    
+	my $layers;	
+	if ($params{driver} ne 'Memory') {
 	    eval {
-		$layers = Geo::Vector::layers($ret{driver}, $ret{data_source});
+		$layers = Geo::Vector::layers($params{driver}, $params{data_source});
 	    };
-	}
-    
-	if ($layers and $layers->{$ret{create}}) {
-	
-	    $gui->message("Data source '$ret{data_source}' already contains a layer with name '$ret{create}'.");
-	    return;
-	
-	}
-
+	}    
+	croak "Data source '$params{data_source}' already contains a layer with name '$params{create}'."
+	    if ($layers and $layers->{$params{create}});
     }
 
     my $from = $dialog->get_widget('from_EPSG_entry')->get_text;
@@ -191,26 +170,26 @@ sub do_copy {
 	    $gui->message("can't create coordinate transformation$@");
 	    return;
 	}
-	$ret{transformation} = $ct;
+	$params{transformation} = $ct;
     }
 
     unless ($into_layer) {
 
 	my $new_layer;
 	eval {
-	    $new_layer = $self->copy(%ret);
+	    $new_layer = $self->copy(%params);
 	};
 	if ($@ or !$new_layer) {
 	    $gui->message("can't copy: $@");
 	    return;
 	}
-	$gui->add_layer($new_layer, $ret{create}, 1);
+	$gui->add_layer($new_layer, $params{create}, 1);
 	#$gui->set_layer($new_layer);
 	#$gui->{overlay}->render;
 	
     } else {
 
-	$into_layer->add($self, %ret);
+	$into_layer->add($self, %params);
 
     }
 

@@ -79,7 +79,7 @@ our %pm_files =
      $root.'/Layer.pm'            => $i.'/Layer.pm',
      $root.'/Layer/Dialogs.pm'    => $i.'/Layer/Dialogs.pm',
      $root.'/Layer/Dialogs/Copy.pm' => $i.'/Layer/Dialogs/Copy.pm',
-     $root.'/Layer/Dialogs/Vectorize.pm' => $i.'/Layer/Dialogs/Vectorize.pm',
+     $root.'/Layer/Dialogs/Polygonize.pm' => $i.'/Layer/Dialogs/Polygonize.pm',
      $root.'/Layer/Dialogs/Properties/GDAL.pm' => $i.'/Layer/Dialogs/Properties/GDAL.pm',
      $root.'/Layer/Dialogs/Properties/libral.pm' => $i.'/Layer/Dialogs/Properties/libral.pm'
      );

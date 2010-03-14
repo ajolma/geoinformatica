@@ -1,4 +1,5 @@
 use strict;
+use Glib qw/TRUE FALSE/;
 use Geo::Raster;
 use Gtk2::Ex::Geo;
 use Gtk2::TestHelper tests => 15;
@@ -32,7 +33,7 @@ $layer->open_properties_dialog($gis)->destroy;
 ok(1);
 $layer->open_copy_dialog($gis)->destroy;
 ok(1);
-$layer->open_vectorize_dialog($gis)->destroy;
+$layer->open_polygonize_dialog($gis)->destroy;
 ok(1);
 
 eval {
@@ -56,9 +57,9 @@ $a->open_properties_dialog($gis)->destroy;
 ok(1);
 $layer->open_properties_dialog($gis)->destroy;
 ok(1);
-#$layer->open_copy_dialog($gis)->destroy;
+$layer->open_copy_dialog($gis)->destroy;
 ok(1);
-$layer->open_vectorize_dialog($gis)->destroy;
+$layer->open_polygonize_dialog($gis)->destroy;
 ok(1);
 
 $gis->close();

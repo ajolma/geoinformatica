@@ -216,14 +216,6 @@ sub do_copy {
     $gui->{overlay}->render;
 }
 
-sub progress {
-    my($progress, $msg, $bar) = @_;
-    $progress = 1 if $progress > 1;
-    $bar->set_fraction($progress);
-    Gtk2->main_iteration while Gtk2->events_pending;
-    return 1;
-}
-
 ##@ignore
 sub cancel_copy {
     my($self, $gui);

@@ -120,13 +120,13 @@ for my $datatype1 ('','int','real') {
 }
 
 {
-    my $test_grid = 'test_grid.bil';
+    my $test_grid = 'test_grid';
     for my $datatype ('int','real') {
 	my $gd1 = new Geo::Raster($datatype,5,10);
 	$gd1->set(5);
-	$gd1->save($test_grid);
-	my $gd2 = new Geo::Raster filename=>$test_grid,load=>1;
-	ok(diff($gd1->cell(3,3),$gd2->cell(3,3)),'save/open');
+	$gd1->save($test_grid.'.bil');
+	my $gd2 = new Geo::Raster filename=>$test_grid.'.bil', load=>1 ;
+	ok(diff($gd1->cell(3,3),$gd2->cell(3,3)), 'save/open');
     }
     for ('.hdr','.bil') {unlink($test_grid.$_)};
     

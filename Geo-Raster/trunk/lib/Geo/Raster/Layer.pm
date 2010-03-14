@@ -26,7 +26,7 @@ use Gtk2;
 use Gtk2::Ex::Geo::Layer qw /:all/;
 use Geo::Raster::Layer::Dialogs;
 use Geo::Raster::Layer::Dialogs::Copy;
-use Geo::Raster::Layer::Dialogs::Vectorize;
+use Geo::Raster::Layer::Dialogs::Polygonize;
 use Geo::Raster::Layer::Dialogs::Properties::GDAL;
 use Geo::Raster::Layer::Dialogs::Properties::libral;
 
@@ -308,9 +308,9 @@ sub menu_items {
 	my($self, $gui) = @{$_[1]};
 	$self->open_copy_dialog($gui);
 		    },
-		    'V_ectorize...' => sub {
+		    'Pol_ygonize...' => sub {
 			my($self, $gui) = @{$_[1]};
-			$self->open_vectorize_dialog($gui);
+			$self->open_polygonize_dialog($gui);
 		    });
     push @items, ( 1 => 0 );
     push @items, $self->SUPER::menu_items();    
@@ -374,8 +374,8 @@ sub open_copy_dialog {
 }
 
 ## @ignore
-sub open_vectorize_dialog {
-    return Geo::Raster::Layer::Dialogs::Vectorize::open(@_);
+sub open_polygonize_dialog {
+    return Geo::Raster::Layer::Dialogs::Polygonize::open(@_);
 }
 
 ##@ignore
