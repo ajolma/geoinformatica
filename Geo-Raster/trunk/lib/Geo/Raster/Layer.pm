@@ -380,8 +380,8 @@ sub open_polygonize_dialog {
 
 ##@ignore
 sub update_srs_labels {
-    my($self, $gui) = @{$_[1]};
-    my $dialog = $self->{copy_raster_dialog};
+    my($self, $gui, $dialog) = @{$_[1]};
+    $dialog = $self->{$dialog};
     my $from = $dialog->get_widget('from_EPSG_entry')->get_text;
     my $to = $dialog->get_widget('to_EPSG_entry')->get_text;
 

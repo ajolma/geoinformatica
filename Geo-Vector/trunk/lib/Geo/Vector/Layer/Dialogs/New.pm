@@ -34,7 +34,7 @@ sub open {
     if ($boot) {
 	my $combo = $dialog->get_widget('new_vector_class_combobox');
 	my $model = $combo->get_model();
-	for my $n ('Feature collection', 'OGR Layer') {
+	for my $n ('OGR Layer', 'Feature collection') {
 	    $model->set ($model->append, 0, $n);
 	}
 	$combo->set_active(0);

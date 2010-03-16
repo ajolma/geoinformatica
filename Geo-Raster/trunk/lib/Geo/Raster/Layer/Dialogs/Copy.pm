@@ -7,6 +7,7 @@ use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
+use Geo::Raster::Layer qw /:all/;
 
 ## @ignore
 # copy dialog
@@ -20,8 +21,8 @@ sub open {
 	     copy_raster_dialog => [delete_event => \&cancel_copy, [$self, $gui]],
 	     copy_cancel_button => [clicked => \&cancel_copy, [$self, $gui]],
 	     copy_ok_button => [clicked => \&do_copy, [$self, $gui, 1]],
-	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
-	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui]],
+	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui, 'copy_raster_dialog']],
+	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui, 'copy_raster_dialog']],
 	     copy_folder_button => [clicked => \&copy_select_folder, $self],
 	 },
 	);
