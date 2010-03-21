@@ -88,13 +88,23 @@ sub registration {
 
 ## @cmethod $upgrade($object)
 #
-# @brief Upgrade (strictly) Geo::Vector objects to Geo::Vector::Layers
+# @brief Upgrade Geo::Vector, feature and geometry objects to Geo::Vector::Layers
 sub upgrade {
     my($object) = @_;
     if (isa($object, 'Geo::Vector') and !isa($object, 'Geo::Vector::Layer')) {
 	bless($object, 'Geo::Vector::Layer');
 	$object->defaults();
 	return 1;
+    } elsif (isa($object, 'Geo::OGR::Feature') or isa($object, 'Geo::Vector::Feature')) {
+	my $layer = Geo::Vector->new(features => [$object]);
+	bless($layer, 'Geo::Vector::Layer');
+	$layer->defaults();
+	return $layer;
+    } elsif (isa($object, 'Geo::OGR::Geometry')) {
+	my $layer = Geo::Vector->new(geometries => [$object]);
+	bless($layer, 'Geo::Vector::Layer');
+	$layer->defaults();
+	return $layer;
     }
     return 0;
 }
@@ -126,18 +136,18 @@ sub defaults {
 ## @method $type()
 #
 # @brief Returns the type of the layer.
-# @return A string ('V'== vector layer, ' T' == feature layer, ' L'== ogr layer,
-# ' U' == update layer) representing the type of the layer.
+# @return A string ('V'== vector layer, 'Coll' == feature collection
+# layer, 'OGR'== ogr layer, 'U' == updateable layer) representing the
+# type of the layer.
 sub type {
     my($self, $format) = @_;
-    my $type = ($format and $format eq 'long') ? 'Vector layer' : 'V';
+    my $type;
     if ( $self->{features} ) {
-	$type .= ($format and $format eq 'long') ? ' features' : ' T';
+	$type = ($format and $format eq 'long') ? 'Feature collection' : 'FC';
+    } else {
+	$type = ($format and $format eq 'long') ? 'OGR layer' : 'OGR';
+	$type .= ($format and $format eq 'long') ? ', updateable' : ' U' if $self->{update};
     }
-    elsif ( $self->{OGR}->{Layer} ) {
-	$type = ($format and $format eq 'long') ? 'OGR '.$type : 'OGR';
-	}
-    $type .= ($format and $format eq 'long') ? ', updateable' : ' U' if $self->{update};
     return $type;
 }
 
@@ -238,13 +248,12 @@ sub open_rasterize_dialog {
 # Has to be one of the modes given by render_as_modes().
 # @return The current rendering mode as a string.
 sub render_as {
-    my ( $self, $render_as ) = @_;
-    if ( defined $render_as ) {
+    my($self, $render_as) = @_;
+    if (defined $render_as) {
 	croak "Unknown rendering mode: $render_as"
 	    unless defined $Geo::Vector::RENDER_AS{$render_as};
 	$self->{RENDER_AS} = $render_as;
-    }
-    else {
+    } else {
 	return $self->{RENDER_AS};
     }
 }
@@ -254,7 +263,7 @@ sub render_as {
 # @brief Returns a list of supported palette types.
 # @return A list (strings) of supported palette types.
 sub supported_palette_types {
-    my ($self)  = @_;
+    my($self)  = @_;
     my $schema  = $self->schema;
     my $has_int = 0;
     for my $field ( $schema->fields ) {
@@ -279,7 +288,7 @@ sub supported_palette_types {
 # @brief Returns a list of supported symbol types.
 # @return A list (strings) of supported symbol types.
 sub supported_symbol_types {
-    my ($self) = @_;
+    my($self) = @_;
     
     # symbol if rendered as points or as a point (centroid of a polygon)
     return ( 'No symbol', 'Square', 'Dot', 'Cross', 'Wind rose' );
@@ -309,7 +318,7 @@ sub ohoh {
 # @param[in,out] pb Pixel buffer into which the vector layer is rendered.
 # @note The layer has to be visible while using the method!
 sub render {
-    my ( $self, $pb, $cr, $overlay, $viewport ) = @_;
+    my($self, $pb, $cr, $overlay, $viewport) = @_;
     return if !$self->visible();
     
     $self->{PALETTE_VALUE} = $PALETTE_TYPE{$self->{PALETTE_TYPE}};
@@ -318,160 +327,252 @@ sub render {
 		$self->{SYMBOL_SCALE_MIN} = 0; # similar to grayscale scale
 		$self->{SYMBOL_SCALE_MAX} = 0;
     }
+    my $schema = $self->schema();
+    $self->{COLOR_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{COLOR_FIELD}),
+				      $schema->field_index($self->{COLOR_FIELD}),
+				      Geo::Vector::undefined_field_index());
+    $self->{SYMBOL_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{SYMBOL_FIELD}),
+				       $schema->field_index($self->{SYMBOL_FIELD}),
+				       Geo::Vector::undefined_field_index());
     
-    if ( $self->{features} ) {
-	
-	$self->{COLOR_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{COLOR_FIELD}),
-					  Geo::Vector::undefined_field_index());
-	$self->{SYMBOL_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{SYMBOL_FIELD}),
-					   Geo::Vector::undefined_field_index());
-	$self->{RENDER_AS}       = 'Native';
-	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };
-	
-	my $layer = Geo::Vector::ral_visual_feature_table_create( $self, $self->{features} );
-	if ($layer) {
-	    Geo::Vector::ral_visual_feature_table_render( $layer, $pb ) if $pb;
-	    Geo::Vector::ral_visual_feature_table_destroy($layer);
-	}
-
-	if ( 0 and @{$self->{BORDER_COLOR}} ) { # not yet functional, waiting to exploit Geo::Vector::Feature...
-	    
-	    my @color = @{$self->{BORDER_COLOR}};
-	    push @color, 255;
-	    my $layer = Geo::Vector::ral_visual_feature_table_create( $self, $self->{features} );
-	    if ($layer) {
-		Geo::Vector::ral_visual_feature_table_render( $layer, $pb ) if $pb;
-		Geo::Vector::ral_visual_feature_table_destroy($layer);
-	    }
-	}
-	
+    $self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};
+    $self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };
+    my @border;
+    if ( @{$self->{BORDER_COLOR}} and 
+	 ($self->{RENDER_AS} eq 'Native' or $self->{RENDER_AS} eq 'Polygons')) {
+	@border = @{$self->{BORDER_COLOR}};
+	push @border, 255;
     }
-    elsif ( $self->{OGR}->{Layer} ) {
-	
-	my $schema = $self->schema();
-	$self->{COLOR_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{COLOR_FIELD}),
-					  $schema->field_index($self->{COLOR_FIELD}),
-					  Geo::Vector::undefined_field_index());
-	$self->{SYMBOL_FIELD_VALUE} = ohoh(Geo::Vector::field_index($self->{SYMBOL_FIELD}),
-					   $schema->field_index($self->{SYMBOL_FIELD}),
-					   Geo::Vector::undefined_field_index());
-	
-	$self->{RENDER_AS}       = 'Native' unless defined $self->{RENDER_AS};
-	$self->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{ $self->{RENDER_AS} };
-	
-        if ( not $self->{RENDERER} ) {
-            my $layer = Geo::Vector::ral_visual_layer_create( $self, Geo::Vector::OGRLayerH($self->{OGR}->{Layer}) );
+    
+    if ($self->{features}) {
+	for my $feature (values %{$self->{features}}) {
+	    $self->render_feature($overlay, $cr, $feature);
+	}
+    } else {
+	my $handle = Geo::Vector::OGRLayerH($self->{OGR}->{Layer});
+        if ( not $self->{RENDERER} ) {	    
+            my $layer = Geo::Vector::ral_visual_layer_create($self, $handle);
             if ($layer) {
                 Geo::Vector::ral_visual_layer_render( $layer, $pb ) if $pb;
                 Geo::Vector::ral_visual_layer_destroy($layer);
             }
         }
-	
-	if ( @{$self->{BORDER_COLOR}} and ($self->{RENDER_AS} eq 'Native' or $self->{RENDER_AS} eq 'Polygons')) {
-	    
-	    my @color = @{$self->{BORDER_COLOR}};
-	    push @color, 255;
-	    my $border = Geo::Vector::Layer->new( alpha => $self->{ALPHA}, single_color => \@color );
+	if (@border) {
+	    my $border = Geo::Vector::Layer->new( alpha => $self->{ALPHA}, single_color => \@border );
 	    $border->{RENDER_AS_VALUE} = $Geo::Vector::RENDER_AS{Lines};
-	    my $layer = Geo::Vector::ral_visual_layer_create( $border, Geo::Vector::OGRLayerH($self->{OGR}->{Layer}) );
+	    my $layer = Geo::Vector::ral_visual_layer_create($border, $handle);
 	    if ($layer) {
 		Geo::Vector::ral_visual_layer_render( $layer, $pb ) if $pb;
 		Geo::Vector::ral_visual_layer_destroy($layer);
 	    }
 	}
+	$self->render_labels($cr, $overlay, $viewport);
+    }
+}
 
-	my $labeling = $self->labeling;
-	if ($labeling->{field} ne 'No Labels') {
+sub render_labels {
+    my($self, $cr, $overlay, $viewport) = @_;
+    my $labeling = $self->labeling;
+    return unless $labeling->{field} ne 'No Labels';
 
-	    my @label_color = @{$labeling->{color}};
-	    $label_color[3] = int($self->{ALPHA}*$label_color[3]/255);
-	    for (@label_color) {
-		$_ /= 255;
-	    }
-
-	    my $wc = -0.5;
-	    my $hc = -0.5;
-	    my $dw = 0;
-	    for ($labeling->{placement}) {
-		$hc = -1 - $self->{LABEL_VERT_NUDGE} if /Top/;
-		$hc = $self->{LABEL_VERT_NUDGE} if /Bottom/;
-		if (/left/) {$wc = -1; $dw = -1*$self->{LABEL_HORIZ_NUDGE_LEFT}};
-		if (/right/) {$wc = 0; $dw = $self->{LABEL_HORIZ_NUDGE_RIGHT}};
-	    }
-	    my $font_desc = Gtk2::Pango::FontDescription->from_string($labeling->{font});
-	    
-	    $self->{OGR}->{Layer}->SetSpatialFilterRect(@$viewport);
-	    $self->{OGR}->{Layer}->ResetReading();
-
-            my %geohash;
-	    my $f;
-
-            # later this should be as in libral, color may be a function
-            my @color = @{$self->{SINGLE_COLOR}};
-            $label_color[3] = int($self->{ALPHA}*$color[3]/255);
-            for (@color) {
-                $_ /= 255;
-            }
-
-	    while ($f = $self->{OGR}->{Layer}->GetNextFeature()) {
+    my @label_color = @{$labeling->{color}};
+    $label_color[3] = int($self->{ALPHA}*$label_color[3]/255);
+    for (@label_color) {
+	$_ /= 255;
+    }
+    
+    my $wc = -0.5;
+    my $hc = -0.5;
+    my $dw = 0;
+    for ($labeling->{placement}) {
+	$hc = -1 - $self->{LABEL_VERT_NUDGE} if /Top/;
+	$hc = $self->{LABEL_VERT_NUDGE} if /Bottom/;
+	if (/left/) {$wc = -1; $dw = -1*$self->{LABEL_HORIZ_NUDGE_LEFT}};
+	if (/right/) {$wc = 0; $dw = $self->{LABEL_HORIZ_NUDGE_RIGHT}};
+    }
+    my $font_desc = Gtk2::Pango::FontDescription->from_string($labeling->{font});
+    
+    $self->{OGR}->{Layer}->SetSpatialFilterRect(@$viewport);
+    $self->{OGR}->{Layer}->ResetReading();
+    
+    my %geohash;
+    my $f;
+    
+    # later this should be as in libral, color may be a function
+    my @color = @{$self->{SINGLE_COLOR}};
+    $label_color[3] = int($self->{ALPHA}*$color[3]/255);
+    for (@color) {
+	$_ /= 255;
+    }
+    
+    while ($f = $self->{OGR}->{Layer}->GetNextFeature()) {
 	
-		my $geometry = $f->GetGeometryRef();
-
-		my @placements = label_placement($geometry, $overlay->{pixel_size}, @$viewport, $f->GetFID);
-		
-		for (@placements) {
-
-		    my ($size, @point) = @$_;
-		
-		    last unless (@point and defined($point[0]) and defined($point[1]));
-
-		    next if ($labeling->{min_size} > 0 and $size < $labeling->{min_size});
-
-		    next if 
-			$point[0] < $viewport->[0] or 
-			$point[0] > $viewport->[2] or
-			$point[1] < $viewport->[1] or
-			$point[1] > $viewport->[3];
-		    
-		    my @pixel = $overlay->point2pixmap_pixel(@point);
-                    if ($self->{INCREMENTAL_LABELS}) {
-                        # this is fast but not very good
-                        my $geokey = int($pixel[0]/120) .'-'. int($pixel[1]/50);
-                        next if $geohash{$geokey};
-                        $geohash{$geokey} = 1;
-                    }
-
-                    if ($self->{RENDERER} eq 'Cairo') {
-                        my $points = $geometry->Points;
-                        # now only for points
-                        my @p = $overlay->point2pixmap_pixel(@{$points->[0]});
-                        my $d = $self->{SYMBOL_SIZE}/2;
-                        $cr->move_to($p[0]-$d, $p[1]);
-                        $cr->line_to($p[0]+$d, $p[1]);
-                        $cr->move_to($p[0], $p[1]-$d);
-                        $cr->line_to($p[0], $p[1]+$d);
-                        $cr->set_line_width($self->{LINE_WIDTH});
-                        $cr->set_source_rgba(@color);
-                        $cr->stroke();
-                    }
-		    
-		    my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
-		    next unless defined $str or $str eq '';
-		    $str = decode($self->{encoding}, $str) if $self->{encoding};
-		    
-		    my $layout = Gtk2::Pango::Cairo::create_layout($cr);
-		    $layout->set_font_description($font_desc);    
-		    $layout->set_text($str);
-		    my($width, $height) = $layout->get_pixel_size;
-		    $cr->move_to($pixel[0]+$wc*$width+$dw, $pixel[1]+$hc*$height);
-                    $cr->set_source_rgba(@label_color);
-		    Gtk2::Pango::Cairo::show_layout($cr, $layout);
-
-		}
-
+	my $geometry = $f->GetGeometryRef();
+	
+	my @placements = label_placement($geometry, $overlay->{pixel_size}, @$viewport, $f->GetFID);
+	
+	for (@placements) {
+	    
+	    my ($size, @point) = @$_;
+	    
+	    last unless (@point and defined($point[0]) and defined($point[1]));
+	    
+	    next if ($labeling->{min_size} > 0 and $size < $labeling->{min_size});
+	    
+	    next if 
+		$point[0] < $viewport->[0] or 
+		$point[0] > $viewport->[2] or
+		$point[1] < $viewport->[1] or
+		$point[1] > $viewport->[3];
+	    
+	    my @pixel = $overlay->point2pixmap_pixel(@point);
+	    if ($self->{INCREMENTAL_LABELS}) {
+		# this is fast but not very good
+		my $geokey = int($pixel[0]/120) .'-'. int($pixel[1]/50);
+		next if $geohash{$geokey};
+		$geohash{$geokey} = 1;
 	    }
+	    
+	    if ($self->{RENDERER} eq 'Cairo') {
+		my $points = $geometry->Points;
+		# now only for points
+		my @p = $overlay->point2pixmap_pixel(@{$points->[0]});
+		my $d = $self->{SYMBOL_SIZE}/2;
+		$cr->move_to($p[0]-$d, $p[1]);
+		$cr->line_to($p[0]+$d, $p[1]);
+		$cr->move_to($p[0], $p[1]-$d);
+		$cr->line_to($p[0], $p[1]+$d);
+		$cr->set_line_width($self->{LINE_WIDTH});
+		$cr->set_source_rgba(@color);
+		$cr->stroke();
+	    }
+	    
+	    my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
+	    next unless defined $str or $str eq '';
+	    $str = decode($self->{encoding}, $str) if $self->{encoding};
+	    
+	    my $layout = Gtk2::Pango::Cairo::create_layout($cr);
+	    $layout->set_font_description($font_desc);    
+	    $layout->set_text($str);
+	    my($width, $height) = $layout->get_pixel_size;
+	    $cr->move_to($pixel[0]+$wc*$width+$dw, $pixel[1]+$hc*$height);
+	    $cr->set_source_rgba(@label_color);
+	    Gtk2::Pango::Cairo::show_layout($cr, $layout);
+	    
+	}
+	
+    }
+}
+
+sub render_feature {
+    my($self, $overlay, $cr, $feature, $geometry) = @_;
+    $geometry = $feature->Geometry unless $geometry;
+    my $t = $geometry->GeometryType;
+    my $a = $self->alpha/255.0;
+    my @color = $self->single_color;
+    for (@color) {
+	$_ /= 255.0;
+	$_ *= $a;
+    }
+    if ($t =~ /^Point/) {
+	render_point($overlay, $cr, $geometry, \@color);
+    } elsif ($t =~ /^Line/) {
+	render_linestring($overlay, $cr, $geometry, 1, \@color);
+    } elsif ($t =~ /^Poly/) {
+	my @border = $self->border_color;
+	@border = (0,0,0) unless @border;
+	for (@border) {
+	    $_ /= 255.0;
+	    $_ *= $a;
+	}
+	push @border, $color[3];
+	render_polygon($overlay, $cr, $geometry, 1, \@border, \@color);
+    } elsif ($geometry->GetGeometryCount > 0) {
+	for my $i (0..$geometry->GetGeometryCount-1) {
+	    render_feature($overlay, $cr, $feature, $geometry->GetGeometryRef($i));
 	}
     }
+}
+
+sub render_polygon {
+    my($overlay, $cr, $geometry, $line_width, $border, $fill) = @_;
+    paths($overlay, $cr, $geometry->Points);
+    $cr->set_line_width($line_width);
+    $cr->set_source_rgba(@$fill);
+    $cr->set_fill_rule('even-odd');
+    $cr->fill_preserve;
+    $cr->set_source_rgba(@$border);
+    $cr->stroke;
+}
+
+sub render_linestring {
+    my($overlay, $cr, $geometry, $line_width, $color) = @_;
+    $cr->set_line_width($line_width);
+    $cr->set_source_rgba(@$color);
+    geometry_path($overlay, $cr, $geometry);
+    $cr->stroke;
+}
+
+sub render_point {
+    my($overlay, $cr, $geometry, $color) = @_;
+    $cr->set_line_width(1);
+    $cr->set_source_rgba(@$color);
+    my @p = $overlay->point2surface($geometry->GetPoint);
+    for (@p) {
+	$_ = bounds($_, -10000, 10000);
+    }
+    $p[0] -= 3;
+    $cr->move_to(@p);
+    $p[0] += 6;
+    $cr->line_to(@p);
+    $p[0] -= 3;
+    $p[1] -= 3;
+    $cr->move_to(@p);
+    $p[1] += 6;
+    $cr->line_to(@p);
+    $cr->stroke;
+}
+
+sub geometry_path {
+    my($overlay, $cr, $geometry) = @_;
+    if ($geometry->GetGeometryCount > 0) {
+	for my $i (0..$geometry->GetGeometryCount-1) {
+	    geometry_path($overlay, $cr, $geometry->GetGeometryRef($i));
+	}
+    } else {
+	path($overlay, $cr, $geometry->Points);
+    }
+}
+
+sub paths {
+    my($overlay, $cr, $points) = @_;
+    if (ref $points->[0]->[0]) {
+	for my $i (0..$#$points) {
+	    paths($overlay, $cr, $points->[$i]);
+	}
+    } else {
+	path($overlay, $cr, $points);
+    }
+}
+
+sub path {
+    my($overlay, $cr, $points) = @_;
+    my @p = $overlay->point2surface(@{$points->[0]});
+    for (@p) {
+	$_ = bounds($_, -10000, 10000);
+    }
+    $cr->move_to(@p);
+    for my $i (1..$#$points) {
+	@p = $overlay->point2surface(@{$points->[$i]});
+	for (@p) {
+	    $_ = bounds($_, -10000, 10000);
+	}
+	$cr->line_to(@p);
+    }
+}
+
+sub bounds {
+    $_[0] < $_[1] ? $_[1] : ($_[0] > $_[2] ? $_[2] : $_[0]);
 }
 
 ##@ignore

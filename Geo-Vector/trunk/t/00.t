@@ -7,6 +7,7 @@ use Test::More qw(no_plan);
 BEGIN { use_ok('Geo::Vector') };
 
 use Geo::OGC::Geometry;
+#use Data::Dumper;
 
 #########################
 
@@ -46,9 +47,9 @@ eval {
 ok($@ eq '', "add a schema into the layer: $@");
 
 eval {
-    $test->add_feature(geometry=>Geo::OGC::Point->new(1.123,2.345),int=>12,real=>3.4);
-    $test->add_feature(geometry=>Geo::OGC::Point->new(2.123,2.345),int=>13,real=>4.4);
-    $test->add_feature(geometry=>Geo::OGC::Point->new(0.123,2.345),int=>15,real=>7.4);
+    $test->add_feature(Geometry=>Geo::OGC::Point->new(1.123,2.345),int=>12,real=>3.4);
+    $test->feature({Geometry=>Geo::OGC::Point->new(2.123,2.345),int=>13,real=>4.4});
+    $test->add_feature(Geometry=>Geo::OGC::Point->new(0.123,2.345),int=>15,real=>7.4);
 };
 ok($@ eq '', "add a feature into the layer: $@");
 
@@ -63,7 +64,6 @@ eval {
 ok($@ eq '', "open a layer: $@");
 
 ok ($test->feature_count == 3, 'feature_count '.$test->feature_count);
-ok ($test->field_count == 2, 'field_count '.$test->field_count);
 
 @w = $test->world;
 ok (@w == 4, 'world size');
@@ -89,18 +89,13 @@ $v = Geo::Vector->new( features => [] );
 $v->add_feature(sfield => 'string',
 		ifield => 1,
 		rfield => 1.23, 
-		geometry => Geo::OGC::Point->new(12.34, 56.78));
+		Geometry => Geo::OGC::Point->new(12.34, 56.78));
 
 ok($v->feature_count == 1, 'fset: feature count');
 
-my $c = $v->field_count(feature=>0);
-
-ok($c == 3, 'fset: field count '.$c);
-
-$s = $v->schema(0);
-
-ok($s->field('rfield')->{Type} eq 'Real', 'fset: schema');
-ok($s->field('sfield')->{Type} eq 'String', 'fset: schema');
+my $s = $v->feature(0)->Schema;
+ok($s->field('rfield')->{Name} eq 'rfield', 'fset: schema');
+ok($s->field('sfield')->{Name} eq 'sfield', 'fset: schema');
 
 my $ogc = Geo::OGC::Point->new(1,2);
 my $ogr = Geo::OGR::CreateGeometryFromWkt($ogc->AsText);
@@ -119,10 +114,10 @@ $C->AddGeometry(Geo::OGC::Point->new(0, 0));
 $ogr = Geo::OGR::CreateGeometryFromWkt($C->AsText);
 
 $box = Geo::Vector->new();
-$box->add_feature(geometry=>'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+$box->add_feature(Geometry=>'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
 $points = Geo::Vector->new();
-$points->add_feature(geometry=>'POINT(1 1)');
-$points->add_feature(geometry=>'POINT(20 1)');
+$points->add_feature(Geometry=>'POINT(1 1)');
+$points->add_feature(Geometry=>'POINT(20 1)');
 $within = $points->within($box)->features;
 ok($within->[0]->GetGeometry->ExportToWkt eq 'POINT (1 1)', 'Within, WKT');
 
@@ -131,5 +126,5 @@ $v = Geo::Vector->new(geometries => [$g]);
 $p = $v->geometry(0);
 ok($g->ExportToWkt eq $p->ExportToWkt, "geometries");
 
-$c = Geo::Vector->new(features=>"t/data/a.geojson");
+#$c = Geo::Vector->new(features=>"t/data/a.geojson");
 

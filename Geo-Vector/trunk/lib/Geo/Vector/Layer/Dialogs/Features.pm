@@ -388,7 +388,7 @@ sub make_selection {
 sub from_drawing {
     my($self, $gui) = @{$_[1]};
     return unless $gui->{overlay}->{drawing};
-    $self->add_feature({ geometry => $gui->{overlay}->{drawing} });
+    $self->add_feature( Geometry => $gui->{overlay}->{drawing} );
     fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }

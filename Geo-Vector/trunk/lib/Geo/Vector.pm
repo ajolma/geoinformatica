@@ -206,7 +206,7 @@ sub new {
 
     if ($params{features} or $params{geometries}) {
 	$self->{update} = 1;
-	$self->{features} = [];
+	$self->{features} = {};
 	if ($params{geometries}) {
 	    for my $g (@{$params{geometries}}) {
 		$self->geometry($g);
@@ -219,10 +219,10 @@ sub new {
 	    my $object = $coder->decode("@a");
 	    if ($object->{type} eq 'FeatureCollection') {
 		for my $o (@{$object->{features}}) {
-		    push @{$self->{features}}, Geo::Vector::Feature->new(GeoJSON => $o);
+		    $self->feature(Geo::Vector::Feature->new(GeoJSON => $o));
 		}
 	    } else {
-		push @{$self->{features}}, Geo::Vector::Feature->new(GeoJSON => $object);
+		$self->feature(Geo::Vector::Feature->new(GeoJSON => $object));
 	    }
 	} else {	
 	    for my $f (@{$params{features}}) {
@@ -301,7 +301,7 @@ sub new {
 sub save {
     my($self, $filename) = @_;
     my $object = { type => 'FeatureCollection', features => [] };
-    for my $f (@{$self->{features}}) {
+    for my $f (values %{$self->{features}}) {
 	push @{$object->{features}}, $f->GeoJSON;
     }
     my $coder = JSON::XS->new->ascii->pretty->allow_nonref;
@@ -367,11 +367,7 @@ sub DESTROY {
     if ( $self->{SQL} and $self->{OGR}->{DataSource} ) {
 	$self->{OGR}->{DataSource}->ReleaseResultSet( $self->{OGR}->{Layer} );
     }
-    if ( $self->{features} ) {
-	for ( @{ $self->{features} } ) {
-	    undef $_;
-	}
-    }
+    delete $self->{features};
 }
 
 ## @method driver()
@@ -449,13 +445,13 @@ sub dump_geom {
 # @brief Reset reading features from the object iteratively.
 sub init_iterate {
     my $self = shift;
+    return unless isa($self, 'Geo::Vector');
     my %options = @_ if @_;
     if ($options{selected_features}) {
 	$self->{_features} = $options{selected_features};
 	$self->{_cursor} = 0;
 	$self->{_filter_rect} = $options{filter_rect};
     } elsif ($self->{features}) {
-	$self->{_cursor} = 0;
 	$self->{_filter_rect} = $options{filter_rect};
     } else {
 	if ( exists $options{filter} ) {
@@ -476,15 +472,30 @@ sub init_iterate {
 # @brief Return a feature iteratively or undef if no more features. 
 sub next_feature {
     my $self = shift;
-    my $features = $self->{_features} || $self->{features};
-    if ($features) {
+    return $self unless isa($self, 'Geo::Vector');
+    if ($self->{features}) {
 	my $f;
 	while (1) {
-	    last if $self->{_cursor} > $#$features;
-	    $f = $features->[$self->{_cursor}++];
+	    (undef, $f) = each %{$self->{features}};
+	    last unless $f;
 	    last unless $self->{_filter_rect};
 	    my $r = $self->{_filter_rect};
-	    my $e = $f->GetGeometryRef()->GetEnvelope(); # [$minx, $maxx, $miny, $maxy]
+	    my $e = $f->Geometry->GetEnvelope(); # [$minx, $maxx, $miny, $maxy]
+	    last if 
+		$e->[0] <= $r->[2] and $e->[1] >= $r->[0] and
+		$e->[2] <= $r->[3] and $e->[3] >= $r->[1];
+	}
+	return $f if $f;
+	return;
+    }
+    if ($self->{_features}) {
+	my $f;
+	while (1) {
+	    last if $self->{_cursor} > $#{$self->{_features}};
+	    $f = $self->{_features}->[$self->{_cursor}++];
+	    last unless $self->{_filter_rect};
+	    my $r = $self->{_filter_rect};
+	    my $e = $f->Geometry->GetEnvelope(); # [$minx, $maxx, $miny, $maxy]
 	    last if 
 		$e->[0] <= $r->[2] and $e->[1] >= $r->[0] and
 		$e->[2] <= $r->[3] and $e->[3] >= $r->[1];
@@ -602,8 +613,8 @@ sub within {
 
 ## @method $add($other, %params)
 #
-# @brief Add features from the other layer to this layer.
-# @param other A Geo::Vector object
+# @brief Add a feature or features from another layer to this layer.
+# @param other A feature or a feature layer object
 # @param params Named parameters, used for creating the new object,
 # if one is created, and for iterating through the features of other.
 # @return (If used in non-void context) A new Geo::Vector object, which
@@ -633,9 +644,9 @@ sub add {
     } else {
 	$dst_geometry_type = 'Unknown';
     }
-    $other->init_iterate(%params);
-    while (my $feature = $other->next_feature()) {
-	my $geom = $feature->GetGeometryRef();
+    init_iterate($other, %params);
+    while (my $feature = next_feature($other)) {
+	my $geom = $feature->Geometry();
 
 	# check for match of geometry types
 	next unless $dst_geometry_type eq 'Unknown' or 
@@ -672,9 +683,9 @@ sub add {
 # @todo Add $force parameter.
 # @return The number of features in the layer. The valued may be approximate.
 sub feature_count {
-    my ($self) = @_;
+    my($self) = @_;
     if ( $self->{features} ) {
-	my $count = @{ $self->{features} };
+	my $count = keys %{ $self->{features} };
 	return $count;
     }
     return unless $self->{OGR}->{Layer};
@@ -711,54 +722,15 @@ sub srs {
     return $srs;
 }
 
-## @method $field_count(%params)
-# 
-# @deprecated
-# @brief For a layer object returns the number of fields in the layer schema.
-# For a feature set object requires a named parameter that specifies the feature.
+## @method $geometry_type()
 #
-# Each feature in a feature set object may have its own schema.
-# @return For a layer object returns the number of fields in the layer schema.
-# For a feature set object requires a named parameter that specifies the feature.
-sub field_count {
-    my ( $self, %params ) = @_;
-    if ( $self->{features} ) {
-	my $f = $self->{features}->[ $params{feature} ];
-	return $f ? $f->GetFieldCount() : undef;
-    }
-    return unless $self->{OGR}->{Layer};
-    my $n;
-    eval { $n = $self->{OGR}->{Layer}->GetLayerDefn()->GetFieldCount(); };
-    croak "GetLayerDefn or GetFieldCount failed: $@" if $@;
-    return $n;
-}
-
-## @method $geometry_type(%params)
+# @brief Return the geometry type of the layer.
 #
-# @brief For a layer object returns the geometry type of the layer.
-# For a feature set object requires a named parameter that specifies the feature.
-#
-# @param[in] params Named parameters:
-# - flatten => true/false. Default is false.
-# - feature => integer. Index of the feature whose geometry type is queried.
-# @return For a layer object returns the geometry type of the layer.
-# For a feature set object returns specified features geometry type.
+# @return The geometry type as a string.
 sub geometry_type {
-    my ( $self, %params ) = @_;
-    my $t;
-    if ( $self->{features} ) {
-	return $Geo::OGR::wkbUnknown unless defined $params{feature};
-	my $f = $self->{features}->[ $params{feature} ];
-	if ($f) {
-	    $t = $f->GetGeometryRef->GetGeometryType;
-	}
-    }
-    elsif ( $self->{OGR}->{Layer} ) {
-	$t = $self->{OGR}->{Layer}->GetLayerDefn()->GetGeomType;
-    }
-    return unless $t;
-    $t = $t & ~0x80000000 if $params{flatten};
-    return $Geo::OGR::Geometry::TYPE_INT2STRING{$t};
+    my($self) = @_;
+    return 'Unknown' if $self->{features};
+    my $t = $self->{OGR}->{Layer}->GetLayerDefn()->GeometryType;
 }
 
 ## @method hashref schema(hashref schema)
@@ -772,45 +744,23 @@ sub geometry_type {
 #
 # @param[in] schema (optional) a reference to a hash specifying the schema.
 # @return the schema.
-
-## @method hashref schema($feature, hashref schema)
-#
-# @brief Get or set the schema of a feature in a feature collection.
-#
-# @param[in] feature the index of the feature, whose schema to get or set.
-# @param[in] schema (optional) a reference to a hash specifying the schema.
-# @return the schema.
 sub schema {
     my $self = shift;
-    my $s;
-    if (@_ == 0) {
-	return Gtk2::Ex::Geo::Schema->new() if $self->{features};
-	$s = $self->{OGR}->{Layer}->Schema();
-	return bless $s, 'Gtk2::Ex::Geo::Schema';
-    }
-    my $feature = shift if $_[0] =~ /^\d/; 
-    my %schema = @_ == 1 ? %{$_[0]} : @_;
+    my $o;
     if ($self->{features}) {
-	return unless defined $feature;
-	$s = $self->{features}->[$feature]->Schema(%schema);
     } else {
-	$s = $self->{OGR}->{Layer}->Schema(%schema);
+	$o = $self->{OGR}->{Layer};
     }
-    return bless $s, 'Gtk2::Ex::Geo::Schema';
-}
-
-## @method Geo::OGR::FeatureDefn defn()
-#
-# @brief Create a FeatureDefn object, which is needed to create
-# feature objects for this layer.
-#
-# @return a Geo::OGR::FeatureDefn object.
-sub defn {
-    my $self = shift;
-    my $schema = $self->schema;
-    my $defn = Geo::OGR::FeatureDefn->new();
-    $defn->Schema(%$schema);
-    return $defn;
+    if (@_ > 0) {
+	my %schema = @_ == 1 ? %{$_[0]} : @_;
+	$o->Schema(%schema);
+    }
+    if ($o) {
+	my $s = $o->Schema();
+	return bless $s, 'Gtk2::Ex::Geo::Schema';
+    } else {
+	return Gtk2::Ex::Geo::Schema->new;
+    }
 }
 
 ## @ignore
@@ -873,8 +823,8 @@ sub value_range {
     }
 
     if ($self->{features}) {
-	return ( 0, $#{$self->{features}} )
-	    if $field_name eq '.FID';
+	my $n = keys %{$self->{features}};
+	return (0, $n) if $field_name eq '.FID';
     } else {
 	my $schema = $self->schema()->field($field_name);
 	croak "value_range: field with name '$field_name' does not exist"
@@ -923,35 +873,40 @@ sub z_range {
 
 ## @method hashref feature($fid, $feature)
 #
-# @brief Get, add or update a feature.
+# @brief Get, add, update, or create a new feature.
 #
 # Example of retrieving:
 # @code
-# $feature = $vector->feature($i);
+# $feature = $layer->feature($fid);
 # @endcode
 #
 # Example of updating:
 # @code
-# $vector->feature($i, $feature);
+# $layer->feature($fid, $feature);
 # @endcode
 #
 # Example of adding:
-# @code $vector->feature($feature);
+# @code $layer->feature($feature);
 # @endcode
 #
-# @param[in] fid The FID of the feature if updating
-# @param[in] feature Geo::OGR::Feature object to add or to update.
-# @return an Geo::OGR::Feature object
-# @exception The fid is higher than the feature count.
+# Example of creating a new feature (note: the feature is not added to the layer):
+# @code $feature = $layer->feature();
+# @endcode
+#
+# @param[in] fid The ID of the feature
+# @param[in] feature A feature object to add or to update.
+# @return a feature object
 sub feature {
-    my ( $self, $fid, $feature ) = @_;
+    my($self, $fid, $feature) = @_;
     if ($feature) {
 	
 	# update at fid
 	if ( $self->{features} ) {
-	    $self->{features}->[$fid] = $feature;
-	    $feature->FID($fid);
+	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::Vector::Feature');
+	    $self->{features}{$fid} = $feature;
+	    $feature->{FID} = $fid;
 	} else {
+	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::OGR::Feature');
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
 	}
@@ -964,19 +919,23 @@ sub feature {
     } elsif (ref $fid) {
 
 	# add
+	$feature = $fid;
 	if ($self->{features}) {
-	    push @{$self->{features}}, $fid;
-	    $fid->FID($#{$self->{features}});
+	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::Vector::Feature');
+	    $fid = 0;
+	    while (exists $self->{features}{$fid}) {$fid++}
+	    $self->{features}{$fid} = $feature;
+	    $feature->{FID} = $fid;
 	} else {
-	    $self->{OGR}->{Layer}->CreateFeature($fid);
+	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::OGR::Feature');
+	    $self->{OGR}->{Layer}->CreateFeature($feature);
 	}
     } elsif (defined $fid) {
 
 	# retrieve
 	if ( $self->{features} ) {
-	    for my $f (@{$self->{features}}) {
-		return $f if $f->FID == $fid;
-	    }
+	    return $self->{features}{$fid} if exists $self->{features}{$fid};
+	    return;
 	} else {
 	    return $self->{OGR}->{Layer}->GetFeature($fid);
 	}
@@ -991,6 +950,12 @@ sub feature {
     }
 }
 
+sub add_feature {
+    my $self = shift;
+    my %params = @_ == 1 ? %{$_[0]} : @_;
+    feature($self, \%params);
+}
+
 ## @method Geo::OGR::Geometry geometry($fid, $geometry)
 # @brief Get, set or add a geometry.
 # @param $fid (optional) The feature id, whose geometry to set or get.
@@ -1000,22 +965,17 @@ sub geometry {
     my($self, $fid, $geometry) = @_;
     if ($geometry) {
 	# update at fid
-	if ( $self->{features} ) {
-	    $self->{features}->[$fid]->SetGeometry($geometry);
-	}
-	elsif ( $self->{OGR}->{Layer} ) {
-	    my $feature = $self->feature($fid);
-	    $feature->SetGeometry($geometry);
-	}
-	else {
-	    croak "no layer";
-	}
+	my $feature = $self->feature($fid);
+	$feature->Geometry($geometry) if $feature;
     }
     elsif (ref $fid) {
 	# add
-	my $feature = $self->make_feature(geometry => $fid);
+	$geometry = $fid;
+	my $feature = $self->make_feature(Geometry => $geometry);
 	if ($self->{features}) {
-	    push @{$self->{features}}, $feature;
+	    $fid = 0;
+	    while (exists $self->{features}{$fid}) {$fid++}
+	    $self->{features}{$fid} = $feature;
 	} else {
 	    $self->{OGR}->{Layer}->CreateFeature($feature);
 	    $self->{OGR}->{Layer}->SyncToDisk;
@@ -1025,101 +985,73 @@ sub geometry {
 	# retrieve
 	my $f;
 	if ( $self->{features} ) {
-	    $f = $self->{features}->[$fid];
-	    croak "feature: index out of bounds: $fid" unless $f;
-	}
-	elsif ( $self->{OGR}->{Layer} ) {
+	    $f = $self->{features}{$fid} if exists $self->{features}{$fid};
+	} else {
 	    $f = $self->{OGR}->{Layer}->GetFeature($fid);
 	}
-	else {
-	    croak "no layer";
-	}
-	return $f->GetGeometryRef->Clone;
+	return $f->Geometry->Clone if $f;
     }
 }
 
-## @method Geo::OGR::Feature make_feature(%feature)
+sub make_geometry {
+    my($input) = @_;
+    my $geometry;
+    if (isa($input, 'Geo::OGR::Geometry')) {
+	return $input->Clone;
+    } elsif (isa($input, 'Geo::OGC::Geometry')) {
+	$geometry = Geo::OGR::CreateGeometryFromWkt( $input->AsText );
+    } else {
+	$geometry = Geo::OGR::CreateGeometryFromWkt( $input );
+    }
+    return $geometry;
+}
+
+## @method Geo::OGR::Feature make_feature(%params)
 #
-# @brief Creates a Geo::OGR::Feature object from attribute data and a
-# Geo::OGC::Geometry object.
-# @param[in] feature a hash whose keys are field names or 'geometry'
-# and values are field values, or, for geometry, well-known text or an
-# object which responds to AsText method by returning well-known text.
-# @return Geo::OGR::Feature object.
-# @note If the parameter is already a Geo::OGR::Feature object nothing
-# is done to the feature.
+# @brief Creates a feature object for this layer from argument data.
+#
+# @param[in] feature a hash whose keys are field names (Geometry is
+# recognized as a field) and values are field values, or, for the
+# geometry, a geometry object or well-known text.
+# @return A feature object.
 sub make_feature {
     my $self = shift;
-    my %feature;
-    if ( @_ == 1 ) {
+    my %params;
+    if (@_ == 1) {
 	my $feature = shift;
-	return $feature if isa($feature, 'Geo::OGR::Feature');
-	%feature = %$feature;
+	if ($self->{features}) {
+	    return $feature if isa($feature, 'Geo::Vector::Feature');
+	} else {
+	    return $feature if isa($feature, 'Geo::OGR::Feature');
+	}
+	%params = %$feature;
+    } else {
+	%params = @_;
     }
-    else {
-	%feature = @_;
-    }
-    croak "Geo::Vector::make_feature: No geometry specified" unless $feature{geometry};
-    my $defn;
-    if ( $self->{features} ) {
-	$defn = Geo::OGR::FeatureDefn->new();
-	for my $name ( sort keys %feature ) {
-	    next if $name eq 'geometry';
-	    my $value = $feature{$name};    # fieldname found.
-	    my $type;
-	    if ( $value =~ /^[+-]*\d+$/ ) {
-		$type = $Geo::OGR::OFTInteger;
-	    }
-	    elsif ( $value =~ /^[+-]*\d*\.*\d*$/ and $value =~ /\d/ ) {
-		$type = $Geo::OGR::OFTReal;
-	    }
-	    else {
-		$type = $Geo::OGR::OFTString;
-	    }
-	    my $fd = Geo::OGR::FieldDefn->new( $name, $type );
-	    $fd->ACQUIRE;
-	    $fd->SetWidth(10) if $type == $Geo::OGR::OFTInteger;
-	    $defn->AddFieldDefn($fd);
+    my $feature;
+    $params{Geometry} = $params{geometry} if exists $params{geometry};
+    my $geometry = make_geometry($params{Geometry});
+    delete $params{Geometry};
+    delete $params{geometry};
+    if ($self->{features}) {
+	$feature = Geo::Vector::Feature->new();
+	for (keys %params) {
+	    next if /^FID$/;
+	    $feature->Field($_, $params{$_});
+	}
+    } else {
+	my $defn = $self->{OGR}->{Layer}->GetLayerDefn();
+	$defn->DISOWN; # feature owns
+	$feature = Geo::OGR::Feature->new($defn);
+	my $n = $defn->GetFieldCount();
+	for my $i ( 0 .. $n - 1 ) {
+	    my $fd   = $defn->GetFieldDefn($i);
+	    my $name = $fd->GetName;
+	    $feature->SetField( $name, $params{$name} );
 	}
     }
-    else {
-	$defn = $self->{OGR}->{Layer}->GetLayerDefn();
-    }
-    
-    $defn->DISOWN; # feature owns
-    my $feature = Geo::OGR::Feature->new($defn);
-    
-    my $n = $defn->GetFieldCount();
-    for my $i ( 0 .. $n - 1 ) {
-	my $fd   = $defn->GetFieldDefn($i);
-	my $name = $fd->GetName;
-	$feature->SetField( $name, $feature{$name} );
-    }
-    my $geom;
-    if (isa($feature{geometry}, 'Geo::OGR::Geometry')) {
-	$geom = Geo::OGR::CreateGeometryFromWkt( $feature{geometry}->ExportToWkt );
-    } elsif (isa($feature{geometry}, 'Geo::OGC::Geometry')) {
-	$geom = Geo::OGR::CreateGeometryFromWkt( $feature{geometry}->AsText );
-    } else {
-	$geom = Geo::OGR::CreateGeometryFromWkt( $feature{geometry} );
-    }
-    $feature->SetGeometry( $geom );
-    
+    $feature->Geometry($geometry);
     return $feature;
-}
-
-## @method void add_feature(%feature)
-#
-# @brief Adds a feature to the layer.
-# @param feature As in make_feature.
-sub add_feature {
-    my $self = shift;
-    my $feature = $self->make_feature(@_);
-    if ($self->{features}) {
-	push @{$self->{features}}, $feature;
-    } else {
-	$self->{OGR}->{Layer}->CreateFeature($feature);
-    }
 }
 
 ## @method listref features(%params)
@@ -1145,7 +1077,7 @@ sub add_feature {
 # - \a limit => If defined, maximum number of features returned.
 # @return A reference to an array of features.
 sub features {
-    my ( $self, %params ) = @_;
+    my($self, %params) = @_;
     my @features;
     my $i = 0;
     my $from = $params{from} || 1;
@@ -1156,11 +1088,11 @@ sub features {
     if ( exists $params{with_id} ) {
 
 	for my $fid (@{$params{with_id}}) {
-	    my $x = $self->{OGR}->{Layer}->GetFeature($fid) if $self->{OGR}->{Layer};
+	    my $x;
 	    if ($self->{features}) {
-		for my $feature (@{$self->{features}}) {
-		    $x = $feature, last if $fid == $feature->FID;
-		}
+		$x = $self->{features}{$fid} if exists $self->{features}{$fid};
+	    } else {
+		$x = $self->{OGR}->{Layer}->GetFeature($fid);
 	    }
 	    next unless $x;
 	    $i++;
@@ -1275,59 +1207,56 @@ sub _intersect {
     }
 }
 
-## @method @world(hash params)
+## @method @world($FID)
 #
-# @brief Get the bounding box (xmin, ymin, xmax, ymax) of the layer or one of
+# @brief Get the bounding box (xmin, ymin, xmax, ymax) of the layer or some of
 # its features.
 #
-# The method uses Geo::OGR::Geometry::GetEnvelope() or
-# Geo::OGR::Layer::GetExtent().
-#
-# Example of getting a bounding box:
-# @code
-# @bb = $vector->world(feature=><feature_index>);
-# @endcode
-#
-# @param[in] params is a list of named parameters:
-# - feature => feature_index (optional).
+# @param[in] FID ID or IDs of the features to take into account.
 # @return Returns the bounding box (minX, minY, maxX, maxY) as an array.
-# If a single feature is defined with it's index as parameter, then the method
-# returns that feature's bounding box, else the whole layer's bounding box.
 sub world {
     my $self = shift;
-    my %params;
-    %params = @_ unless @_ % 2;
-    my $extent;
-    if ( defined $params{feature} ) {
-	my $f;
-	if ( $self->{features} ) {
-	    $f = $self->{features}->[ $params{feature} ];
-	} elsif ( $self->{OGR}->{Layer} ) {
-	    $f = $self->{OGR}->{Layer}->GetFeature( $params{feature} );
+    my %fids;
+    if (@_ == 1) {
+	my $ref = shift;
+	if (ref $ref eq 'ARRAY') {
+	    %fids = map {$_ => 1} @$ref;
+	} else {
+	    %fids = %$ref;
 	}
-	croak "feature with fid=$params{feature} does not exist" unless $f;
-	eval { $extent = $f->GetGeometryRef()->GetEnvelope(); };
-	croak "GetEnvelope failed: $@" if $@;
+    } elsif (@_ > 1) {
+	%fids = map {$_ => 1} @_;
     }
-    else {
-	if ( $self->{features} ) {
-	    for my $f ( @{ $self->{features} } ) {
-		my $e = $f->GetGeometryRef()->GetEnvelope();
-		unless ($extent) {
-		    @$extent = @$e;
-		}
-		else {
-		    $extent->[0] = MIN( $extent->[0], $e->[0] );
-		    $extent->[2] = MIN( $extent->[2], $e->[2] );
-		    $extent->[1] = MAX( $extent->[1], $e->[1] );
-		    $extent->[3] = MAX( $extent->[3], $e->[3] );
-		}
+    my $extent;
+    if (%fids) {
+	for my $fid (keys %fids) {
+	    my $e = $self->feature($fid)->Geometry->GetEnvelope();
+	    unless ($extent) {
+		@$extent = @$e;
+	    }
+	    else {
+		$extent->[0] = MIN( $extent->[0], $e->[0] );
+		$extent->[2] = MIN( $extent->[2], $e->[2] );
+		$extent->[1] = MAX( $extent->[1], $e->[1] );
+		$extent->[3] = MAX( $extent->[3], $e->[3] );
 	    }
 	}
-	elsif ( $self->{OGR}->{Layer} and $self->{OGR}->{Layer}->GetFeatureCount() > 0 ) {
-	    eval { $extent = $self->{OGR}->{Layer}->GetExtent(); };
-	    croak "GetExtent failed: $@" if $@;
+    } elsif ($self->{features}) {
+	for my $feature(values %{$self->{features}}) {
+	    my $e = $feature->Geometry->GetEnvelope();
+	    unless ($extent) {
+		@$extent = @$e;
+	    }
+	    else {
+		$extent->[0] = MIN( $extent->[0], $e->[0] );
+		$extent->[2] = MIN( $extent->[2], $e->[2] );
+		$extent->[1] = MAX( $extent->[1], $e->[1] );
+		$extent->[3] = MAX( $extent->[3], $e->[3] );
+	    }
 	}
+    } elsif ($self->{OGR}->{Layer}->GetFeatureCount() > 0) {
+	eval { $extent = $self->{OGR}->{Layer}->GetExtent(); };
+	croak "GetExtent failed: $@" if $@;
     }
     
     return unless $extent;
@@ -1374,11 +1303,7 @@ sub copy {
 	    $feature->SetField($i, $value) if defined $value;
 	}
 
-	if ($copy->{features}) {
-	    push @{$copy->{features}}, $feature;
-	} else {
-	    $copy->{OGR}->{Layer}->CreateFeature($feature);
-	}
+	$copy->feature($feature);
 	
     }
     $copy->{OGR}->{Layer}->SyncToDisk if $copy->{OGR};

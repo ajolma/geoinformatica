@@ -172,18 +172,10 @@ sub delete_selected_features {
     my $now;
     my $select;
     my $feature;
-    for $feature (@{$self->{features}}) {
-	my $fid = $feature->FID;
-	$now = 1, next if exists $delete->{$fid};
-	if ($now) {
-	    $select = $fid;
-	    $now = 0;
-	}
-	push @features, $feature;
+    for my $fid (keys %$delete) {
+	delete $self->{features}{$fid};
     }
-    $select = $feature->FID if $feature and !$select;
-    $self->{features} = \@features;
-    $self->select(with_id => [$select]) if defined $select;
+    $self->select();
     fill_features_table(undef, [$self, $gui]);
     $gui->{overlay}->render;
 }
@@ -345,21 +337,25 @@ sub fill_features_table {
     $model->clear;
 
     my %selected = map { $_->FID => 1 } @{$self->selected_features};
+
     my $i = 1;
-    my $j = 0;
-    while ($i < $from+$count) {
+    for my $f (@{$self->selected_features}) {
+	last if $i >= $from+$count;
 	$i++;
 	next if $i <= $from;
-	$j++, next if ($j > $#{$self->{features}});
-	my $f = $self->{features}->[$j++]; 	
 	my $fid = $f->FID;
 	my $iter = $model->insert(undef, 999999);
 	$model->set($iter, 0, $fid);
-	if ($selected{$fid}) {
-	    $selection->select_iter($iter);
-	} else {
-	    $selection->unselect_iter($iter);
-	}
+	$selection->select_iter($iter);
+    }
+    for my $fid (sort {$a <=> $b} keys %{$self->{features}}) {
+	next if $selected{$fid};
+	last if $i >= $from+$count;
+	$i++;
+	next if $i <= $from;
+	my $iter = $model->insert(undef, 999999);
+	$model->set($iter, 0, $fid);
+	$selection->unselect_iter($iter);
     }
     
 }

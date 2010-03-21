@@ -14,10 +14,8 @@ sub new {
     my %params = @_;
     my $self = { properties => {} };
     bless $self => (ref($package) or $package);
-    $self->{properties}{class} = $params{class} if exists $params{class};
-    $self->{properties}{class} = 'Feature' unless $self->{properties}{class};
-    $self->{OGRDefn} = Geo::OGR::FeatureDefn->new();
-    $self->{OGRFeature} = Geo::OGR::Feature->new($self->{OGRDefn});
+    $self->{class} = $params{class} if exists $params{class};
+    $self->{class} = 'Feature' unless $self->{class};
     $self->GeoJSON($params{GeoJSON}) if ($params{GeoJSON});
     return $self;
 }
@@ -25,30 +23,30 @@ sub new {
 sub _Geometry {
     my($self, $object) = @_;
     # set type 25D depending on the actual dimension
-    my $geom;
+    my $geometry;
     if ($object->{type} eq 'GeometryCollection') {
-	$geom = Geo::OGR::Geometry->create( Type => $object->{type} );
+	$geometry = Geo::OGR::Geometry->create( Type => $object->{type} );
 	for my $g (@{$object->{geometries}}) {
-	    $geom->AddGeometry($self->_Geometry($g));
+	    $geometry->AddGeometry($self->_Geometry($g));
 	}
     } else { # assuming a non-collection geometry
-	$geom = Geo::OGR::Geometry->create( Type => $object->{type}, Points => $object->{coordinates} );
+	$geometry = Geo::OGR::Geometry->create( Type => $object->{type}, Points => $object->{coordinates} );
     }
-    return $geom;
+    return $geometry;
 }
 
 sub GeoJSON {
     my($self, $object) = @_;
     if ($object) {
 	if ($object->{type} eq 'Feature') {
-	    $self->{OGRFeature}->SetGeometry( $self->_Geometry($object->{geometry}) );
+	    $self->{OGRGeometry} = $self->_Geometry($object->{geometry});
 	    my $to = $self->{properties};
 	    my $from = $object->{properties};
 	    for my $field (keys %$from) {
 		$to->{$field} = $from->{$field};
 	    }
 	} else { # assuming a geometry
-	    $self->{OGRFeature}->SetGeometry( $self->_Geometry($object) );
+	    $self->{OGRGeometry} = $self->_Geometry($object);
 	}
     } else {
 	$object->{type} = 'Feature';
@@ -57,14 +55,13 @@ sub GeoJSON {
 	for my $field (keys %$from) {
 	    $to->{$field} = $from->{$field};
 	}
-	my $geom = $self->{OGRFeature}->GetGeometryRef();
-	my $type = $geom->GeometryType;
+	my $type = $self->{OGRGeometry}->GeometryType;
 	$type =~ s/25D//;
 	if ($type =~ /Collection/) {
 	    $object->{geometry}{type} = $type;
 	    $object->{geometry}{geometries} = [];
-	    for my $i (0..$geom->GetGeometryCount-1) {
-		my $g = $geom->GetGeometryRef($i);
+	    for my $i (0..$self->{OGRGeometry}->GetGeometryCount-1) {
+		my $g = $self->{OGRGeometry}->GetGeometryRef($i);
 		my $type = $g->GeometryType;
 		$type =~ s/25D//;
 		my $geometry = { type => $type, coordinates => $g->Points };
@@ -72,7 +69,7 @@ sub GeoJSON {
 	    }
 	} else {	    
 	    $object->{geometry}{type} = $type;
-	    $object->{geometry}{coordinates} = $geom->Points;
+	    $object->{geometry}{coordinates} = $self->{OGRGeometry}->Points;
 	}
     }
     return $object;
@@ -80,17 +77,16 @@ sub GeoJSON {
 
 sub Schema {
     my($self) = @_;
-    my @fields = ({ Name => 'class', Type => 'String' });
+    my $s = Gtk2::Ex::Geo::Schema->new;
+    my @fields;
     for my $f (sort keys %{$self->{properties}}) {
 	next if $f eq 'class';
-	push @fields, { Name => $f, Type => 'String' };
+	push @fields, { Name => $f, Type => 'Scalar' }; # this needs more work
     }
-    my $geom = $self->{OGRFeature}->GetGeometryRef;
-    my $type = $geom ? $geom->GeometryType : '';
-    return {
-	GeometryType => $type,
-	Fields => \@fields,
-    }
+    my $type = $self->{OGRGeometry} ? $self->{OGRGeometry}->GeometryType : '';
+    $s->{GeometryType} = $type;
+    $s->{Fields} = \@fields;
+    return $s;
 }
 
 sub DeleteField {
@@ -106,27 +102,31 @@ sub Field {
 *GetField = *Field;
 *SetField = *Field;
 
+sub GetFieldCount {
+    my($self) = @_;
+    return sort keys %{$self->{properties}};
+}
+
 sub Geometry {
-    my($self, $geom) = @_;
-    $self->{OGRFeature}->SetGeometry($geom) if $geom;
-    $self->{OGRFeature}->GetGeometryRef();
+    my($self, $geometry) = @_;
+    $self->{OGRGeometry} = $geometry if $geometry;
+    return $self->{OGRGeometry};
 }
 *SetGeometry = *Geometry;
 *GetGeometryRef = *Geometry;
 
+# FID is unique within a layer, thus only the owning layer can legally
+# set the fid.
 sub FID {
-    my($self, $fid) = @_;
-    $self->{OGRFeature}->SetFID($fid) if defined $fid;
-    $self->{OGRFeature}->GetFID;
+    my($self) = @_;
+    return $self->{FID};
 }
-*SetFID = *FID;
 *GetFID = *FID;
 
 sub Row {
     my($self, %row) = @_;
     for my $key (keys %row) {
 	if ($key eq 'FID') {
-	    $self->FID($row{FID});
 	} elsif ($key eq 'Geometry') {
 	    $self->Geometry($row{Geometry});
 	} else {
