@@ -260,12 +260,12 @@ sub copy_region_selected {
     if ($region eq '') {
     } elsif ($region eq '<Current view>') {
 	@region = $gui->{overlay}->get_viewport();
-	push @region, $self->cell_size( of_GDAL => 1 );
+	push @region, $self->cell_size();
     } else {
 	$region = $self->name if $region eq '<self>';
 	my $layer = $gui->{overlay}->get_layer_by_name($region);
-	@region = $layer->world( of_GDAL => 1 );
-	push @region, $layer->cell_size( of_GDAL => 1 );
+	@region = $layer->world();
+	push @region, $layer->cell_size();
     }
     copy_define_region($self, @region);
 }
@@ -291,8 +291,8 @@ sub copy_define_region {
 	$maxy = get_number_from_entry($dialog->get_widget('copy_maxy_entry'));
 	$cellsize = get_number_from_entry($dialog->get_widget('copy_cellsize_entry'));
 
-	$cellsize = $self->cell_size( of_GDAL => 1 ) if $cellsize eq '';
-	my @world = $self->world( of_GDAL => 1 ); # $min_x, $min_y, $max_x, $max_y
+	$cellsize = $self->cell_size() if $cellsize eq '';
+	my @world = $self->world(); # $min_x, $min_y, $max_x, $max_y
 
 	$minx = $world[0] if $minx eq '';
 	$miny = $world[1] if $miny eq '';

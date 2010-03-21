@@ -29,23 +29,23 @@ sub open {
     $dialog->get_widget('gdal_name_entry')->set_text($self->name);
     $dialog->get_widget('gdal_alpha_spinbutton')->set_value($self->alpha);
 
-    my @size = $self->size(of_GDAL=>1);
+    my @size = $self->size();
     $dialog->get_widget('gdal_size_label')->set_text("@size");
 
-    @size = $self->world(of_GDAL=>1);
+    @size = $self->world();
     $dialog->get_widget('gdal_min_x_label')->set_text($size[0]);
     $dialog->get_widget('gdal_min_y_label')->set_text($size[1]);
     $dialog->get_widget('gdal_max_x_label')->set_text($size[2]);
     $dialog->get_widget('gdal_max_y_label')->set_text($size[3]);
 
-    @size = $self->cell_size(of_GDAL=>1);
+    @size = $self->cell_size();
     $dialog->get_widget('gdal_cellsize_label')->set_text("@size");
 
     my $nodata = $self->nodata_value();
     $nodata = '' unless defined $nodata;
     $dialog->get_widget('gdal_nodata_entry')->set_text($nodata);
 
-    @size = $self->value_range(of_GDAL=>1);
+    @size = $self->value_range();
     my $text = defined $size[0] ? "@size" : "not available";
     $dialog->get_widget('gdal_minmax_label')->set_text($text);
     

@@ -283,7 +283,6 @@ sub _with_decimal_point {
 # - \a max_x The max x of the bounding box.
 # - \a max_y The max y of the bounding box.
 # - \a cell_size Length of the edges of the cells.
-# - \a of_GDAL Return the bounding box of the underlying GDAL raster
 # if there is one.
 # @note At least three parameters are needed to define the bounding box.
 # @return (min_x, min_y, max_x, max_y) if possible
@@ -317,22 +316,17 @@ sub world {
 	    ral_grid_set_bounds_nnx($self->{GRID}, $minx, $miny, $maxy);
 	} elsif (defined($maxx) and defined($miny) and defined($maxy)) {
 	    ral_grid_set_bounds_xnx($self->{GRID}, $maxx, $miny, $maxy);
-	} elsif ($self->{GDAL} and defined($o{of_GDAL})) {
-	    my $dataset = $self->{GDAL}->{dataset};
-	    my @t = $dataset->GeoTransform();
-	    my $h = $dataset->{RasterYSize};
-	    my $w = $dataset->{RasterXSize};
-	    my $min_x = $t[1] > 0 ? $t[0] : $t[0]+$w*$t[1];
-	    my $max_x = $t[1] > 0 ? $t[0]+$w*$t[1] : $t[0];
-	    my $min_y = $t[5] > 0 ? $t[3] : $t[3]+$h*$t[5];
-	    my $max_y = $t[5] > 0 ? $t[3]+$h*$t[5] : $t[3];
-	    return ($min_x, $min_y, $max_x, $max_y);
-	} elsif (!$self->{GRID}) {
-	    return ();
-	} else {
-	    my $w = ral_grid_get_world($self->{GRID});
-	    return @$w;
 	}
+    } elsif ($self->{GDAL}) {
+	my $dataset = $self->{GDAL}->{dataset};
+	my @t = $dataset->GeoTransform();
+	my $h = $dataset->{RasterYSize};
+	my $w = $dataset->{RasterXSize};
+	my $min_x = $t[1] > 0 ? $t[0] : $t[0]+$w*$t[1];
+	my $max_x = $t[1] > 0 ? $t[0]+$w*$t[1] : $t[0];
+	my $min_y = $t[5] > 0 ? $t[3] : $t[3]+$h*$t[5];
+	my $max_y = $t[5] > 0 ? $t[3]+$h*$t[5] : $t[3];
+	return ($min_x, $min_y, $max_x, $max_y);
     } elsif (!$self->{GRID}) {
 	return ();
     } else {
@@ -721,7 +715,6 @@ sub _type_name {
 # @brief Returns the minimum and maximum values of the raster.
 # @param[in] params Named parameters:
 # - \a field_name The attribute whose min and max values are looked up.
-# - \a of_GDAL Boolean telling if the value range should be from GDAL.
 # @return array (min,max)
 sub value_range {
     my $self = shift;
@@ -746,7 +739,7 @@ sub value_range {
 	    $range[1] = defined $range[1] ? ($range[1] > $value ? $range[1] : $value) : $value;
 	}
 	return @range;
-    } elsif ($param{of_GDAL} and $self->{GDAL}) {
+    } elsif ($self->{GDAL}) {
 	my $band = $self->band;
 	return($band->GetMinimum, $band->GetMaximum) if $band;
     }
@@ -792,13 +785,9 @@ sub data_type {
     return $self->datatype;
 }
 
-## @method @size(%params)
+## @method @size()
 #
 # @brief Returns the size (height, width) of the raster.
-#
-# @param params Named parameters:
-# - \a of_GDAL Whether to force the method to return the size of the
-# underlying GDAL raster, if there is one.
 #
 # @return The size (height, width) of the raster or an empty list if
 # no part of the GDAL raster has yet been cached.
@@ -809,7 +798,7 @@ sub size {
 	return ral_grid_zonesize($self->{GRID}, $i, $j);
     } else {
 	my %o = @_;
-	if ($self->{GDAL} and $o{of_GDAL}) {
+	if ($self->{GDAL}) {
 	    return ($self->{GDAL}->{dataset}->{RasterYSize}, 
 		    $self->{GDAL}->{dataset}->{RasterXSize});
 	} elsif (!$self->{GRID}) {
@@ -820,16 +809,13 @@ sub size {
     }
 }
 
-## @method $cell_size(%params)
+## @method $cell_size()
 # 
 # @brief Returns the cell size.
-# @param[in] params Named parameters:
-# - \a of_GDAL=>boolean (optional) Force the method to return the cell
-# size (width, height) of the underlying GDAL raster if there is one.
 # @return Cell size, i.e., the length of the cell edge in raster scale.
 sub cell_size {
     my($self, %o) = @_;
-    if ($self->{GDAL} and $o{of_GDAL}) {
+    if ($self->{GDAL}) {
 	my @t = $self->{GDAL}->{dataset}->GeoTransform;
 	return (CORE::abs($t[1]), CORE::abs($t[5]));
     } elsif (!$self->{GRID}) {
