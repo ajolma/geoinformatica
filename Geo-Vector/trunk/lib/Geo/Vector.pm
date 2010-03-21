@@ -381,6 +381,17 @@ sub driver {
     return 'Memory';
 }
 
+## @method datasource()
+#
+# @brief The datasource of the object.
+# @return The name of the OGR datasource as a string. Returns 'Memory' if the
+# object is not an OGR layer.
+sub data_source {
+    my $self = shift;
+    return $self->{OGR}->{DataSource}->GetName if $self->{OGR}->{DataSource};
+    return 'Memory';
+}
+
 ## @method dump(%parameters)
 #
 # @brief Print the contents of the layer.

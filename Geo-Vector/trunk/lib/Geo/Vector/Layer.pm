@@ -176,16 +176,8 @@ sub features {
 # @param[in] gui A reference to a GUI object, like for example Gtk2::Ex::Geo::Glue.
 # @todo Support for feature layer.
 sub open_properties_dialog {
-    my ( $self, $gui ) = @_;
-    if ( $self->{features} ) {
-	$gui->message("not yet implemented");
-    }
-    elsif ( $self->{OGR}->{Layer} ) {
-	Geo::Vector::Layer::Dialogs::Properties::open($self, $gui);
-    }
-    else {
-	$gui->message("no data in this layer");
-    }
+    my($self, $gui) = @_;
+    Geo::Vector::Layer::Dialogs::Properties::open($self, $gui);
 }
 
 ## @ignore

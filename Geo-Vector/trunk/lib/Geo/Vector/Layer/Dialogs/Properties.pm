@@ -41,14 +41,13 @@ sub open {
     $a = defined $a ? $Geo::Vector::RENDER_AS{$a} : 0;
     $dialog->get_widget('properties_render_as_combobox')->set_active($a);
     
-    my $count = $self->{OGR}->{Layer}->GetFeatureCount();
-    $count .= " (estimated)";
+    my $count = $self->feature_count;
     $dialog->get_widget('properties_feature_count_label')->set_text($count);
     
-    my $ds = $self->{OGR}->{DataSource} if $self->{OGR}->{DataSource};
+    my $ds = $self->data_source;
     my $driver = $self->driver;
     $dialog->get_widget('properties_driver_label')->set_text($driver ? $driver : 'unknown');
-    $dialog->get_widget('properties_data_source_label')->set_text($ds->GetName) if $ds;
+    $dialog->get_widget('properties_data_source_label')->set_text($ds);
     $dialog->get_widget('properties_SQL_label')->set_text($self->{SQL});
     
     $dialog->get_widget('properties_name_entry')->set_text($self->name);
