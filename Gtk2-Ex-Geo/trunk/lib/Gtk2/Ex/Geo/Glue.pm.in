@@ -775,13 +775,13 @@ sub set_layer {
 			 );
 }
 
-## @method Gtk2::Ex::Geo::Layer add_layer($layer, $name, $do_not_zoom_to)
+## @method Gtk2::Ex::Geo::Layer add_layer($object, $name, $do_not_zoom_to)
 # @brief Add a layer to the overlay and the tree store
 #
 # The default behavior is to zoom to the new layer. The layer is
 # upgraded using the upgrade method of the registered layer classes.
 #
-# @param layer The geospatial data object. Must be either an object of
+# @param object A geospatial data object. Must be either an object of
 # a subclass of Gtk2::Ex::Geo::Layer or a data object that is
 # recognized by such. It is the responsibility of the upgrade method
 # of the layer class to upgrade the data object to a layer object.
@@ -790,11 +790,18 @@ sub set_layer {
 # to this layer. Forwarded to Gtk2::Ex::Geo::Overlay::add_layer.
 # @return
 sub add_layer {
-    my($self, $layer, $name, $do_not_zoom_to) = @_;
-    return unless $layer;
+    my($self, $object, $name, $do_not_zoom_to) = @_;
+    return unless $object;
 
+    my $layer;
     for $upgrade (@{$self->{upgrades}}) {
-	last if $upgrade->($layer);
+	$layer = $upgrade->($object);
+	last if $layer;
+    }
+    if ($layer) {
+	$layer = $object if $layer == 1; # backwards compatibility
+    } else {
+	$layer = $object;
     }
 
     return unless isa($layer, 'Gtk2::Ex::Geo::Layer');

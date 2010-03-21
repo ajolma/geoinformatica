@@ -164,6 +164,10 @@ sub fill_color_field_combo {
 	$active = $i if $field->{Name} eq $self->color_field();
 	$i++;
     }
+    if (@fields and !defined($active)) {
+	$active = 0;
+	$self->color_field($fields[0]->{Name});
+    }
     $combo->set_active($active) if defined $active;
 }
 
@@ -191,6 +195,8 @@ sub palette_type_changed {
 	$dialog->get_widget($w)->set_sensitive(0);
     }
     $tv->set_sensitive(0);
+
+    return unless create_colors_treeview($self);
     
     if ($palette_type ne 'Single color') {
 	for my $w (qw/color_field_label color_field_combobox/) {
@@ -231,7 +237,6 @@ sub palette_type_changed {
 	}
 	$tv->set_sensitive(1);
     }
-    create_colors_treeview($self);
 }
 
 ##@ignore
@@ -619,13 +624,11 @@ sub create_colors_treeview {
     
     if ($palette_type eq 'Grayscale' or $palette_type eq 'Rainbow') {
 	put_scale_in_treeview($self);
-	return;
+	return 1;
     }
-
-    my $select = $treeview->get_selection;
-    $select->set_mode('multiple');
-
-    my $model;
+    
+    my $model = $treeview->get_model;
+    $model->clear if $model;
     my $type = $self->{current_coloring_type} = current_coloring_type($self);
     if ($palette_type eq 'Single color') {
 	$model = Gtk2::TreeStore->new(qw/Gtk2::Gdk::Pixbuf Glib::Int Glib::Int Glib::Int Glib::Int/);
@@ -665,7 +668,9 @@ sub create_colors_treeview {
 	$column = Gtk2::TreeViewColumn->new_with_attributes($c, $cell, text => $i++);
 	$treeview->append_column($column);
     }
+    $treeview->get_selection->set_mode('multiple');
     fill_colors_treeview($self);
+    return 1;
 }
 
 ##@ignore
@@ -683,7 +688,7 @@ sub current_coloring_type {
 
 ##@ignore
 sub fill_colors_treeview {
-    my ($self) = @_;
+    my($self) = @_;
 
     my $palette_type = $self->palette_type;
     my $treeview = $self->{colors_dialog}->get_widget('colors_treeview');

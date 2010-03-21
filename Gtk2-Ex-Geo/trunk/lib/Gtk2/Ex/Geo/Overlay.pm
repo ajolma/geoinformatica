@@ -248,7 +248,7 @@ sub zoom_to {
 	my $layer = shift;
 	return unless $self->{layers} and @{$self->{layers}};
 	eval {
-	    @bounds = $layer->world(of_GDAL=>1);
+	    @bounds = $layer->world();
 	};
 	@bounds = (0,0,1,1) unless @bounds;
 	$self->{offset} = [0, 0];
@@ -338,7 +338,7 @@ sub zoom_to_all {
     for my $layer (@{$self->{layers}}) {
 	my @s;
 	eval {
-	    @s = $layer->world(of_GDAL=>1);
+	    @s = $layer->world();
 	};
 	next unless @s;
 	if (@size) {
