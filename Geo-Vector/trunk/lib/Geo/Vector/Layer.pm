@@ -481,7 +481,7 @@ sub render_feature {
 	render_polygon($overlay, $cr, $geometry, 1, \@border, \@color);
     } elsif ($geometry->GetGeometryCount > 0) {
 	for my $i (0..$geometry->GetGeometryCount-1) {
-	    render_feature($overlay, $cr, $feature, $geometry->GetGeometryRef($i));
+	    render_feature($self, $overlay, $cr, $feature, $geometry->GetGeometryRef($i));
 	}
     }
 }

@@ -522,106 +522,6 @@ sub next_feature {
 }
 *get_next = *next_feature;
 
-## @method $buffer(%params)
-#
-# @deprecated
-# @brief Create a new Geo::Vector object, whose features are buffer
-# areas to the original.
-# @param[in] params Named parameters: (see also the named
-# parameters of Geo::Vector::new).
-# - \a distance => float (default is 1.0). The width of the buffer.
-# - \a quad_segs => int (default is 30). The number of segments used to approximate a 90
-# degree (quadrant) of curvature.
-# - \a copy_attributes => true/false (default is false). 
-# - \a driver default is 'Memory'.
-# - \a layer default is 'buffer'.
-# @return The new Geo::Vector object.
-sub buffer {
-    my $self = shift;
-    my %params;
-    if (@_) {
-	if (@_ == 1) {
-	    $params{distance} = shift;
-	} else {
-	    %params = @_ if @_;
-	}
-    }
-    my $w = $params{distance};
-    $w = 1 unless defined $w;
-    my $q = $params{quad_segs};
-    $q = 30 unless defined $q;
-    $params{schema} = $self->schema() if $params{copy_attributes};
-    my $new = Geo::Vector->new(%params);
-    my $out = $new->{OGR}->{Layer};
-    croak "buffer: the resulting layer must be an OGR layer" unless $out;
-    my $defn = $out->GetLayerDefn();
-    $self->init_iterate;
-    while (my $feature = $self->next_feature()) {
-	my $geom = $feature->GetGeometryRef();
-	my $buf = $geom->Buffer($w, $q);
-	$defn = $feature->GetDefnRef unless $out;
-	my $f = Geo::OGR::Feature->new($defn);
-	if ($params{schema}) {
-	    for my $name ($params{schema}->field_names) {
-		next if $name =~ /^\./;
-		$f->SetField($name, $feature->GetField($name));
-	    }
-	}
-	$f->SetGeometry($buf);
-	$out->CreateFeature($f);
-    }
-    #$out->SyncToDisk unless $new->driver eq 'Memory';
-    return $new;
-}
-
-## @method $within($other, %params)
-#
-# @deprecated
-# @brief Return the features from this layer that are within the
-# features of other.
-# @todo Add some optimizations.
-# @return A new Geo::Vector object
-sub within {
-    my $self = shift;
-    my $other = shift;
-    my %params = @_ if @_;
-    $params{schema} = $self->schema();
-    my $new = Geo::Vector->new(%params);
-    my $out = $new->{OGR}->{Layer};
-    croak "within: the resulting layer must be an OGR layer" unless $out;
-    my @c;
-    $other->init_iterate;
-    while (my $feature = $other->next_feature()) {
-	my $geom = $feature->GetGeometry();
-	push @c, $geom;
-    }
-    my $defn = $out->GetLayerDefn();
-    $self->init_iterate;
-    while (my $feature = $self->next_feature()) {
-	my $geom = $feature->GetGeometryRef();
-	my $within = 0;
-	for (@c) {
-	    if ($geom->Within($_)) {
-		$within = 1;
-		last;
-	    }
-	}
-	next unless $within;
-	$defn = $feature->GetDefnRef;
-	my $f = Geo::OGR::Feature->new($defn);
-	if ($params{schema}) {
-	    for my $name ($params{schema}->field_names) {
-		next if $name =~ /^\./;
-		$f->SetField($name, $feature->GetField($name));
-	    }
-	}
-	$f->SetGeometry($geom);
-	$out->CreateFeature($f);
-    }
-    #$out->SyncToDisk unless $new->driver eq 'Memory';
-    return $new;
-}
-
 ## @method $add($other, %params)
 #
 # @brief Add a feature or features from another layer to this layer.
@@ -633,18 +533,17 @@ sub within {
 sub add {
     my $self = shift;
     my $other = shift;
-    #print STDERR "add from $other->{NAME} to $self->{NAME}\n";
     my %params = @_ if @_;
     if (defined wantarray) {
 	$params{schema} = $self->schema();
 	$self = Geo::Vector->new(%params);
     }
-    my $dst_layer = $self->{OGR}->{Layer} unless $self->{features};
-    my $dst_defn;
     my %dst_schema;
     my $dst_geometry_type;
-    if ($dst_layer) {
-	$dst_defn = $dst_layer->GetLayerDefn();
+    if ($self->{features}) {
+	$dst_geometry_type = 'Unknown';
+    } else {
+	my $dst_defn = $self->{OGR}->{Layer}->GetLayerDefn();
 	$dst_geometry_type = $dst_defn->GeometryType;
 	$dst_geometry_type =~ s/25D$//;
 	my $n = $dst_defn->GetFieldCount();
@@ -652,8 +551,6 @@ sub add {
 	    my $fd   = $dst_defn->GetFieldDefn($i);
 	    $dst_schema{$fd->GetName} = $fd->GetType;
 	}
-    } else {
-	$dst_geometry_type = 'Unknown';
     }
     init_iterate($other, %params);
     while (my $feature = next_feature($other)) {
@@ -664,15 +561,11 @@ sub add {
 	    $dst_geometry_type =~ /$geom->GeometryType/;
 
 	my $f = $self->feature();
-	my $src_defn = $feature->GetDefnRef;
-	my $n = $src_defn->GetFieldCount();
-	for my $i ( 0 .. $n - 1 ) {
-	    my $fd   = $src_defn->GetFieldDefn($i);
-	    my $name = $fd->GetName;
-	    my $type = $fd->GetType;
-	    if ($dst_defn) {
+	for my $field ( @{$feature->Schema->{Fields}} ) {
+	    my $name = $field->{Name};
+	    if (%dst_schema) {
 		# copy only those attributes which match
-		next unless exists($dst_schema{$name}) and $dst_schema{$name} == $type;
+		next unless exists($dst_schema{$name}) and $dst_schema{$name} == $field->{Type};
 	    }
 	    $f->SetField($name, $feature->GetField($name));
 	}
@@ -684,8 +577,68 @@ sub add {
 	$f->Geometry($geom);
 	$self->feature($f);
     }
-    #$dst_layer->SyncToDisk unless $self->driver eq 'Memory';
     return $self if defined wantarray;
+}
+
+## @method Geo::Vector copy(%params)
+#
+# @brief Copy selected or all features from the layer into a new layer.
+#
+# @param[in] params is a list of named parameters. They are forwarded
+# to constructor (new) and init_iterate. If no value is given the
+# defaults are taken from this layer.
+# @return A Geo::Vector object.
+sub copy {
+    my($self, %params) = @_;
+    $params{data_source} = $self->{data_source} unless $params{data_source};
+    $params{driver} = $self->driver unless $params{driver};
+    $params{schema} = $self->schema unless $params{schema};
+    my $copy = Geo::Vector->new(%params);
+    my $fd = Geo::OGR::FeatureDefn->create($params{schema});
+    my $i = 0;
+    $self->init_iterate(%params);
+    while (my $f = $self->next_feature()) {
+	
+	my $geometry = $f->GetGeometryRef();
+
+	# transformation if that is wished
+	if ($params{transformation}) {
+	    my $points = $geometry->Points;
+	    transform_points($points, $params{transformation});
+	    $geometry->Points($points);
+	}
+	
+	# make copies of the features and add them to copy
+	
+	my $feature = Geo::OGR::Feature->new($fd);
+	$feature->SetGeometry($geometry); # makes a copy
+	
+	for my $i (0..$fd->GetFieldCount-1) {
+	    my $value = $f->GetField($i);
+	    $feature->SetField($i, $value) if defined $value;
+	}
+
+	$copy->feature($feature);
+	
+    }
+    $copy->{OGR}->{Layer}->SyncToDisk if $copy->{OGR};
+    return $copy;
+}
+
+## @ignore
+sub transform_points {
+    my($points, $ct) = @_;
+    unless (ref($points->[0])) { # single point [x,y,z]
+	@$points = $ct->TransformPoint(@$points);
+	return;
+    }
+    $ct->TransformPoints($points), return 
+	unless ref($points->[0]->[0]); # list of points [[x,y,z],[x,y,z],...]
+
+    # list of list of points [[[x,y,z],[x,y,z],...],...]
+    for my $p (@$points) {
+	transform_points($p, $ct);
+    }
 }
 
 ## @method $feature_count()
@@ -1118,6 +1071,14 @@ sub features {
 	{
 	    my $geom = $params{that_contain};
 	    my $e = $geom->GetEnvelope;
+	    if ($e->[0] == $e->[1]) {
+		$e->[0] -= $e->[0]/100;
+		$e->[1] += $e->[1]/100;
+	    }
+	    if ($e->[2] == $e->[3]) {
+		$e->[2] -= $e->[2]/100;
+		$e->[3] += $e->[3]/100;
+	    }
 	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
 	    $self->init_iterate(%options);
 	    while ( my $f = $self->next_feature() ) {
@@ -1148,6 +1109,14 @@ sub features {
 	{
 	    my $geom = $params{that_intersect};
 	    my $e = $geom->GetEnvelope;
+	    if ($e->[0] == $e->[1]) {
+		$e->[0] -= $e->[0]/100;
+		$e->[1] += $e->[1]/100;
+	    }
+	    if ($e->[2] == $e->[3]) {
+		$e->[2] -= $e->[2]/100;
+		$e->[3] += $e->[3]/100;
+	    }
 	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
 	    $self->init_iterate(%options);
 	    while ( my $f = $self->next_feature() ) {
@@ -1274,67 +1243,6 @@ sub world {
     $extent->[1] = $extent->[0] + 1 if $extent->[1] <= $extent->[0];
     $extent->[3] = $extent->[2] + 1 if $extent->[3] <= $extent->[2];
     return ( $extent->[0], $extent->[2], $extent->[1], $extent->[3] );
-}
-
-## @method Geo::Vector copy(%params)
-#
-# @brief Copy selected or all features from the layer into a new layer.
-#
-# @param[in] params is a list of named parameters. They are forwarded
-# to constructor (new) and init_iterate. If no value is given the
-# defaults are taken from this layer.
-# @return A Geo::Vector object.
-sub copy {
-    my($self, %params) = @_;
-    $params{data_source} = $self->{data_source} unless $params{data_source};
-    $params{driver} = $self->driver unless $params{driver};
-    $params{schema} = $self->schema unless $params{schema};
-    my $copy = Geo::Vector->new(%params);
-    my $fd = Geo::OGR::FeatureDefn->create($params{schema});
-    my $i = 0;
-    $self->init_iterate(%params);
-    while (my $f = $self->next_feature()) {
-	
-	my $geometry = $f->GetGeometryRef();
-
-	# transformation if that is wished
-	if ($params{transformation}) {
-	    my $points = $geometry->Points;
-	    transform_points($points, $params{transformation});
-	    $geometry->Points($points);
-	}
-	
-	# make copies of the features and add them to copy
-	
-	my $feature = Geo::OGR::Feature->new($fd);
-	$feature->SetGeometry($geometry); # makes a copy
-	
-	for my $i (0..$fd->GetFieldCount-1) {
-	    my $value = $f->GetField($i);
-	    $feature->SetField($i, $value) if defined $value;
-	}
-
-	$copy->feature($feature);
-	
-    }
-    $copy->{OGR}->{Layer}->SyncToDisk if $copy->{OGR};
-    return $copy;
-}
-
-## @ignore
-sub transform_points {
-    my($points, $ct) = @_;
-    unless (ref($points->[0])) { # single point [x,y,z]
-	@$points = $ct->TransformPoint(@$points);
-	return;
-    }
-    $ct->TransformPoints($points), return 
-	unless ref($points->[0]->[0]); # list of points [[x,y,z],[x,y,z],...]
-
-    # list of list of points [[[x,y,z],[x,y,z],...],...]
-    for my $p (@$points) {
-	transform_points($p, $ct);
-    }
 }
 
 ## @method Geo::Raster rasterize(%params)

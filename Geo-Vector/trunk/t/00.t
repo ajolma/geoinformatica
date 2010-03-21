@@ -118,7 +118,7 @@ $box->add_feature(Geometry=>'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
 $points = Geo::Vector->new();
 $points->add_feature(Geometry=>'POINT(1 1)');
 $points->add_feature(Geometry=>'POINT(20 1)');
-$within = $points->within($box)->features;
+$within = $points->features( that_are_within => $box->geometry(0) );
 ok($within->[0]->GetGeometry->ExportToWkt eq 'POINT (1 1)', 'Within, WKT');
 
 $g = Geo::OGR::Geometry->create(WKT => 'POINT (1 1)');
