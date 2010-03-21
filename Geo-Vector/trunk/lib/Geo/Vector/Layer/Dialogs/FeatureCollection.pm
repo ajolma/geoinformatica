@@ -55,7 +55,7 @@ sub open {
     }
 
     my $i = 0;
-    for my $column ('index') {
+    for my $column ('FID') {
 	my $cell = Gtk2::CellRendererText->new;
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$treeview->append_column($col);
