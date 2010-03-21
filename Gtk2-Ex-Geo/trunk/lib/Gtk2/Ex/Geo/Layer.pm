@@ -290,7 +290,12 @@ sub name {
 # @return Current alpha value, if no parameter is given.
 sub alpha {
     my($self, $alpha) = @_;
-    defined $alpha ? $self->{ALPHA} = $alpha : $self->{ALPHA};
+    if (defined $alpha) {
+	$alpha = 0 if $alpha < 0;
+	$alpha = 255 if $alpha > 255;
+	$self->{ALPHA} = $alpha;
+    }
+    $self->{ALPHA};
 }
 
 ## @method visible($visible)

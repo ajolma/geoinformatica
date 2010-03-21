@@ -71,6 +71,23 @@ sub new {
     my $i = 0;
     foreach my $column (@columns) {
 	my $cell = Gtk2::CellRendererText->new;
+	if ($column eq 'a') {
+	    $cell->set(editable => 1);
+	    $cell->signal_connect(edited => sub {
+		my($cell, $path, $new_value, $data) = @_;
+		my($self, $column) = @$data;
+		my $layer = $self->{overlay}->get_layer_by_index($path);
+		return unless $layer;
+		if ($column eq 'name') {
+		    $layer->name($new_value) unless $self->{overlay}->get_layer_by_name($new_value);
+		} else {
+		    $layer->alpha($new_value);
+		    $self->update;
+		    $self->{overlay}->render;
+		}
+				  }
+				  , [$self, $column]);
+	}
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$self->{tree_view}->append_column($col);
     }
@@ -536,24 +553,23 @@ sub overlay_menu {
 ## @fn layer_menu()
 # @brief The callback for button_press_event in the layer list tree view.
 sub layer_menu {
-    my($tv, $event, $self) = @_;
+    my($tree_view, $event, $self) = @_;
 
     my $layer;
     my @layers;
-    my $column = '';
 
-    my $selection = $self->{tree_view}->get_selection;
+    my $selection = $tree_view->get_selection;
     my @rows = $selection->get_selected_rows;
+    my @res = $tree_view->get_path_at_pos($event->x, $event->y);
+    return unless defined $res[0];
+    my $index = $res[0] ? $res[0]->to_string : '';
+    my $column = $res[1] ? $res[1]->get_title : '';
+    my $path = Gtk2::TreePath->new($index);
 
     if (@rows < 2) {
-	my @res = $self->{tree_view}->get_path_at_pos($event->x, $event->y);
-	my $s = $res[0] ? $res[0]->to_string : '';
-	#print STDERR "res=@res, $s\n";
-	return unless defined $res[0];
-	$self->{tree_view}->set_cursor(Gtk2::TreePath->new($s));
-	$layer = $self->{overlay}->get_layer_by_index($s);
+	$tree_view->set_cursor($path);
+	$layer = $self->{overlay}->get_layer_by_index($index);
 	return unless $layer;
-	$column = $res[1]->get_title if $res[1];
     } else {
 	for my $r (@rows) {
 	    $layer = $self->{overlay}->get_layer_by_index($r->to_string);
@@ -646,9 +662,9 @@ sub layer_menu {
 	$self->update;
 	$self->{overlay}->render;
 
-    } else {
+    } elsif ($column =~ /^t/) {
 
-	$self->{tree_view}->columns_autosize();
+	$tree_view->columns_autosize();
 
     }
 
