@@ -171,7 +171,7 @@ sub new {
 		      $layer->select();
 		  }
 		  $overlay->update_image;
-		  $layer->open_features_dialog($self) if $layer->dialog_visible('features_dialog');
+		  $layer->open_features_dialog($self, 1);
 	      }
 	  }, $self);
     
