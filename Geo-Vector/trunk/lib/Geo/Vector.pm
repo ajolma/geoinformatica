@@ -445,33 +445,42 @@ sub dump_geom {
 }
 
 ## @method init_iterate(%options)
+# @brief Reset reading features from the object iteratively.
+#
+# For OGR layers uses GDAL filtering. Only filter_rect is implemented
+# for feature collection and filtering is only preliminary, based on
+# envelopes.
+#
 # @param options Named parameters, all are optional.
 # - \a selected_features => reference to a list of features, which to
 # iterate through.
-# - \a filter => a spatial filter
+# - \a filter => a spatial filter (geometry)
 # - \a filter_rect => reference to an array defining a spatial
 # rectangle filter (min_x, min_y, max_x, max_y)
-#
-# @todo filter for feature collections
-# @brief Reset reading features from the object iteratively.
 sub init_iterate {
     my $self = shift;
     return unless isa($self, 'Geo::Vector');
     my %options = @_ if @_;
+    if ($options{filter_rect}) {
+	$self->{_filter} = Geo::OGR::Geometry->create(
+	    GeometryType => 'Polygon',
+	    Points => 
+	    [[[$options{filter_rect}->[0], $options{filter_rect}->[1]],
+	      [$options{filter_rect}->[0], $options{filter_rect}->[3]],
+	      [$options{filter_rect}->[2], $options{filter_rect}->[3]],
+	      [$options{filter_rect}->[2], $options{filter_rect}->[1]],
+	      [$options{filter_rect}->[0], $options{filter_rect}->[1]]]]);
+    } elsif ($options{filter}) {
+	$self->{_filter} = $options{filter};
+    }
     if ($options{selected_features}) {
 	$self->{_features} = $options{selected_features};
 	$self->{_cursor} = 0;
-	$self->{_filter_rect} = $options{filter_rect};
     } elsif ($self->{features}) {
-	$self->{_filter_rect} = $options{filter_rect};
     } else {
-	if ( exists $options{filter} ) {
-	    $self->{OGR}->{Layer}->SetSpatialFilter( $options{filter} );
-	}
-	elsif ( exists $options{filter_rect} ) {
-	    $self->{OGR}->{Layer}->SetSpatialFilterRect( @{ $options{filter_rect} } );
-	}
-	else {
+	if ( exists $self->{_filter} ) {
+	    $self->{OGR}->{Layer}->SetSpatialFilter( $self->{_filter} );
+	} else {
 	    $self->{OGR}->{Layer}->SetSpatialFilter(undef);
 	}
 	$self->{OGR}->{Layer}->ResetReading();
@@ -481,6 +490,7 @@ sub init_iterate {
 ## @method next_feature()
 #
 # @brief Return a feature iteratively or undef if no more features. 
+#
 sub next_feature {
     my $self = shift;
     return $self unless isa($self, 'Geo::Vector');
@@ -489,36 +499,32 @@ sub next_feature {
 	while (1) {
 	    (undef, $f) = each %{$self->{features}};
 	    last unless $f;
-	    last unless $self->{_filter_rect};
-	    my $r = $self->{_filter_rect};
-	    my $e = $f->Geometry->GetEnvelope(); # [$minx, $maxx, $miny, $maxy]
-	    last if 
-		$e->[0] <= $r->[2] and $e->[1] >= $r->[0] and
-		$e->[2] <= $r->[3] and $e->[3] >= $r->[1];
+	    last unless $self->{_filter};
+	    last if $self->{_filter}->Intersect($f->Geometry);
 	}
 	return $f if $f;
+	delete $self->{_filter};
 	return;
-    }
-    if ($self->{_features}) {
+    } elsif ($self->{_features}) {
 	my $f;
 	while (1) {
+	    $f = undef;
 	    last if $self->{_cursor} > $#{$self->{_features}};
 	    $f = $self->{_features}->[$self->{_cursor}++];
-	    last unless $self->{_filter_rect};
-	    my $r = $self->{_filter_rect};
-	    my $e = $f->Geometry->GetEnvelope(); # [$minx, $maxx, $miny, $maxy]
-	    last if 
-		$e->[0] <= $r->[2] and $e->[1] >= $r->[0] and
-		$e->[2] <= $r->[3] and $e->[3] >= $r->[1];
+	    last unless $self->{_filter};
+	    last if $self->{_filter}->Intersect($f->Geometry);
 	}
 	return $f if $f;
 	delete $self->{_cursor};
 	delete $self->{_features};
+	delete $self->{_filter};
 	return;
+    } else {
+	my $f = $self->{OGR}->{Layer}->GetNextFeature();
+	return $f if $f;
+	delete $self->{_filter};
+	$self->{OGR}->{Layer}->SetSpatialFilter(undef);
     }
-    my $f = $self->{OGR}->{Layer}->GetNextFeature();
-    $self->{OGR}->{Layer}->SetSpatialFilter(undef) unless $f;
-    return $f;
 }
 *get_next = *next_feature;
 
@@ -1069,21 +1075,8 @@ sub features {
 
 	if ( exists $params{that_contain} ) 
 	{
-	    my $geom = $params{that_contain};
-	    my $e = $geom->GetEnvelope;
-	    if ($e->[0] == $e->[1]) {
-		$e->[0] -= $e->[0]/100;
-		$e->[1] += $e->[1]/100;
-	    }
-	    if ($e->[2] == $e->[3]) {
-		$e->[2] -= $e->[2]/100;
-		$e->[3] += $e->[3]/100;
-	    }
-	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
-	    $self->init_iterate(%options);
+	    $self->init_iterate( filter => $params{that_contain} );
 	    while ( my $f = $self->next_feature() ) {
-		my $g = $f->GetGeometryRef;
-		next unless _within($geom, $g);
 		$i++;
 		next if $i < $from;
 		push @features, $f;
@@ -1092,13 +1085,8 @@ sub features {
 	}
 	elsif ( exists $params{that_are_within} ) 
 	{
-	    my $geom = $params{that_are_within};
-	    my $e = $geom->GetEnvelope;
-	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
-	    $self->init_iterate(%options);
+	    $self->init_iterate( filter => $params{that_are_within} );
 	    while ( my $f = $self->next_feature() ) {
-		my $g = $f->GetGeometryRef;
-		next unless _within($g, $geom);
 		$i++;
 		next if $i < $from;
 		push @features, $f;
@@ -1107,21 +1095,8 @@ sub features {
 	}
 	elsif ( exists $params{that_intersect} ) 
 	{
-	    my $geom = $params{that_intersect};
-	    my $e = $geom->GetEnvelope;
-	    if ($e->[0] == $e->[1]) {
-		$e->[0] -= $e->[0]/100;
-		$e->[1] += $e->[1]/100;
-	    }
-	    if ($e->[2] == $e->[3]) {
-		$e->[2] -= $e->[2]/100;
-		$e->[3] += $e->[3]/100;
-	    }
-	    my %options = ( filter_rect => [$e->[0], $e->[2], $e->[1], $e->[3]] );
-	    $self->init_iterate(%options);
+	    $self->init_iterate( filter => $params{that_intersect} );
 	    while ( my $f = $self->next_feature() ) {
-		my $g = $f->GetGeometryRef;
-		next unless _intersect($g, $geom);
 		$i++;
 		next if $i < $from;
 		push @features, $f;
@@ -1141,50 +1116,6 @@ sub features {
 	}
     }
     return wantarray ? (\@features, $is_all) : \@features;
-}
-
-## @ignore
-sub _within {
-    my($a, $b) = @_;
-    if (($a->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
-	my $w = 1;
-	for my $i (0..$a->GetGeometryCount()-1) {
-	    $w = $a->GetGeometryRef($i)->Within($b);
-	    last unless $w;
-	}
-	return $w;
-    } elsif (($b->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
-	my $w = 0;
-	for my $i (0..$b->GetGeometryCount()-1) {
-	    $w = $a->Within($b->GetGeometryRef($i));
-	    last if $w;
-	}
-	return $w;
-    } else {
-	return $a->Within($b);
-    }
-}
-
-## @ignore
-sub _intersect {
-    my($a, $b) = @_;
-    if (($a->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
-	my $w = 1;
-	for my $i (0..$a->GetGeometryCount()-1) {
-	    $w = $a->GetGeometryRef($i)->Intersect($b);
-	    last unless $w;
-	}
-	return $w;
-    } elsif (($b->GetGeometryType & ~0x80000000) == $Geo::OGR::wkbGeometryCollection) {
-	my $w = 0;
-	for my $i (0..$b->GetGeometryCount()-1) {
-	    $w = $a->Intersect($b->GetGeometryRef($i));
-	    last if $w;
-	}
-	return $w;
-    } else {
-	return $a->Intersect($b);
-    }
 }
 
 ## @method @world($FID)

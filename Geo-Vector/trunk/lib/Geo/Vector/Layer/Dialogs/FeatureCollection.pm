@@ -39,15 +39,35 @@ sub open {
 	 }	 
 	);
     
-    if ($boot) {	
-	my $selection = $dialog->get_widget('feature_collection_treeview')->get_selection;
+    if ($boot) {
+	my $treeview = $dialog->get_widget('feature_collection_treeview');
+	my $model = Gtk2::TreeStore->new('Glib::Int');
+	$treeview->set_model($model);
+	my $i = 0;
+	for my $column ('FID') {
+	    my $cell = Gtk2::CellRendererText->new;
+	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	    $col->set_clickable(1);
+	    $col->signal_connect(clicked => sub {
+		shift;
+		my($self, $gui) = @{$_[0]};
+		fill_features_table(undef, [$self, $gui]);
+				 }, [$self, $gui]);
+	    $treeview->append_column($col);
+	}
+	my $selection = $treeview->get_selection;
 	$selection->set_mode('multiple');
 	$selection->signal_connect(changed => \&feature_activated, [$self, $gui]);
     }
 
-    my $treeview = $dialog->get_widget('feature_collection_treeview');
+    fill_features_table(undef, [$self, $gui]);
 
-    my $model = Gtk2::TreeStore->new('Glib::Int');
+    my $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
+
+    my @columns = ('Field', 'Value');
+    my @coltypes = ('Glib::String', 'Glib::String');
+
+    my $model = Gtk2::TreeStore->new(@coltypes);
     $treeview->set_model($model);
 
     for ($treeview->get_columns) {
@@ -55,36 +75,6 @@ sub open {
     }
 
     my $i = 0;
-    for my $column ('FID') {
-	my $cell = Gtk2::CellRendererText->new;
-	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
-	$treeview->append_column($col);
-    }
-
-    for ($treeview->get_columns) {
-	$_->set_clickable(1);
-	$_->signal_connect(clicked => sub {
-	    shift;
-	    my($self, $gui) = @{$_[0]};
-	    fill_features_table(undef, [$self, $gui]);
-	}, [$self, $gui]);
-    }
-
-    fill_features_table(undef, [$self, $gui]);
-
-    $treeview = $dialog->get_widget('feature_collection_attributes_treeview');
-
-    my @columns = ('Field', 'Value');
-    my @coltypes = ('Glib::String', 'Glib::String');
-
-    $model = Gtk2::TreeStore->new(@coltypes);
-    $treeview->set_model($model);
-
-    for ($treeview->get_columns) {
-	$treeview->remove_column($_);
-    }
-
-    $i = 0;
     foreach my $column (@columns) {
 	my $cell = Gtk2::CellRendererText->new;
 	#if ($column eq 'Value') {
@@ -325,11 +315,12 @@ sub zoom_to_selected_features {
 sub fill_features_table {
     shift;
     my($self, $gui) = @{$_[0]};
-
     my $dialog = $self->{$DIALOG};
 
     my $from = $dialog->get_widget('feature_collection_from_spinbutton')->get_value_as_int;
     my $count = $dialog->get_widget('feature_collection_max_spinbutton')->get_value_as_int;
+
+    $self->{_not_a_click} = 1;
 
     my $treeview = $dialog->get_widget('feature_collection_treeview');
     my $selection = $treeview->get_selection;
@@ -357,6 +348,7 @@ sub fill_features_table {
 	$model->set($iter, 0, $fid);
 	$selection->unselect_iter($iter);
     }
+    delete $self->{_not_a_click};
     
 }
 
@@ -364,39 +356,37 @@ sub fill_features_table {
 sub feature_activated {
     my $selection = shift;
     my($self, $gui) = @{$_[0]};
-
-    my $dialog = $self->{$DIALOG};
-    my $model = $dialog->get_widget('feature_collection_attributes_treeview')->get_model;
-    return unless $model;
-    $model->clear;
+    return if $self->{_not_a_click};
 
     my $ids = get_selected_from_selection($selection);
     my @ids = keys %$ids;
-    return unless @ids == 1;
 
     my $features = $self->features(with_id=>[@ids]);
-    return unless $features and @$features == 1;
     $self->selected_features($features);
 
-    my $row = $features->[0]->Row;
-    my $g = $row->{Geometry};
-    my @recs = ( # [ 0, 'FID', 1, $row->{FID} ], 
-		 [ 0, 'Geometry type', 1, $g ? $g->GeometryType : '' ],
-		 [ 0, 'Class', 1, $row->{class} ], 
-	);
-    for (sort {$a cmp $b} keys %$row) {
-	next if /^FID/;
-	next if /^Geometry/;
-	next if /^class/;
-	push @recs, [ 0, $_, 1, $row->{$_} ];
-    }
-    push @recs, [ 0, 'add field', 1, '' ];
+    if ($features and @$features == 1) {
+	my $dialog = $self->{$DIALOG};
+	my $model = $dialog->get_widget('feature_collection_attributes_treeview')->get_model;
+	$model->clear;
+
+	my $row = $features->[0]->Row;
+	my $g = $row->{Geometry};
+	my @recs = ( # [ 0, 'FID', 1, $row->{FID} ], 
+		     [ 0, 'Geometry type', 1, $g ? $g->GeometryType : '' ],
+		     [ 0, 'Class', 1, $row->{class} ], 
+	    );
+	for (sort {$a cmp $b} keys %$row) {
+	    next if /^FID/;
+	    next if /^Geometry/;
+	    next if /^class/;
+	    push @recs, [ 0, $_, 1, $row->{$_} ];
+	}
+	push @recs, [ 0, 'add field', 1, '' ];
     
-    for my $rec (@recs) {
-	
-	my $iter = $model->insert (undef, 999999);
-	$model->set ($iter, @$rec);
-	
+	for my $rec (@recs) {
+	    my $iter = $model->insert (undef, 999999);
+	    $model->set ($iter, @$rec);
+	}
     }
 
     $gui->{overlay}->update_image(
