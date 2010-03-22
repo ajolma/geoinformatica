@@ -101,7 +101,7 @@ sub new {
 			   menu_item_setup => $menu_item_setup,
 			   rubberband_mode => 'zoom',
 			   rubberband_geometry => 'rect',
-			   selecting => 'that_are_within',
+			   selecting => 'that_intersect',
 	);
     
     for my $key (keys %params) {

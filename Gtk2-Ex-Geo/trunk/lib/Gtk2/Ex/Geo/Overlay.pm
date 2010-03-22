@@ -547,6 +547,7 @@ sub render_geometry {
 # @brief Updates the image on the screen to show the changes in pixmap.
 sub update_image {
     my($self, $annotations, $user_param) = @_;
+    return unless $self->{pixbuf};
     $self->{image}->set_from_pixbuf(undef);
     $self->{pixmap} = $self->{pixbuf}->render_pixmap_and_mask(0);
     my $gc = Gtk2::Gdk::GC->new($self->{pixmap});
