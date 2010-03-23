@@ -178,11 +178,12 @@ sub fill_features_table {
     my $count = $dialog->get_widget('max_features_spinbutton')->get_value_as_int;
     my $limit = $dialog->get_widget('features_limit_checkbutton')->get_active;
 
-    my $schema = $self->schema;
+    $self->{_not_a_click} = 1;
+    
     my $model = $treeview->get_model;
-
     $model->clear;
 
+    my $schema = $self->schema;
     my @fnames = $schema->fields;
 
     my $features = $self->selected_features;
@@ -202,6 +203,7 @@ sub fill_features_table {
 	add_features($self, $treeview, $model, \@fnames, $features, 0, \%added);
     }
     $dialog->get_widget('all_features_label')->set_sensitive($is_all);
+    delete $self->{_not_a_click};
 }
 
 ##@ignore
@@ -267,6 +269,7 @@ sub set_selected_features {
 sub feature_activated {
     my $selection = shift;
     my($self, $gui) = @{$_[0]};
+    return if $self->{_not_a_click};
 
     my $features = get_selected_from_selection($selection);
     $features = $self->features(with_id=>[keys %$features]);

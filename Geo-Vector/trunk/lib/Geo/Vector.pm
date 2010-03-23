@@ -520,7 +520,14 @@ sub next_feature {
 	delete $self->{_filter};
 	return;
     } else {
-	my $f = $self->{OGR}->{Layer}->GetNextFeature();
+	my $f;
+	while (1) {
+	    $f = $self->{OGR}->{Layer}->GetNextFeature();
+	    last unless $f;
+	    last unless $self->{_filter};
+	    # can't trust that all OGR drivers are good filterers
+	    last if $self->{_filter}->Intersect($f->Geometry);
+	}
 	return $f if $f;
 	delete $self->{_filter};
 	$self->{OGR}->{Layer}->SetSpatialFilter(undef);
@@ -569,9 +576,9 @@ sub add {
 	my $f = $self->feature();
 	for my $field ( @{$feature->Schema->{Fields}} ) {
 	    my $name = $field->{Name};
-	    if (%dst_schema) {
+	    unless ($self->{features}) {
 		# copy only those attributes which match
-		next unless exists($dst_schema{$name}) and $dst_schema{$name} == $field->{Type};
+		next unless exists($dst_schema{$name}) and $dst_schema{$name} eq $field->{Type};
 	    }
 	    $f->SetField($name, $feature->GetField($name));
 	}
