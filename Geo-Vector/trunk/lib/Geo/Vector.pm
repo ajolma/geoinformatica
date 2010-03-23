@@ -946,6 +946,7 @@ sub geometry {
 	    $fid = 0;
 	    while (exists $self->{features}{$fid}) {$fid++}
 	    $self->{features}{$fid} = $feature;
+	    $feature->{FID} = $fid;
 	} else {
 	    $self->{OGR}->{Layer}->CreateFeature($feature);
 	    $self->{OGR}->{Layer}->SyncToDisk;
