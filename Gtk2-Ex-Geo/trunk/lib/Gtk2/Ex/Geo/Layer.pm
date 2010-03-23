@@ -652,16 +652,16 @@ sub color_table {
 	    my @tokens = split /\s+/;
 	    next unless @tokens > 3;
 	    $tokens[4] = 255 unless defined $tokens[4];
-	    print STDERR "@tokens\n";
+	    #print STDERR "@tokens\n";
 	    for (@tokens[1..4]) {
 		$_ =~ s/\D//g;
 	    }
-	    print STDERR "@tokens\n";
+	    #print STDERR "@tokens\n";
 	    for (@tokens[1..4]) {
 		$_ = 0 if $_ < 0;
 		$_ = 255 if $_ > 255;
 	    }
-	    print STDERR "@tokens\n";
+	    #print STDERR "@tokens\n";
 	    push @{$self->{COLOR_TABLE}}, \@tokens;
 	}
 	$fh->close;
