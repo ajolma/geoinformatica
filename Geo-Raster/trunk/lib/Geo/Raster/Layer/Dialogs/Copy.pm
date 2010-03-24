@@ -7,7 +7,7 @@ use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
-use Geo::Raster::Layer qw /:all/;
+use Geo::Raster::Layer;
 
 ## @ignore
 # copy dialog
