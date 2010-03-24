@@ -315,7 +315,8 @@ sub fill_directory_treeview {
     for (reverse @dirs) {
 	next if /^\s*$/;
 	my $filename = Glib->filename_to_unicode($_);
-	my $label = Gtk2::Label->new($filename) if Gtk2->CHECK_VERSION(2, 18, 0);
+	#my $label = Gtk2::Label->new($filename) if Gtk2->CHECK_VERSION(2, 18, 0);
+	my $label = Gtk2::Label->new($filename);
 	my $b = Gtk2::ToolButton->new($label, $filename);
 	$b->signal_connect(
 	    clicked => sub {
