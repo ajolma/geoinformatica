@@ -34,14 +34,15 @@ $EDIT_SNAP_DISTANCE = 5;
 use Glib::Object::Subclass
     Gtk2::ScrolledWindow::,
     signals => {
-	update_layers => {}, # sent just before the layers are rendered
-	new_selection => {}, # sent after attribute {selection} has changed
-	zoomed_in => {},     # deprecated
-	extent_changed => {},# deprecated
-	motion_notify => {}, # the mouse has a new location on the map
-	map_updated => {},   # deprecated
-	pixmap_ready => {},  # sent just after pixmap is ready, but selection and drawing 
-	                     # haven't been rendered, connect to this for annotations
+	update_layers => {},  # sent just before the layers are rendered
+	new_selection => {},  # sent after the user has changed the selection
+	drawing_changed => {},# sent after the user has changed the drawing
+	zoomed_in => {},      # deprecated
+	extent_changed => {}, # deprecated
+	motion_notify => {},  # the mouse has a new location on the map
+	map_updated => {},    # deprecated
+	pixmap_ready => {},   # sent just after pixmap is ready, but selection and drawing 
+	                      # haven't been rendered, connect to this for annotations
     },
     properties => 
     [
@@ -730,6 +731,7 @@ sub key_press_event {
 	    my $d = pop @r;
 	    if (@r and $d/$self->{pixel_size} < $EDIT_SNAP_DISTANCE) {
 		$self->{drawing}->AddVertex(@r);
+		$self->signal_emit('drawing-changed');
 		$self->update_image;
 	    }
 	}
@@ -744,6 +746,7 @@ sub key_press_event {
 	    my $d = pop @r;
 	    if (@r and $d/$self->{pixel_size} < $EDIT_SNAP_DISTANCE) {
 		$self->{drawing}->DeleteVertex(@r);
+		$self->signal_emit('drawing-changed');
 		$self->update_image;
 	    }	    
 	}
@@ -804,6 +807,7 @@ sub add_to_selection {
 	$self->{$store} = $geom;
     }
     $self->signal_emit('new_selection') if $self->{rubberband_mode} eq 'select';
+    $self->signal_emit('drawing-changed') if $self->{rubberband_mode} eq 'drawing';
 }
 
 ## @method button_press_event()
@@ -818,7 +822,7 @@ sub button_press_event {
 
     if ($event->button == 3 and $self->{menu}) {
 
-	$self->delete_rubberband;
+	$self->delete_rubberband if $self->{path};
 	my $menu = Gtk2::Menu->new;
 	for (my $i =0; $i < @{$self->{menu}}; $i+=2) {
 	    my $name = $self->{menu_item_setup}->($self->{menu}->[$i], $self);
@@ -860,6 +864,7 @@ sub button_press_event {
 		$self->signal_emit('new_selection');
 	    } elsif ($self->{rubberband_mode} eq 'draw') {
 		delete $self->{drawing};
+		$self->signal_emit('drawing-changed');
 	    }
 	}
 
