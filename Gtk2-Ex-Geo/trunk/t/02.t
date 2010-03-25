@@ -16,7 +16,42 @@ Gtk2->init;
 #Glib->install_exception_handler(\&Gtk2::Ex::Geo::exception_handler);
 
 {
-    package Gtk2::Ex::Geo::Test;
+    package Gtk2::Ex::Geo::Test1;
+    our @ISA = qw(Gtk2::Ex::Geo::Layer);
+    sub new {
+	my $self = Gtk2::Ex::Geo::Layer::new(@_);
+	return $self;
+    }
+    sub world {
+	return (0, 0, 100, 100);
+    }
+    sub render {
+	my($self, $pb, $cr, $overlay, $viewport) = @_;
+    }
+    sub got_focus {
+	my($self, $gui) = @_;
+	print STDERR $self->name," got focus\n";
+	$self->{_tag} = $gui->{overlay}->signal_connect(drawing_changed => \&drawing_changed, $self);
+    }
+    sub lost_focus {
+	my($self, $gui) = @_;
+	print STDERR $self->name," lost focus\n";
+	$gui->{overlay}->signal_handler_disconnect($self->{_tag}) if $self->{_tag};
+    }
+    sub drawing_changed {
+	my(undef, $self) = @_;
+	print STDERR $self->name," was notified of a change in drawing\n";
+    }
+    sub select {
+	my($self, %params) = @_;
+	for my $k (keys %params) {
+	    print STDERR $self->name," was notified of a change in selection: $k=>$params{$k}\n";
+	}
+    }
+}
+
+{
+    package Gtk2::Ex::Geo::Test2;
     our @ISA = qw(Gtk2::Ex::Geo::Layer);
     sub new {
 	my $self = Gtk2::Ex::Geo::Layer::new(@_);
@@ -30,8 +65,14 @@ Gtk2->init;
     }
     sub got_focus {
 	my($self) = @_;
-	print STDERR $self->name,"got focus\n";
-    }   
+	print STDERR $self->name," got focus\n";
+    }
+    sub select {
+	my($self, %params) = @_;
+	for my $k (keys %params) {
+	    print STDERR $self->name," was notified of a change in selection: $k=>$params{$k}\n";
+	}
+    }
 }
 
 my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer/] );
@@ -43,10 +84,10 @@ if ($have_gnuplot) {
     $gis->register_function( name => 'p', object => $gnuplot );
 }
 
-my $layer = Gtk2::Ex::Geo::Test->new(name => 'test 1');
+my $layer = Gtk2::Ex::Geo::Test1->new(name => 'test 1');
 $gis->add_layer($layer);
 
-$layer = Gtk2::Ex::Geo::Test->new(name => 'test 2');
+$layer = Gtk2::Ex::Geo::Test2->new(name => 'test 2');
 $gis->add_layer($layer);
 
 $gis->{overlay}->signal_connect(update_layers => 

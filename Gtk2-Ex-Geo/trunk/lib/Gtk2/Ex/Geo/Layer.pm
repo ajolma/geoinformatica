@@ -307,11 +307,18 @@ sub visible {
     defined $visible ? $self->{VISIBLE} = $visible : $self->{VISIBLE};
 }
 
-## @method got_focus
+## @method got_focus($gui)
 #
 # @brief Called by the GUI when this layer has received the focus.
 sub got_focus {
-    my($self) = @_;
+    my($self, $gui) = @_;
+}
+
+## @method lost_focus($gui)
+#
+# @brief Called by the GUI when this layer has lost the focus.
+sub lost_focus {
+    my($self, $gui) = @_;
 }
 
 ## @method border_color($red, $green, $blue)
@@ -341,8 +348,6 @@ sub inspect_data {
 # @param gui A Gtk2::Ex::Glue object (contains predefined dialogs).
 sub open_properties_dialog {
     my($self, $gui) = @_;
-    $gui->message("It looks like the author of the layer class ".ref($self)." was\n".
-		  "negligent enough to leave the properties dialog out.");
 }
 
 ## @method void open_features_dialog($gui, $soft_open)
@@ -352,8 +357,6 @@ sub open_properties_dialog {
 # @param soft_open Whether to "soft open", i.e., reset an already open dialog.
 sub open_features_dialog {
     my($self, $gui, $soft_open) = @_;
-    $gui->message("It looks like the author of the layer class ".ref($self)." was\n".
-		  "negligent enough to leave the features dialog out.");
 }
 
 ## @method arrayref menu_items()

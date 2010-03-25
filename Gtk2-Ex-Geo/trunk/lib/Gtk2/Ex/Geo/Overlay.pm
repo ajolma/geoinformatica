@@ -807,7 +807,7 @@ sub add_to_selection {
 	$self->{$store} = $geom;
     }
     $self->signal_emit('new_selection') if $self->{rubberband_mode} eq 'select';
-    $self->signal_emit('drawing-changed') if $self->{rubberband_mode} eq 'drawing';
+    $self->signal_emit('drawing-changed') if $self->{rubberband_mode} eq 'draw';
 }
 
 ## @method button_press_event()
@@ -861,10 +861,10 @@ sub button_press_event {
 	{
 	    if ($self->{rubberband_mode} eq 'select') {
 		delete $self->{selection};
-		$self->signal_emit('new_selection');
+		#$self->signal_emit('new_selection');
 	    } elsif ($self->{rubberband_mode} eq 'draw') {
 		delete $self->{drawing};
-		$self->signal_emit('drawing-changed');
+		#$self->signal_emit('drawing-changed');
 	    }
 	}
 
