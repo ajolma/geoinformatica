@@ -270,6 +270,10 @@ sub open_properties_dialog {
 }
 
 ## @ignore
+sub open_features_dialog {
+}
+
+## @ignore
 sub menu_items {
     my($self) = @_;
     my @items;
