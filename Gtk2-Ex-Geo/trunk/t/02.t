@@ -28,6 +28,10 @@ Gtk2->init;
     sub render {
 	my($self, $pb, $cr, $overlay, $viewport) = @_;
     }
+    sub got_focus {
+	my($self) = @_;
+	print STDERR $self->name,"got focus\n";
+    }   
 }
 
 my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer/] );

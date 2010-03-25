@@ -300,11 +300,18 @@ sub alpha {
 
 ## @method visible($visible)
 # 
-# @brief[in] Show or hide the layer.
+# @brief Show or hide the layer.
 # @param visible If true then the layer is made visible, else hidden.
 sub visible {
     my($self, $visible) = @_;
     defined $visible ? $self->{VISIBLE} = $visible : $self->{VISIBLE};
+}
+
+## @method got_focus
+#
+# @brief Called by the GUI when this layer has received the focus.
+sub got_focus {
+    my($self) = @_;
 }
 
 ## @method border_color($red, $green, $blue)
@@ -345,7 +352,7 @@ sub open_properties_dialog {
 # @param soft_open Whether to "soft open", i.e., reset an already open dialog.
 sub open_features_dialog {
     my($self, $gui, $soft_open) = @_;
-    $gui->message("It looks like the author of the layer class ".ref($self)."was\n".
+    $gui->message("It looks like the author of the layer class ".ref($self)." was\n".
 		  "negligent enough to leave the features dialog out.");
 }
 
@@ -845,17 +852,25 @@ sub select {
     }
 }
 
-# get or set the selected features, give an array ref
+## @method $select($selected)
+# @brief Get or set the selected features.
+#
+# @param selected Reference to an array of features that will be the
+# array of selected features.
+# @return Reference to the array of selected features.
 sub selected_features {
     my($self, $selected) = @_;
-    if (defined $selected) {
+    if (@_ > 1) {
 	$self->{SELECTED_FEATURES} = $selected;
-    } else {
-	return $self->{SELECTED_FEATURES};
     }
+    return $self->{SELECTED_FEATURES};
 }
 
-# spatial selection of features, return a ref to an array of matching features
+## @method $features(%params)
+# @brief Virtual method called from select.
+#
+# @param params As in select.
+# @return A reference to an array of matching features.
 sub features {
 }
 
@@ -869,6 +884,8 @@ sub schema {
     return $schema;
 }
 
+## @class Gtk2::Ex::Geo::Schema
+# @brief A class for layer schemas.
 package Gtk2::Ex::Geo::Schema;
 
 sub new {
@@ -1034,6 +1051,8 @@ sub bootstrap_dialog {
     return wantarray ? ($self->{$dialog}, $boot) : $self->{$dialog};
 }
 
+## @method hide_dialog($dialog)
+# @brief Hide the given (name of a) dialog.
 sub hide_dialog {
     my($self, $dialog) = @_;
     $self->{$dialog.'_position'} = [$self->{$dialog}->get_widget($dialog)->get_position];
@@ -1042,7 +1061,7 @@ sub hide_dialog {
 
 ## @method $dialog_visible($dialog)
 #
-# @brief Return true is the given (name of a ) dialog is visible.
+# @brief Return true is the given (name of a) dialog is visible.
 sub dialog_visible {
     my($self, $dialog) = @_;
     my $d = $self->{$dialog};

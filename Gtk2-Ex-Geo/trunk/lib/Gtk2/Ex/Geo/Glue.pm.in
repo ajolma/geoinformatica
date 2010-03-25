@@ -115,8 +115,9 @@ sub new {
     $self->{tree_view}->signal_connect
 	( cursor_changed => 
 	  sub {
-	      my(undef, $gis) = @_;
-	      $gis->get_selected_layer();
+	      my(undef, $self) = @_;
+	      my $layer = $self->get_selected_layer();
+	      $layer->got_focus if $layer;
 	  }, $self);
 
     $self->{tree_view}->signal_connect
@@ -568,7 +569,6 @@ sub layer_menu {
     my $path = Gtk2::TreePath->new($index);
 
     if (@rows < 2) {
-	$tree_view->set_cursor($path);
 	$layer = $self->{overlay}->get_layer_by_index($index);
 	return unless $layer;
     } else {
@@ -579,6 +579,8 @@ sub layer_menu {
     }
     
     if ($event->button == 3) {
+
+	$tree_view->set_cursor($path);
 
 	my $hide = $layer->visible() ? '_Hide' : '_Show';
 	
