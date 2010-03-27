@@ -163,6 +163,7 @@ sub DESTROY {
 ## @ignore
 sub defaults {
     my($self, %params) = @_;
+    # these can still be overridden with params:
     if ($self->{GDAL}) {
 	my $band = $self->band();
 	my $color_table = $band->GetRasterColorTable;
@@ -187,6 +188,7 @@ sub defaults {
 	$self->palette_type('Grayscale');
     }
     $self->color_field('Cell value');
+    # set inherited from params:
     $self->SUPER::defaults(%params);
 }
 

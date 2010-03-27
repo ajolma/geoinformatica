@@ -124,13 +124,15 @@ sub DESTROY {
 ## @ignore
 sub defaults {
     my($self, %params) = @_;
+    # these can still be overridden with params:
     $self->name($self->{OGR}->{Layer}->GetName()) if $self->{OGR}->{Layer};
     my $gt = $self->geometry_type;
-    @{$self->{BORDER_COLOR}} = @$BORDER_COLOR if $gt and $gt =~ /Polygon/;
-    $self->SUPER::defaults(%params);
+    @{$self->{BORDER_COLOR}} = @$BORDER_COLOR if $gt and $gt =~ /Polygon/;    
     $self->{RENDER_AS} = 'Native' unless exists $self->{RENDER_AS};
     $self->{RENDER_AS} = $params{render_as} if exists $params{render_as};
     $self->{LINE_WIDTH} = 1;
+    # set inherited from params:
+    $self->SUPER::defaults(%params);
 }
 
 ## @method $type()

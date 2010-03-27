@@ -20,6 +20,8 @@ Gtk2->init;
     our @ISA = qw(Gtk2::Ex::Geo::Layer);
     sub new {
 	my $self = Gtk2::Ex::Geo::Layer::new(@_);
+	#print STDERR $self->isa('Gtk2::Ex::Geo::Layer') ? "is layer\n" : "is not layer\n";
+	#print STDERR $self->isa('Gtk2::Ex::Geo::Test1') ? "is test 1\n" : "is not test 1\n";
 	return $self;
     }
     sub world {
