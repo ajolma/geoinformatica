@@ -45,11 +45,60 @@ sub new {
     my($package, %params) = @_;
     my $self = Gtk2::Ex::Geo::Layer->new(%params);
     $self->{graph} = Graph->new;
+    $self->{index} = 1;
     return bless $self => $package;
 }
 
+sub save {
+    my($self, $filename) = @_;
+    open(my $fh, '>', $filename) or croak $!;
+    for my $v ($self->{graph}->vertices) {
+	print $fh "$v->{index}\t$v->{point}->{X}\t$v->{point}->{Y}\n";
+    }
+    print $fh "edges\n";
+    for my $e ($self->{graph}->edges) {
+	my($u, $v) = @$e;
+	my $w = $self->{graph}->get_edge_weight($u, $v);
+	print $fh "$u->{index}\t$v->{index}\t$w\n";
+    }
+    close $fh;
+}
+
+sub open {
+    my($self, $filename) = @_;
+    open(my $fh, '<', $filename) or croak $!;
+    $self->{graph} = Graph->new;
+    my $vertex = 1;
+    my %vertices;
+    while (<$fh>) {
+	chomp;
+	my @l = split /\t/;
+	$vertex = 0, next if $l[0] eq 'edges';
+	if ($vertex) {
+	    my $v = { index => $l[0],
+		      point => Geo::OGC::Point->new($l[1], $l[2]) };
+	    $vertices{$l[0]} = $v;
+	    $self->{graph}->add_vertex($v);
+	} else {
+	    my $u = $vertices{$l[0]};
+	    my $v = $vertices{$l[1]};
+	    $self->{graph}->add_weighted_edge($u, $v, $l[2]);
+	}
+    }
+    close $fh;
+}
+
 sub world {
-    return (0, 0, 100, 100);
+    my $self = shift;
+    my($minx, $miny, $maxx, $maxy);
+    for my $v ($self->{graph}->vertices) {
+	$minx = min($minx, $v->{point}->{X});
+	$miny = min($miny, $v->{point}->{Y});
+	$maxx = max($maxx, $v->{point}->{X});
+	$maxy = max($maxy, $v->{point}->{Y});
+    }
+    return ($minx, $miny, $maxx, $maxy) if defined $minx;
+    return ();
 }
 
 sub render {
@@ -122,13 +171,16 @@ sub drawing_changed {
 	my $v2 = $self->find_vertex($gui, $drawing->EndPoint);
 	unless ($v1) {
 	    $v1 = { point => $drawing->StartPoint->Clone };
+	    $v1->{index} = $self->{index}++;
 	    $self->{graph}->add_vertex($v1);
 	}
 	unless ($v2) {
 	    $v2 = { point => $drawing->EndPoint->Clone };
+	    $v2->{index} = $self->{index}++;
 	    $self->{graph}->add_vertex($v2);
 	}
-	$self->{graph}->add_edge($v1, $v2);
+	my $w = $drawing->Length;
+	$self->{graph}->add_weighted_edge($v1, $v2, $w);
     }
     delete $gui->{overlay}->{drawing};
     $gui->{overlay}->render;
@@ -205,6 +257,16 @@ sub key_pressed {
 
 sub open_properties_dialog {
     my($self, $gui) = @_;
+}
+
+## @ignore
+sub min {
+    $_[0] > $_[1] ? $_[1] : $_[0];
+}
+
+## @ignore
+sub max {
+    $_[0] > $_[1] ? $_[0] : $_[1];
 }
 
 1;
