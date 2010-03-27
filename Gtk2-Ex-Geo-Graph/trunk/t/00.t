@@ -1,4 +1,4 @@
-use Test::More;
+use Test::More tests => 1;
 use Glib qw/TRUE FALSE/;
 use Gtk2;
 use Gtk2::Ex::Geo;
@@ -9,7 +9,7 @@ BEGIN {
 
 Gtk2->init;
 
-my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer Gtk2::Ex::Geo::Graph/] );
+my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer Gtk2::Ex::Geo::Graph/]);
 
 $gis->{overlay}->signal_connect(update_layers => 
 	sub {
