@@ -7,6 +7,7 @@ use Glib qw/TRUE FALSE/;
 use Geo::Raster;
 use Geo::Vector;
 use Gtk2::Ex::Geo;
+use Gtk2::Ex::Geo::Graph;
 use Gtk2 '-init';
 eval {
     require IPC::Gnuplot;
@@ -60,7 +61,7 @@ if ($OS eq 'MSWin32') {
 #$Gtk2::Ex::Geo::Layer::SINGLE_COLOR = [0, 0, 0, 255];
 
 setup (
-    classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer Geo::Raster::Layer/],
+    classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer Geo::Raster::Layer Gtk2::Ex::Geo::Graph/],
     title => 'Geoinformatica',
     );
 
