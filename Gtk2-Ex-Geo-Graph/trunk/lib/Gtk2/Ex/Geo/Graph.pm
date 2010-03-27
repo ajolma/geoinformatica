@@ -55,6 +55,9 @@ sub world {
 sub render {
     my($self, $pb, $cr, $overlay, $viewport) = @_;
 
+    my @s = @{$self->selected_features()};
+    my %selected = map { (ref($_) eq 'HASH' ? $_ : $_->[0].$_->[1] ) => 1 } @s;
+
     my $a = $self->alpha/255.0;
     my @color = $self->single_color;
     for (@color) {
@@ -71,6 +74,7 @@ sub render {
 	    $_ = bounds($_, -10000, 10000);
 	}
 	$cr->arc(@p, $NODE_RAY, 0, 2*3.1415927);
+	$cr->fill_preserve if $selected{$v};
 	$cr->stroke;
     }
     for my $e ($self->{graph}->edges) {
@@ -82,7 +86,9 @@ sub render {
 	}
 	$cr->move_to(@p);
 	$cr->line_to(@q);
+	$cr->set_line_width(3) if $selected{$u.$v};
 	$cr->stroke;
+	$cr->set_line_width(1) if $selected{$u.$v};
     }
     
 }
@@ -93,15 +99,19 @@ sub bounds {
 
 sub got_focus {
     my($self, $gui) = @_;
-    $self->{_tag1} = $gui->{overlay}->signal_connect(drawing_changed => \&drawing_changed, [$self, $gui]);
-    $self->{_tag2} = $gui->{overlay}->signal_connect(new_selection => \&new_selection, [$self, $gui]);
-    $gui->{overlay}->{rubberband_mode} = 'draw';
-    $gui->{overlay}->{rubberband_geometry} = 'line';
+    my $o = $gui->{overlay};
+    $self->{_tag1} = $o->signal_connect(drawing_changed => \&drawing_changed, [$self, $gui]);
+    $self->{_tag2} = $o->signal_connect(new_selection => \&new_selection, [$self, $gui]);
+    $self->{_tag3} = $o->signal_connect(key_press_event => \&key_pressed, [$self, $gui]);
+    $o->{rubberband_mode} = 'draw';
+    $o->{rubberband_geometry} = 'line';
+    $o->{show_selection} = 0;
 }
 sub lost_focus {
     my($self, $gui) = @_;
     $gui->{overlay}->signal_handler_disconnect($self->{_tag1}) if $self->{_tag1};
     $gui->{overlay}->signal_handler_disconnect($self->{_tag2}) if $self->{_tag2};
+    $gui->{overlay}->signal_handler_disconnect($self->{_tag3}) if $self->{_tag3};
 }
 
 sub drawing_changed {
@@ -135,10 +145,61 @@ sub find_vertex {
     return $c if $d/$gui->{overlay}->{pixel_size} < $NODE_RAY;
 }
 
+sub find_edge {
+    my($self, $gui, $point) = @_;
+    my $d = -1;
+    my $c;
+    for my $e ($self->{graph}->edges) {
+	my $e2 = Geo::OGC::LineString->new;
+	$e2->AddPoint($e->[0]->{point});
+	$e2->AddPoint($e->[1]->{point});
+	my $d2 = $point->Distance($e2);
+	($c, $d) = ($e, $d2) if $d < 0 or $d2 < $d;
+    }
+    return $c if $d/$gui->{overlay}->{pixel_size} < $NODE_RAY;
+}
+
 sub new_selection {
     my($self, $gui) = @{$_[1]};
     my $selection = $gui->{overlay}->{selection};
-    delete $gui->{overlay}->{selection};
+    $self->select();
+    $self->_select($gui, $selection);
+    $gui->{overlay}->render;
+}
+
+sub _select {
+    my($self, $gui, $selection) = @_;
+    if ($selection->isa('Geo::OGC::GeometryCollection')) {
+	for my $g (@{$selection->{Geometries}}) {
+	    $self->_select($gui, $g);
+	}
+    } elsif ($selection->isa('Geo::OGC::Point')) {
+	my $v = $self->find_vertex($gui, $selection);
+	push @{$self->selected_features}, $v if $v;
+	unless ($v) {
+	    my $e = $self->find_edge($gui, $selection);
+	    push @{$self->selected_features}, $e if $e;
+	}
+    }
+}
+
+sub key_pressed {
+    my($overlay, $event, $user) = @_;
+    my $key = $event->keyval;
+    return unless $key == $Gtk2::Gdk::Keysyms{Delete};
+    my($self, $gui) = @{$user};
+    my @v;
+    my @e;
+    for my $v (@{$self->selected_features()}) {
+	if (ref $v eq 'HASH') {
+	    push @v, $v;
+	} else {
+	    push @e, ($v->[0], $v->[1]);
+	}
+    }
+    $self->{graph}->delete_vertices(@v);
+    $self->{graph}->delete_edges(@e);
+    $self->select();
     $gui->{overlay}->render;
 }
 
