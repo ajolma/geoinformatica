@@ -74,6 +74,7 @@ sub open {
 	chomp;
 	my @l = split /\t/;
 	$vertex = 0, next if $l[0] eq 'edges';
+	print STDERR "$vertex, @l\n";
 	if ($vertex) {
 	    my $v = { index => $l[0],
 		      point => Geo::OGC::Point->new($l[1], $l[2]) };
@@ -92,10 +93,15 @@ sub world {
     my $self = shift;
     my($minx, $miny, $maxx, $maxy);
     for my $v ($self->{graph}->vertices) {
-	$minx = min($minx, $v->{point}->{X});
-	$miny = min($miny, $v->{point}->{Y});
-	$maxx = max($maxx, $v->{point}->{X});
-	$maxy = max($maxy, $v->{point}->{Y});
+	unless (defined $minx) {
+	    $maxx = $minx = $v->{point}->{X};
+	    $maxy = $miny = $v->{point}->{Y};
+	} else {
+	    $minx = min($minx, $v->{point}->{X});
+	    $miny = min($miny, $v->{point}->{Y});
+	    $maxx = max($maxx, $v->{point}->{X});
+	    $maxy = max($maxy, $v->{point}->{Y});
+	}
     }
     return ($minx, $miny, $maxx, $maxy) if defined $minx;
     return ();
@@ -149,9 +155,12 @@ sub bounds {
 sub got_focus {
     my($self, $gui) = @_;
     my $o = $gui->{overlay};
-    $self->{_tag1} = $o->signal_connect(drawing_changed => \&drawing_changed, [$self, $gui]);
-    $self->{_tag2} = $o->signal_connect(new_selection => \&new_selection, [$self, $gui]);
-    $self->{_tag3} = $o->signal_connect(key_press_event => \&key_pressed, [$self, $gui]);
+    $self->{_tag1} = $o->signal_connect(
+	drawing_changed => \&drawing_changed, [$self, $gui]);
+    $self->{_tag2} = $o->signal_connect(
+	new_selection => \&new_selection, [$self, $gui]);
+    $self->{_tag3} = $o->signal_connect(
+	key_press_event => \&key_pressed, [$self, $gui]);
     $o->{rubberband_mode} = 'draw';
     $o->{rubberband_geometry} = 'line';
     $o->{show_selection} = 0;
@@ -257,6 +266,24 @@ sub key_pressed {
 
 sub open_properties_dialog {
     my($self, $gui) = @_;
+}
+
+sub shortest_path {
+    my($self) = @_;
+    my($u, $v);
+    for my $x (@{$self->selected_features()}) {
+	next unless ref $x eq 'HASH';
+	$u = $x,next unless $u;
+	$v = $x unless $v;
+	last;
+    }
+    $self->select();
+    return unless $u and $v;
+    print STDERR "sp $u->$v\n";
+    my @path = $self->{graph}->SP_Dijkstra($u, $v);
+    print STDERR "sp @path\n";
+    $self->selected_features(\@path);
+    #$gui->{overlay}->render;
 }
 
 ## @ignore
