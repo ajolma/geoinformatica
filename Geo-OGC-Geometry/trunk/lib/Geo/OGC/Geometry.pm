@@ -114,8 +114,8 @@ sub parse_wkt {
 	    s/\s*\)\s*$//;
 	    my @points = split /\s*,\s*/;
 	    $self = Geo::OGC::MultiPoint->new();
-	    for (@points) {
-		$self->AddGeometry(parse_wkt("POINT$m ($_)"));
+	    for my $p (@points) {
+		$self->AddGeometry(parse_wkt("POINT$m ($p)"));
 	    }
 	} elsif (/^\s*LINESTRING/i) {
 	    s/^\s*LINESTRING\s*([ZM]*)\s*\(\s*//i;
@@ -123,8 +123,8 @@ sub parse_wkt {
 	    s/\s*\)\s*$//;
 	    my @points = split /\s*,\s*/;
 	    $self = Geo::OGC::LineString->new();
-	    for (@points) {
-		$self->AddPoint(parse_wkt("POINT$m ($_)"));
+	    for my $p (@points) {
+		$self->AddPoint(parse_wkt("POINT$m ($p)"));
 	    }
 	} elsif (/^\s*MULTILINESTRING/i) {
 	    s/^\s*MULTILINESTRING\s*([ZM]*)[\s\(]*//i;
@@ -132,8 +132,8 @@ sub parse_wkt {
 	    s/[\s\)]*$//;
 	    my @strings = split /\)\s*,\s*\(/;
 	    $self = Geo::OGC::MultiLineString->new();
-	    for (@strings) {
-		$self->AddGeometry(parse_wkt("LINESTRING$m ($_)"));
+	    for my $s (@strings) {
+		$self->AddGeometry(parse_wkt("LINESTRING$m ($s)"));
 	    }
 	} elsif (/^\s*LINEARRING/i) {
 	    s/^\s*LINEARRING\s*([ZM]*)\s*\(\s*//i;
@@ -141,8 +141,8 @@ sub parse_wkt {
 	    s/\s*\)\s*$//;
 	    my @points = split /\s*,\s*/;
 	    $self = Geo::OGC::LinearRing->new();
-	    for (@points) {
-		$self->AddPoint(parse_wkt("POINT$m ($_)"));
+	    for my $p (@points) {
+		$self->AddPoint(parse_wkt("POINT$m ($p)"));
 	    }
 	} elsif (/^\s*POLYGON/i) {
 	    s/^\s*POLYGON\s*([ZM]*)[\s\(]*//i;
@@ -151,8 +151,8 @@ sub parse_wkt {
 	    my @rings = split /\)\s*,\s*\(/;
 	    $self = Geo::OGC::Polygon->new();
 	    $self->ExteriorRing(parse_wkt("LINEARRING$m (".shift(@rings).")"));
-	    for (@rings) {
-		$self->AddInteriorRing(parse_wkt("LINEARRING$m ($_)"));
+	    for my $r (@rings) {
+		$self->AddInteriorRing(parse_wkt("LINEARRING$m ($r)"));
 	    }
 	} elsif (/^\s*POLYHEDRALSURFACE/i) {
 	    s/^\s*POLYHEDRALSURFACE\s*([ZM]*)[\s\(]*//i;
@@ -160,8 +160,8 @@ sub parse_wkt {
 	    s/[\s\)]*$//;
 	    my @patches = split /\)\s*,\s*\(/;
 	    $self = Geo::OGC::PolyhedralSurface->new();
-	    for (@patches) {
-		$self->AddPatch(parse_wkt("POLYGON$m (($_)"));
+	    for my $p (@patches) {
+		$self->AddPatch(parse_wkt("POLYGON$m (($p)"));
 	    }
 	} elsif (/^\s*MULTIPOLYGON/i) {
 	    s/^\s*MULTIPOLYGON\s*([ZM]*)[\s\(]*//i;
@@ -169,8 +169,8 @@ sub parse_wkt {
 	    s/[\s\)]*$//;
 	    my @polygons = split /\)\s*\)\s*,\s*\(\s*\(/;
 	    $self = Geo::OGC::MultiPolygon->new();
-	    for (@polygons) {
-		$self->AddGeometry(parse_wkt("POLYGON$m (($_))"));
+	    for my $p (@polygons) {
+		$self->AddGeometry(parse_wkt("POLYGON$m (($p))"));
 	    }
 	} elsif (/^\s*GEOMETRYCOLLECTION/i) {
 	    s/^\s*GEOMETRYCOLLECTION\s*([ZM]*)\s*\(\s*//i;
@@ -544,16 +544,16 @@ sub new {
 	%params = @_;
     }
     # support comma as decimal point, and space in numbers
-    for (keys %params) {
-	if (ref($params{$_})) {
-	    for (@{$params{$_}}) {
-		$_ =~ s/,/./g;
-		$_ =~ s/ //g;
+    for my $k (keys %params) {
+	if (ref($params{$k})) {
+	    for my $p (@{$params{$k}}) {
+		$p =~ s/,/./g;
+		$p =~ s/ //g;
 		#print STDERR "point: $_\n";
 	    }
 	} else {
-	    $params{$_} =~ s/,/./g;
-	    $params{$_} =~ s/ //g;
+	    $params{$k} =~ s/,/./g;
+	    $params{$k} =~ s/ //g;
 	    #print STDERR "point: $_ => $params{$_}\n";
 	}
     }
@@ -602,8 +602,8 @@ sub init {
 sub copy {
     my($self, $clone) = @_;
     $self->SUPER::copy($clone);
-    for (qw/X Y Z M/) {
-	$clone->{$_} = $self->{$_} if exists $self->{$_};
+    for my $a (qw/X Y Z M/) {
+	$clone->{$a} = $self->{$a} if exists $self->{$a};
     }
 }
 
@@ -698,14 +698,14 @@ sub as_text {
     my @coords;
     my $ZM = exists $self->{Z} ? 'Z' : '';
     if (exists $self->{Precision}) {
-	for (qw/X Y Z/) {
-	    last unless exists $self->{$_};
-	    my $s = sprintf('%.'.$self->{Precision}.'e', $self->{$_});
+	for my $a (qw/X Y Z/) {
+	    last unless exists $self->{$a};
+	    my $s = sprintf('%.'.$self->{Precision}.'e', $self->{$a});
 	    push @coords, $s;
 	}
     } else {
-	for (qw/X Y Z/) {
-	    push @coords, $self->{$_} if exists $self->{$_};
+	for my $a (qw/X Y Z/) {
+	    push @coords, $self->{$a} if exists $self->{$a};
 	}
     }
     if (exists $self->{M}) {
@@ -724,10 +724,10 @@ sub Equals {
     my($self, $geom) = @_;
     return 0 unless isa($geom, 'Geo::OGC::Point');
     if (exists $self->{Precision}) {
-	for (qw/X Y Z/) {
-	    last unless exists $self->{$_} and exists $geom->{$_};
-	    my $s = sprintf('%.'.$self->{Precision}.'e', $self->{$_});
-	    my $g = sprintf('%.'.$self->{Precision}.'e', $geom->{$_});
+	for my $a (qw/X Y Z/) {
+	    last unless exists $self->{$a} and exists $geom->{$a};
+	    my $s = sprintf('%.'.$self->{Precision}.'e', $self->{$a});
+	    my $g = sprintf('%.'.$self->{Precision}.'e', $geom->{$a});
 	    return 0 if $s != $g;
 	}
 	return 1;
@@ -743,9 +743,9 @@ sub DistanceToLineStringSqr {
     my $p2 = $linestring->{Points}[1];
     return (($x-$p1->{X})**2+($y-$p1->{Y})**2) unless $p2;
     my $distance = distance_point_line_sqr($x, $y, $p1->{X}, $p1->{Y}, $p2->{X}, $p2->{Y});
-    for (2..$#{$linestring->{Points}}) {
+    for my $i (2..$#{$linestring->{Points}}) {
 	$p1 = $p2;
-	$p2 = $linestring->{Points}[$_];
+	$p2 = $linestring->{Points}[$i];
 	my $d = distance_point_line_sqr($x, $y, $p1->{X}, $p1->{Y}, $p2->{X}, $p2->{Y});
 	$distance = $d if $d < $distance;
     }
@@ -889,12 +889,12 @@ sub init {
     $self->SUPER::init(%params);
     $self->{Points} = [];
     if ($params{points}) {
-	for (@{$params{points}}) {
-	    $self->AddPoint(Geo::OGC::Point->new(point=>$_));
+	for my $p (@{$params{points}}) {
+	    $self->AddPoint(Geo::OGC::Point->new(point=>$p));
 	}
     } elsif ($params{pointsm}) {
-	for (@{$params{pointsm}}) {
-	    $self->AddPoint(Geo::OGC::Point->new(pointm=>$_));
+	for my $p (@{$params{pointsm}}) {
+	    $self->AddPoint(Geo::OGC::Point->new(pointm=>$p));
 	}
     }
 }
@@ -902,8 +902,8 @@ sub init {
 sub copy {
     my($self, $clone) = @_;
     $self->SUPER::copy($clone);
-    for (@{$self->{Points}}) {
-	$clone->AddPoint($_->Clone);
+    for my $p (@{$self->{Points}}) {
+	$clone->AddPoint($p->Clone);
     }
 }
 
@@ -986,16 +986,16 @@ sub PointN {
 
 sub Is3D {
     my($self) = @_;
-    for (@{$self->{Points}}) {
-	return 1 if $_->Is3D;
+    for my $p (@{$self->{Points}}) {
+	return 1 if $p->Is3D;
     }
     return 0;
 }
 
 sub IsMeasured {
     my($self) = @_;
-    for (@{$self->{Points}}) {
-	return 1 if $_->IsMeasured;
+    for my $p (@{$self->{Points}}) {
+	return 1 if $p->IsMeasured;
     }
     return 0;
 }
@@ -1284,10 +1284,10 @@ sub LinesWhereWithin {
     return @ret unless $p1;
     push @ret, 1 if 
 	distance_point_line_sqr($x, $y, $p1->{X}, $p1->{Y}, $p2->{X}, $p2->{Y}) < $SNAP_DISTANCE_SQR;
-    for (2..$#{$self->{Points}}) {
+    for my $i (2..$#{$self->{Points}}) {
 	$p1 = $p2;
-	$p2 = $self->{Points}[$_];
-	push @ret, $_ if
+	$p2 = $self->{Points}[$i];
+	push @ret, $i if
 	    distance_point_line_sqr($x, $y, $p1->{X}, $p1->{Y}, $p2->{X}, $p2->{Y}) < $SNAP_DISTANCE_SQR;
     }
     return @ret;
@@ -1302,8 +1302,8 @@ sub Within {
 	return 1;
     } elsif (isa($geom, 'Geo::OGC::LineString')) {
 	my @w1 = ();
-	for (@{$self->{Points}}) {
-	    my @w2 = $geom->LinesWhereWithin($_);
+	for my $p (@{$self->{Points}}) {
+	    my @w2 = $geom->LinesWhereWithin($p);
 	    return 0 unless @w2;
 	    next unless @w1;
 	    my $overlap = 0;
@@ -1600,13 +1600,13 @@ sub IsPointIn {
     my($x, $y) = ($point->{X}, $point->{Y});
     my $c = 0;
     my $prev;
-    for (@{$self->{Points}}) {
-	$prev = $_, next unless $prev;
-	$c = !$c if (((( $_->{Y} <= $y ) && ( $y < $prev->{Y} )) ||
-		      (( $prev->{Y} <= $y ) && ( $y < $_->{Y} ))) &&
-		     ( $x < ( $prev->{X} - $_->{X} ) * 
-		       ( $y - $_->{Y} ) / ( $prev->{Y} - $_->{Y} ) + $_->{X} ));
-	$prev = $_;
+    for my $p (@{$self->{Points}}) {
+	$prev = $p, next unless $prev;
+	$c = !$c if (((( $p->{Y} <= $y ) && ( $y < $prev->{Y} )) ||
+		      (( $prev->{Y} <= $y ) && ( $y < $p->{Y} ))) &&
+		     ( $x < ( $prev->{X} - $p->{X} ) * 
+		       ( $y - $p->{Y} ) / ( $prev->{Y} - $p->{Y} ) + $p->{X} ));
+	$prev = $p;
     }
     return $c;
 }
@@ -1769,8 +1769,8 @@ sub copy {
     my($self, $clone) = @_;
     $self->SUPER::copy($clone);
     $clone->ExteriorRing($self->{ExteriorRing}->Clone) if $self->{ExteriorRing};
-    for (@{$self->{InteriorRings}}) {
-	$clone->AddInteriorRing($_->Clone);
+    for my $r (@{$self->{InteriorRings}}) {
+	$clone->AddInteriorRing($r->Clone);
     }
 }
 
@@ -1790,8 +1790,8 @@ sub Assert {
 
     # b) The boundary of a Polygon consists of a set of LinearRings
     # that make up its exterior and interior boundaries;
-    for (@{$self->{InteriorRings}}) {
-	croak "an interior is not closed" unless $_->IsClosed;
+    for my $r (@{$self->{InteriorRings}}) {
+	croak "an interior is not closed" unless $r->IsClosed;
     }
 
     # c) No two Rings in the boundary cross and the Rings in the
@@ -1809,8 +1809,8 @@ sub Assert {
 
     # d) A Polygon may not have cut lines, spikes or punctures
     croak "exterior is not simple" unless $self->{ExteriorRing}->IsSimple;
-    for (@{$self->{InteriorRings}}) {
-	croak "an interior is not simple" unless $_->IsSimple;
+    for my $r (@{$self->{InteriorRings}}) {
+	croak "an interior is not simple" unless $r->IsSimple;
     }
 
     # e) The interior of every Polygon is a connected point set
@@ -1841,8 +1841,8 @@ sub Assert {
 sub Is3D {
     my($self) = @_;
     return 1 if $self->{ExteriorRing}->Is3D;
-    for (@{$self->{InteriorRings}}) {
-	return 1 if $_->Is3D;
+    for my $r (@{$self->{InteriorRings}}) {
+	return 1 if $r->Is3D;
     }
     return 0;
 }
@@ -1850,8 +1850,8 @@ sub Is3D {
 sub IsMeasured {
     my($self) = @_;
     return 1 if $self->{ExteriorRing}->IsMeasured;
-    for (@{$self->{InteriorRings}}) {
-	return 1 if $_->IsMeasured;
+    for my $r (@{$self->{InteriorRings}}) {
+	return 1 if $r->IsMeasured;
     }
     return 0;
 }
@@ -2147,12 +2147,12 @@ sub init {
     $self->SUPER::init(%params);
     $self->{Patches} = []; # polygon
     if ($params{patches}) {
-	for (@{$params{patches}}) {
-	    $self->AddPatch(Geo::OGC::Polygon->new(points=>$_));
+	for my $p (@{$params{patches}}) {
+	    $self->AddPatch(Geo::OGC::Polygon->new(points=>$p));
 	}
     } elsif ($params{patchesm}) {
-	for (@{$params{patches}}) {
-	    $self->AddPatch(Geo::OGC::Polygon->new(pointsm=>$_));
+	for my $p (@{$params{patches}}) {
+	    $self->AddPatch(Geo::OGC::Polygon->new(pointsm=>$p));
 	}
     }
 }
@@ -2160,8 +2160,8 @@ sub init {
 sub copy {
     my($self, $clone) = @_;
     $self->SUPER::copy($clone);
-    for (@{$self->{Patches}}){
-	$clone->AddPatch($_->Clone);
+    for my $p (@{$self->{Patches}}){
+	$clone->AddPatch($p->Clone);
     }
 }
 
@@ -2207,8 +2207,8 @@ sub IsClosed {
 
 sub IsMeasured {
     my($self) = @_;
-    for (@{$self->{Patches}}) {
-	return 1 if $_->IsMeasured;
+    for my $p (@{$self->{Patches}}) {
+	return 1 if $p->IsMeasured;
     }
     return 0;
 }
@@ -2275,8 +2275,8 @@ sub init {
 sub copy {
     my($self, $clone) = @_;
     $self->SUPER::copy($clone);
-    for (@{$self->{Geometries}}) {
-	$clone->AddGeometry($_->Clone);
+    for my $g (@{$self->{Geometries}}) {
+	$clone->AddGeometry($g->Clone);
     }
 }
 
@@ -2287,8 +2287,8 @@ sub GeometryType {
 sub Dimension {
     my($self) = @_;
     my $dim;
-    for (@{$self->{Geometries}}) {
-	my $d = $self->{Geometries}->Dimension;
+    for my $g (@{$self->{Geometries}}) {
+	my $d = $g->Dimension;
 	$dim = $d if !(defined $dim) or $d > $dim;
     }
     return $dim;
@@ -2296,16 +2296,16 @@ sub Dimension {
 
 sub Is3D {
     my($self) = @_;
-    for (@{$self->{Geometries}}) {
-	return 1 if $_->Is3D;
+    for my $g (@{$self->{Geometries}}) {
+	return 1 if $g->Is3D;
     }
     return 0;
 }
 
 sub IsMeasured {
     my($self) = @_;
-    for (@{$self->{Geometries}}) {
-	return 1 if $_->IsMeasured;
+    for my $g (@{$self->{Geometries}}) {
+	return 1 if $g->IsMeasured;
     }
     return 0;
 }
@@ -2559,12 +2559,12 @@ sub init {
     my($self, %params) = @_;
     $self->SUPER::init(%params);
     if ($params{points}) {
-	for (@{$params{points}}) {
-	    $self->AddGeometry(Geo::OGC::Point->new(point=>$_));
+	for my $p (@{$params{points}}) {
+	    $self->AddGeometry(Geo::OGC::Point->new(point=>$p));
 	}
     } elsif ($params{pointsm}) {
-	for (@{$params{pointsm}}) {
-	    $self->AddGeometry(Geo::OGC::Point->new(pointm=>$_));
+	for my $p (@{$params{pointsm}}) {
+	    $self->AddGeometry(Geo::OGC::Point->new(pointm=>$p));
 	}
     }
 }
