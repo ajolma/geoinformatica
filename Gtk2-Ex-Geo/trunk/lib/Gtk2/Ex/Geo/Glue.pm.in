@@ -728,17 +728,15 @@ sub show_information {
 sub inspect {
     my($self, $data, $name) = @_;
 
-    my $dialog = $self->{inspect_dialog};
-    unless ($dialog) {
-	$self->{inspect_dialog} = $dialog = $self->get_dialog('inspect_dialog');
-	croak "inspect_dialog for Gtk2::Ex::Geo::Glue does not exist" unless $dialog;	
-	$dialog->get_widget('inspect_dialog')->signal_connect(delete_event => \&close_inspect, [$self]);
-	$dialog->get_widget('inspect_close_button')->signal_connect(clicked => \&close_inspect, [$self]);
-    } elsif (!$dialog->get_widget('inspect_dialog')->get('visible')) {
-	$dialog->get_widget('inspect_dialog')->move(@{$self->{inspect_dialog_position}});
-    }
     $name = 'unknown variable' unless $name;
-    $dialog->get_widget('inspect_dialog')->set_title("Inspecting ".$name);
+
+    Gtk2::Ex::Geo::Layer::bootstrap_dialog(
+	$self, $self, 'inspect_dialog', "Inspecting ".$name, 
+	{
+	    inspect_dialog => [delete_event => \&close_inspect, [$self]],
+	    inspect_close_button => [clicked => \&close_inspect, [$self]],
+	}
+	);
 
     $data = \$data unless ref $data;
 
@@ -748,17 +746,15 @@ sub inspect {
 	  title => $name,
 	  dumper_setup => {} );
 
-    $treedumper->{tree_view}->modify_font(Gtk2::Pango::FontDescription->from_string ('monospace'));
+    $treedumper->{tree_view}->modify_font(Gtk2::Pango::FontDescription->from_string('monospace'));
     $treedumper->{tree_view}->collapse_all;
 
-    my $scroller = $dialog->get_widget('inspect_scrolledwindow');
+    my $scroller = $self->{inspect_dialog}->get_widget('inspect_scrolledwindow');
     $scroller->remove($self->{treedumper}->{tree_view}) if $self->{treedumper};
 
     $self->{treedumper} = $treedumper;
     $scroller->add($treedumper->{tree_view});
-
-    $dialog->get_widget('inspect_dialog')->show_all;
-    $dialog->get_widget('inspect_dialog')->present;
+    $scroller->show_all;
 }
 
 ##@ignore
@@ -768,9 +764,7 @@ sub close_inspect {
 	next unless ref eq 'ARRAY';
 	($self) = @{$_};
     }
-    my $dialog = $self->{inspect_dialog}->get_widget('inspect_dialog');
-    $self->{inspect_dialog_position} = [$dialog->get_position];
-    $dialog->hide();
+    Gtk2::Ex::Geo::Layer::hide_dialog($self, 'inspect_dialog');
     1;
 }
 
