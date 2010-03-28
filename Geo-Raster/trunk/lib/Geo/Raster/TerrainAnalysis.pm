@@ -8,7 +8,7 @@
 package Geo::Raster;
 
 use strict;
-use UNIVERSAL qw(isa);
+use Scalar::Util qw(blessed);
 
 ## @method @fit_surface($z_factor)
 #
@@ -696,7 +696,7 @@ sub catchment {
     my $i = shift;
     my ($M, $N) = $fdg->size();
     my ($j, $m, $catchment);
-    if (isa($i, 'Geo::Raster')) {
+    if ($i and blessed($i) and $i->isa('Geo::Raster')) {
 	$catchment = $i;
 	$i = shift;
 	$j = shift;
@@ -733,7 +733,7 @@ sub prune {
     my $fdg = shift;
     my $lakes;
     my $min_length = shift;
-    if (isa($min_length, 'Geo::Raster')) {
+    if ($min_length and blessed($min_length) and $min_length->isa('Geo::Raster')) {
 	$lakes = $min_length;
 	$min_length = shift;
     }
@@ -768,7 +768,7 @@ sub number_streams {
     my $fdg = shift;
     my $lakes;
     my $i = shift;
-    if (isa($i, 'Geo::Raster')) {
+    if ($i and blessed($i) and $i->isa('Geo::Raster')) {
 	$lakes = $i;
 	$i = shift;
     }
@@ -814,7 +814,7 @@ sub subcatchments {
     my $fdg = shift;
     my $lakes;
     my $i = shift;
-    if (isa($i, 'Geo::Raster')) {
+    if ($i and blessed($i) and $i->isa('Geo::Raster')) {
 	$lakes = $i;
 	$i = shift;
     }

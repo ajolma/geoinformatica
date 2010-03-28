@@ -119,7 +119,7 @@ sub cache {
     my $cell_size;
     if (defined $_[0]) {
 	if (@_ == 1) { # use the given grid as a model
-	    croak "usage: \$raster->cache(\$another_raster)" unless isa($_[0], 'Geo::Raster');
+	    croak "usage: \$raster->cache(\$another_raster)" unless $_[0]->isa('Geo::Raster');
 	    if ($_[0]->{GDAL}) {
 		my $ds = $_[0]->{GDAL}->{dataset};
 		my $h = $ds->{RasterYSize};

@@ -3,7 +3,6 @@ package Geo::Raster::Layer::Dialogs::Properties::libral;
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;

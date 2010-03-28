@@ -3,7 +3,6 @@ package Geo::Raster::Layer::Dialogs::Polygonize;
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
@@ -43,7 +42,7 @@ sub open {
     my $model = Gtk2::ListStore->new('Glib::String');
     for my $layer (@{$gui->{overlay}->{layers}}) {
 	my $n = $layer->name();
-	next unless isa($layer, 'Geo::Vector');
+	next unless $layer->isa('Geo::Vector');
 	next unless $layer->{update};
 	next if $n eq $self->name();
 	$model->set($model->append, 0, $n);
@@ -90,7 +89,7 @@ sub do_polygonize {
     croak "Store into?" unless $into;
     my $into_layer = $gui->layer($into);
     if ($into_layer) {
-	croak $into_layer->name." is not a vector layer" unless isa($into_layer, 'Geo::Vector');
+	croak $into_layer->name." is not a vector layer" unless $into_layer->isa('Geo::Vector');
 	$params{schema} = $into_layer->schema;
     } else {
 	my $combo = $dialog->get_widget('polygonize_datasource_combobox');

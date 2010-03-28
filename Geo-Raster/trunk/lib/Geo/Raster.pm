@@ -34,7 +34,7 @@ POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.gdal.org/faq.html nr. 
 use Carp;
 use FileHandle;
 use Config; # For byteorder
-use UNIVERSAL qw(isa);
+use Scalar::Util qw(blessed);
 use XSLoader;
 use File::Basename;
 use Geo::GDAL;
@@ -182,7 +182,7 @@ sub new {
 	
 	$params{use} = shift;
 	
-    } elsif (@_ == 1 and isa($_[0], 'Geo::Raster')) { # Geo::Raster->new($raster)
+    } elsif (@_ == 1 and blessed($_[0]) and $_[0]->isa('Geo::Raster')) { # Geo::Raster->new($raster)
 	
 	$params{copy} = shift;
 	
@@ -224,7 +224,7 @@ sub new {
     
     $params{datatype} = $params{datatype} ? _interpret_datatype($params{datatype}) : 0;
     
-    if ($params{copy} and isa($params{copy}, 'Geo::Raster')) {
+    if ($params{copy} and blessed($params{copy}) and $params{copy}->isa('Geo::Raster')) {
 	croak "Can't copy an empty raster." unless $params{copy}->{GRID};
 	$self->{GRID} = ral_grid_create_copy($params{copy}->{GRID}, $params{datatype})
     } elsif ($params{use} and ref($params{use}) eq 'ral_gridPtr') {
@@ -472,7 +472,7 @@ sub wa2ga {
 # mask.
 sub mask {
     my($self, $mask) = @_;
-    isa($mask, 'Geo::Raster') ? 
+    $mask ? 
 	ral_grid_set_mask($self->{GRID}, $mask->{GRID}) : 
 	ral_grid_clear_mask($self->{GRID});
 }
@@ -507,7 +507,7 @@ sub set {
 	}
     } else {
 	if (ref($i)) {
-	    if (isa($i, 'Geo::Raster') and $i->{GRID}) {
+	    if (blessed($i) and $i->isa('Geo::Raster') and $i->{GRID}) {
 		return ral_grid_copy($self->{GRID}, $i->{GRID});
 	    } else {
 		croak "can't copy a ",ref($i)," onto a grid\n";
@@ -1039,7 +1039,7 @@ sub if {
     $a = Geo::Raster->new($a) if defined wantarray;
     croak "usage $a->if($b, $c)" unless defined $c;
     if (ref($c)) {
-	if (isa($c, 'Geo::Raster')) {
+	if (blessed($c) and $c->isa('Geo::Raster')) {
 	    ral_grid_if_then_grid($b->{GRID}, $a->{GRID}, $c->{GRID});
 	} elsif (ref($c) eq 'HASH') {
 	    my(@k,@v);
@@ -1171,7 +1171,7 @@ sub clip {
 	}
     } else {
 	my $gd = shift;
-	return unless isa($gd, 'Geo::Raster');
+	return unless blessed($gd) and $gd->isa('Geo::Raster');
 	my @a = $gd->_attributes;
 	my($i1,$j1) = $self->w2g($a[4],$a[7]);
 	my($i2,$j2) = ($i1+$a[1]-1,$j1+$a[2]-1);

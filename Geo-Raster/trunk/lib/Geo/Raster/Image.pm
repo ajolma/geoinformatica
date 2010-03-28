@@ -3,7 +3,6 @@
 package Geo::Raster;
 
 use strict;
-use UNIVERSAL qw(isa);
 
 ## @method Geo::Raster frame($with)
 #
@@ -78,7 +77,7 @@ sub line {
 sub transect {
     my($self, $geom, $delta) = @_;
     croak "usage: \$raster->transect(\$geometry, \$delta)" 
-	unless isa($geom, 'Geo::OGR::Geometry') and (defined $delta and $delta > 0);
+	unless $geom->isa('Geo::OGR::Geometry') and (defined $delta and $delta > 0);
     my @transect;
     if ($geom->GetGeometryCount) {
 	for (0..$geom->GetGeometryCount-1) {

@@ -3,7 +3,6 @@ package Geo::Raster::Layer::Dialogs::Copy;
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
@@ -77,7 +76,7 @@ sub open {
     for my $layer (@{$gui->{overlay}->{layers}}) {
 	my $n = $layer->name();
 	$names{$n} = 1;
-	next unless isa($layer, 'Geo::Raster');
+	next unless $layer->isa('Geo::Raster');
 	next if $n eq $self->name();
 	$model->set($model->append, 0, $n);
     }

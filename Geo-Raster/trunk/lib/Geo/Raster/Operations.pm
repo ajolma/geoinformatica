@@ -7,6 +7,7 @@
 package Geo::Raster;
 
 use strict;
+use Scalar::Util qw(blessed);
 use overload (
 	      'fallback' => undef,
               # not having "" overloaded makes print "$raster" to print "1"
@@ -76,7 +77,7 @@ sub _typeconversion {
     my($self,$other) = @_;
     my $type = ral_grid_get_datatype($self->{GRID});
     if (ref($other)) {
-	if (isa($other, 'Geo::Raster')) {
+	if (blessed($other) and $other->isa('Geo::Raster')) {
 	    return $Geo::Raster::REAL_GRID if 
 		ral_grid_get_datatype($other->{GRID}) == $Geo::Raster::REAL_GRID or 
 		$type == $Geo::Raster::REAL_GRID;

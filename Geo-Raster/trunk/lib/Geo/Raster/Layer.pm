@@ -14,11 +14,11 @@ Geo::Raster::Layer - A geospatial raster layer class for Gtk2::Ex::Geo
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
 use FileHandle;
 use Carp;
+use Scalar::Util qw(blessed);
 use File::Spec;
 use File::Basename;
 use Glib qw/TRUE FALSE/;
@@ -104,7 +104,7 @@ sub save_all_rasters {
     my @rasters;
     if ($gui->{overlay}->{layers}) {
 	for my $layer (@{$gui->{overlay}->{layers}}) {
-	    if (isa($layer, 'Geo::Raster')) {
+	    if ($layer->isa('Geo::Raster')) {
 		next if $layer->{GDAL};
 		push @rasters, $layer;
 	    }
@@ -139,7 +139,8 @@ sub save_all_rasters {
 ## @ignore
 sub upgrade {
     my($object) = @_;
-    if (isa($object, 'Geo::Raster') and !isa($object, 'Geo::Raster::Layer')) {
+    return 0 unless blessed($object);
+    if ($object->isa('Geo::Raster') and !$object->isa('Geo::Raster::Layer')) {
 	bless($object, 'Geo::Raster::Layer');
 	$object->defaults();
 	return 1;
