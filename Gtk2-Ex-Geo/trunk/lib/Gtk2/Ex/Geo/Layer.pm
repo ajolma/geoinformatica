@@ -92,18 +92,7 @@ sub registration {
 	#print STDERR "reg: @{$glue->{resources}{icons}{dir}}\n";
     }
     my $dialogs = Gtk2::Ex::Geo::Dialogs->new();
-    my $commands = [ {
-	tag => 'zoom to all',
-	stock_id => 'gtk-zoom-fit',
-	#icon_widget => Gtk2::Image->new_from_file('mActionZoomFullExtent.png'),
-	label => 'Zoom to all',
-	tip => 'Zoom to all layers.',
-	sub => sub {
-	    my(undef, $gui) = @_;
-	    $gui->{overlay}->zoom_to_all;
-	}
-		     } ];
-    return { dialogs => $dialogs, commands => $commands };
+    return { dialogs => $dialogs };
 }
 
 ## @cmethod @palette_types()

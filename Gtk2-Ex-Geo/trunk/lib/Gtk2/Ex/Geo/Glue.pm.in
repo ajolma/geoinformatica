@@ -233,6 +233,37 @@ sub create_toolbar {
     $menu2->show_all;
     $toolbar->insert($button2, 0);
     $toolbar->insert($button1, 0);
+
+    my $button = Gtk2::ToolButton->new_from_stock('gtk-zoom-in');
+    $tooltips = Gtk2::Tooltips->new;
+    my $tip = 'Zoom in one tenth.';
+    $button->set_tooltip($tooltips, $tip, '');
+    $tooltips->set_tip($button, $tip);
+    $tooltips->enable;
+    $toolbar->insert($button, -1);
+    $button->signal_connect('clicked', sub {$_[1]->{overlay}->zoom_in}, $self);
+    $button->show_all;
+
+    $button = Gtk2::ToolButton->new_from_stock('gtk-zoom-out');
+    $tooltips = Gtk2::Tooltips->new;
+    $tip = 'Zoom out one tenth.';
+    $button->set_tooltip($tooltips, $tip, '');
+    $tooltips->set_tip($button, $tip);
+    $tooltips->enable;
+    $toolbar->insert($button, -1);
+    $button->signal_connect('clicked', sub {$_[1]->{overlay}->zoom_out}, $self);
+    $button->show_all;
+
+    $button = Gtk2::ToolButton->new_from_stock('gtk-zoom-fit');
+    $tooltips = Gtk2::Tooltips->new;
+    $tip = 'Zoom to all.';
+    $button->set_tooltip($tooltips, $tip, '');
+    $tooltips->set_tip($button, $tip);
+    $tooltips->enable;
+    $toolbar->insert($button, -1);
+    $button->signal_connect('clicked', sub {$_[1]->{overlay}->zoom_to_all}, $self);
+    $button->show_all;
+
     return ($toolbar, $button1, $button2);
 }
 
@@ -536,15 +567,7 @@ sub message {
 # @brief Construct a menu for an overlay object.
 sub overlay_menu {
     my @menu = 
-	('Zoom _in' => sub { 
-	    my ($item, $self) = @_;
-	    $self->zoom_in(); 
-	 },
-	 'Zoom _out' => sub { 
-	     my ($item, $self) = @_;
-	     $self->zoom_out(); 
-	 },
-	 'Zoom to pre_vious' => sub {
+	('Zoom to pre_vious' => sub {
 	     my ($item, $self) = @_;
 	     my $zoom = pop @{$self->{zoom_stack}};
 	     $self->zoom(@$zoom, 0, 1) if $zoom;
