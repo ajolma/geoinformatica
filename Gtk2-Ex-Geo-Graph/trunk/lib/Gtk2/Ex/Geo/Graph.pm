@@ -11,10 +11,12 @@ Gtk2::Ex::Geo::Graph - Geospatial graphs for Gtk2::Ex::Geo
 use strict;
 use warnings;
 use Carp;
+use File::Spec;
 use Graph;
 use Glib qw/TRUE FALSE/;
 use Gtk2;
 use Gtk2::Ex::Geo;
+use Gtk2::Ex::Geo::Dialogs qw/:all/;
 
 our @ISA = qw(Gtk2::Ex::Geo::Layer);
 
@@ -37,6 +39,21 @@ sub registration {
 		my(undef, $gui) = @_;
 		my $layer = Gtk2::Ex::Geo::Graph->new( name => 'graph' );
 		$gui->add_layer($layer);
+	    }
+	},
+	{
+	    label => 'Open...',
+	    tip => 'Read a graph from a file',
+	    sub => sub {
+		my(undef, $gui) = @_;
+		my $filename = file_chooser('Open a saved graph', 'open');
+		if ($filename) {
+		    my($volume, $directories, $file) = File::Spec->splitpath($filename);
+		    my @file = split /\./, $file;
+		    my $layer = Gtk2::Ex::Geo::Graph->new( name => $file[0] );
+		    $layer->open($filename);
+		    $gui->add_layer($layer);
+		}
 	    }
 	}
 	];
@@ -167,6 +184,7 @@ sub got_focus {
     $gui->set_interaction_geometry('Line');
     $o->{show_selection} = 0;
 }
+
 sub lost_focus {
     my($self, $gui) = @_;
     $gui->{overlay}->signal_handler_disconnect($self->{_tag1}) if $self->{_tag1};
