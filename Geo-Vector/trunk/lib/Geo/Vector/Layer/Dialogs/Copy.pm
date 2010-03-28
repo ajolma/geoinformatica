@@ -3,7 +3,6 @@ package Geo::Vector::Layer::Dialogs::Copy;
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
@@ -75,7 +74,7 @@ sub open {
     $model->clear;
     for my $layer (@{$gui->{overlay}->{layers}}) {
 	my $n = $layer->name();
-	next unless isa($layer, 'Geo::Vector');
+	next unless $layer->isa('Geo::Vector');
 	next unless $layer->{update};
 	next if $n eq $self->name();
 	$model->set($model->append, 0, $n);
@@ -118,7 +117,7 @@ sub do_copy {
     croak "Store into?" unless $into;
     my $into_layer = $gui->layer($into);
     if ($into_layer) {
-	croak $into_layer->name." is not a vector layer" unless isa($into_layer, 'Geo::Vector');
+	croak $into_layer->name." is not a vector layer" unless $into_layer->isa('Geo::Vector');
     } else {
 	my $combo = $dialog->get_widget('copy_datasource_combobox');
 	my $active = $combo->get_active();
@@ -253,7 +252,7 @@ sub copy_into_changed {
     if ($into) {
 	for my $layer (@{$gui->{overlay}->{layers}}) {
 	    my $n = $layer->name();
-	    next unless isa($layer, 'Geo::Vector');
+	    next unless $layer->isa('Geo::Vector');
 	    if ($into eq $layer->name()) {
 		$into_layer = $layer;
 		last;

@@ -31,7 +31,7 @@ use warnings;
 use Carp;
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
-use UNIVERSAL qw(isa);
+use Scalar::Util qw(blessed);
 use XSLoader;
 use File::Basename;
 use Geo::GDAL;
@@ -243,7 +243,7 @@ sub new {
     if ($params{create} or $self->{OGR}->{Driver}->{name} eq 'Memory') {
 
 	my $srs;
-	if (ref($params{srs}) and isa($params{srs}, 'Geo::OSR::SpatialReference')) {
+	if (blessed($params{srs}) and $params{srs}->isa('Geo::OSR::SpatialReference')) {
 	    $srs = $params{srs};
 	} else {
 	    $srs = new Geo::OSR::SpatialReference;
@@ -319,7 +319,7 @@ sub open_data_source {
 	    $data_source = '';
 	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver('Memory');
 	    $create_options = {};
-	} elsif (isa($driver, 'Geo::OGR::Driver')) {
+	} elsif (blessed($driver) and $driver->isa('Geo::OGR::Driver')) {
 	    $self->{OGR}->{Driver} = $driver;
 	} else {
 	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
@@ -459,7 +459,7 @@ sub dump_geom {
 # rectangle filter (min_x, min_y, max_x, max_y)
 sub init_iterate {
     my $self = shift;
-    return unless isa($self, 'Geo::Vector');
+    return unless $self->isa('Geo::Vector');
     my %options = @_ if @_;
     if ($options{filter_rect}) {
 	$self->{_filter} = Geo::OGR::Geometry->create(
@@ -493,7 +493,7 @@ sub init_iterate {
 #
 sub next_feature {
     my $self = shift;
-    return $self unless isa($self, 'Geo::Vector');
+    return $self unless $self->isa('Geo::Vector');
     if ($self->{features}) {
 	my $f;
 	while (1) {
@@ -879,11 +879,13 @@ sub feature {
 	
 	# update at fid
 	if ( $self->{features} ) {
-	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::Vector::Feature');
+	    $feature = $self->make_feature($feature) unless 
+		blessed($feature) and $feature->isa('Geo::Vector::Feature');
 	    $self->{features}{$fid} = $feature;
 	    $feature->{FID} = $fid;
 	} else {
-	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::OGR::Feature');
+	    $feature = $self->make_feature($feature) unless 
+		blessed($feature) and $feature->isa('Geo::OGR::Feature');
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
 	}
@@ -898,13 +900,15 @@ sub feature {
 	# add
 	$feature = $fid;
 	if ($self->{features}) {
-	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::Vector::Feature');
+	    $feature = $self->make_feature($feature) unless 
+		blessed($feature) and $feature->isa('Geo::Vector::Feature');
 	    $fid = 0;
 	    while (exists $self->{features}{$fid}) {$fid++}
 	    $self->{features}{$fid} = $feature;
 	    $feature->{FID} = $fid;
 	} else {
-	    $feature = $self->make_feature($feature) unless isa($feature, 'Geo::OGR::Feature');
+	    $feature = $self->make_feature($feature) unless 
+		blessed($feature) and $feature->isa('Geo::OGR::Feature');
 	    $self->{OGR}->{Layer}->CreateFeature($feature);
 	}
     } elsif (defined $fid) {
@@ -974,10 +978,12 @@ sub geometry {
 sub make_geometry {
     my($input) = @_;
     my $geometry;
-    if (isa($input, 'Geo::OGR::Geometry')) {
-	return $input->Clone;
-    } elsif (isa($input, 'Geo::OGC::Geometry')) {
-	$geometry = Geo::OGR::CreateGeometryFromWkt( $input->AsText );
+    if (blessed($input)) {
+	if ($input->isa('Geo::OGR::Geometry')) {
+	    return $input->Clone;
+	} else {
+	    $geometry = Geo::OGR::CreateGeometryFromWkt( $input->AsText );
+	}
     } else {
 	$geometry = Geo::OGR::CreateGeometryFromWkt( $input );
     }
@@ -998,9 +1004,9 @@ sub make_feature {
     if (@_ == 1) {
 	my $feature = shift;
 	if ($self->{features}) {
-	    return $feature if isa($feature, 'Geo::Vector::Feature');
+	    return $feature if blessed($feature) and $feature->isa('Geo::Vector::Feature');
 	} else {
-	    return $feature if isa($feature, 'Geo::OGR::Feature');
+	    return $feature if blessed($feature) and $feature->isa('Geo::OGR::Feature');
 	}
 	%params = %$feature;
     } else {

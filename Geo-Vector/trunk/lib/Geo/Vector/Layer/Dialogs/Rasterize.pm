@@ -3,7 +3,6 @@ package Geo::Vector::Layer::Dialogs::Rasterize;
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
@@ -50,7 +49,7 @@ sub open {
 	$model = $combobox->get_model();
 	$model->set($model->append, 0, "Use current view");
 	for my $layer (@{$gui->{overlay}->{layers}}) {
-	    next unless isa($layer, 'Geo::Raster');
+	    next unless $layer->isa('Geo::Raster');
 	    $model->set($model->append, 0, $layer->name);
 	}
 	$combobox->set_active(0);

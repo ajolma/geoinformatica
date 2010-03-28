@@ -3,7 +3,6 @@ package Geo::Vector::Feature;
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
 use Carp;
 use Encode;
 use Geo::GDAL;

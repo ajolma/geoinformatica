@@ -11,7 +11,7 @@ Geo::Vector::Layer - A geospatial vector layer class for Gtk2::Ex::Geo
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
+use Scalar::Util qw(blessed);
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
 use Carp;
@@ -90,16 +90,17 @@ sub registration {
 # @brief Upgrade Geo::Vector, feature and geometry objects to Geo::Vector::Layers
 sub upgrade {
     my($object) = @_;
-    if (isa($object, 'Geo::Vector') and !isa($object, 'Geo::Vector::Layer')) {
+    return 0 unless blessed($object);
+    if ($object->isa('Geo::Vector') and !$object->isa('Geo::Vector::Layer')) {
 	bless($object, 'Geo::Vector::Layer');
 	$object->defaults();
 	return 1;
-    } elsif (isa($object, 'Geo::OGR::Feature') or isa($object, 'Geo::Vector::Feature')) {
+    } elsif ($object->isa('Geo::OGR::Feature') or $object->isa('Geo::Vector::Feature')) {
 	my $layer = Geo::Vector->new(features => [$object]);
 	bless($layer, 'Geo::Vector::Layer');
 	$layer->defaults();
 	return $layer;
-    } elsif (isa($object, 'Geo::OGR::Geometry')) {
+    } elsif ($object->isa('Geo::OGR::Geometry')) {
 	my $layer = Geo::Vector->new(geometries => [$object]);
 	bless($layer, 'Geo::Vector::Layer');
 	$layer->defaults();
@@ -158,7 +159,7 @@ sub features {
     my($self, %params) = @_;
     my %new_params;
     for my $key (keys %params) {
-	if (isa($params{$key}, 'Geo::OGC::Geometry')) {
+	if (blessed($params{$key}) and $params{$key}->isa('Geo::OGC::Geometry')) {
 	    $new_params{$key} = Geo::OGR::CreateGeometryFromWkt($params{$key}->AsText);
 	} else {
 	    $new_params{$key} = $params{$key};

@@ -4,7 +4,6 @@ package Geo::Vector::Layer::Dialogs::Open;
 use strict;
 use warnings;
 use Carp;
-use UNIVERSAL qw(isa);
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
@@ -550,9 +549,9 @@ sub build_data_source {
 ## @ignore
 sub get_entries {
     my($widget, $entries) = @_;
-    if (isa($widget, 'Gtk2::Container')) {
+    if ($widget->isa('Gtk2::Container')) {
 	$widget->foreach(\&get_entries, $entries);
-    } elsif (isa($widget, 'Gtk2::Entry')) {
+    } elsif ($widget->isa('Gtk2::Entry')) {
 	my $n = $widget->get_name;
 	my $t = $widget->get_text;
 	if ($n and $t) {

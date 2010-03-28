@@ -4,7 +4,6 @@ package Geo::Vector::Layer::Dialogs::Features;
 use strict;
 use warnings;
 use Carp;
-use UNIVERSAL qw(isa);
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs::Copy;
@@ -373,7 +372,7 @@ sub make_selection {
 	next unless $geom;
 	my $g = Geo::OGC::Geometry->new(Text => $geom->ExportToWkt);
 	unless ($gui->{overlay}->{selection}) {
-	    unless (isa($g, 'Geo::OGC::GeometryCollection')) {
+	    unless ($g->isa('Geo::OGC::GeometryCollection')) {
 		my $coll = $g->MakeCollection;
 		$coll->AddGeometry($g);
 		$gui->{overlay}->{selection} = $coll;
