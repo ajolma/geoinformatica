@@ -120,7 +120,7 @@ sub setup{
 
     $window->add($vbox);
     $window->signal_connect("destroy", \&close_the_app);
-    $window->set_default_size(800,600);
+    $window->set_default_size(850,600);
     $window->show_all;
 
     # add logger and redirect STDOUT to it
