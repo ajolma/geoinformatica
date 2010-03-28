@@ -86,7 +86,7 @@ sub INIT_INSTANCE {
     $self->{rubberband_geometry} = '';
     $self->{rubberband_mode} = '';
         
-    # why do I need to set these?
+    # why do I need to set these two?
     $self->{zoom_factor} = 1.2;
     $self->{step} = 8;
 
@@ -95,6 +95,7 @@ sub INIT_INSTANCE {
     $self->{selection_color} = [255*257, 178*257, 0];
     $self->{selection_style} = 'GDK_LINE_SOLID';
     $self->{drawing_color} = [0, 65535, 0];
+    $self->{show_selection} = 1;
 
     $self->{layers} = [];
 }
@@ -561,7 +562,7 @@ sub update_image {
 	$gc->set_line_attributes(2, $style, 'GDK_CAP_NOT_LAST', 'GDK_JOIN_MITER');
 	$self->render_geometry($gc, $self->{drawing}, enhance_vertices => 1);
     }
-    if ($self->{selection}) {
+    if ($self->{selection} and $self->{show_selection}) {
 	$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(@{$self->{selection_color}}));
 	my $style = $self->{selection_style};
 	$style = 'GDK_LINE_SOLID';
