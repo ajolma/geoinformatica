@@ -120,7 +120,7 @@ sub create_layer_tree_view {
 	  sub {
 	      my(undef, $self) = @_;
 	      my $layer = $self->get_selected_layer();
-	      return if $self->{focused} and $self->{focused} == $layer;
+	      return if $self->{focused} and $self->{focused}->name eq $layer->name;
 	      $self->{focused}->lost_focus($self) if $self->{focused};
 	      $layer->got_focus($self) if $layer;
 	      $self->{focused} = $layer;
