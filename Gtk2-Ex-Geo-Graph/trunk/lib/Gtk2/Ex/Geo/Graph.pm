@@ -163,8 +163,8 @@ sub got_focus {
 	new_selection => \&new_selection, [$self, $gui]);
     $self->{_tag3} = $o->signal_connect(
 	key_press_event => \&key_pressed, [$self, $gui]);
-    $o->{rubberband_mode} = 'draw';
-    $o->{rubberband_geometry} = 'line';
+    $gui->set_interaction_mode('Draw');
+    $gui->set_interaction_geometry('Line');
     $o->{show_selection} = 0;
 }
 sub lost_focus {
