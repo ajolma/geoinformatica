@@ -20,8 +20,6 @@ Gtk2->init;
     our @ISA = qw(Gtk2::Ex::Geo::Layer);
     sub new {
 	my $self = Gtk2::Ex::Geo::Layer::new(@_);
-	#print STDERR $self->isa('Gtk2::Ex::Geo::Layer') ? "is layer\n" : "is not layer\n";
-	#print STDERR $self->isa('Gtk2::Ex::Geo::Test1') ? "is test 1\n" : "is not test 1\n";
 	return $self;
     }
     sub world {
@@ -78,7 +76,6 @@ Gtk2->init;
 }
 
 my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer/] );
-#	(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer Geo::Raster::Layer/]);
 
 if ($have_gnuplot) {
     my $gnuplot = IPC::Gnuplot->new();
@@ -97,13 +94,26 @@ $gis->{overlay}->signal_connect(update_layers =>
 	#print STDERR "in callback: @_\n";
 	});
 
-$gis->register_command( 
-    tag => 'test',
-    label => 'test',
-    sub => sub {
-	my(undef, $gui) = @_;
-	print STDERR "exec command 'test'\n";
-    } );
+$gis->register_commands(
+    [ 
+      tag => 'test popup',
+      label => 'Menu',
+      tip => 'Press to get a menu',
+      {
+	  label => 'menu item 1',
+	  sub => sub {
+	      my(undef, $gui) = @_;
+	      print STDERR "exec menu item 1\n";
+	  }
+      },
+      {
+	  label => 'menu item 2',
+	  sub => sub {
+	      my(undef, $gui) = @_;
+	      print STDERR "exec menu item 2\n";
+	  }
+      }
+    ] );
 
 $gis->{toolbar}->set_style('icons');
 

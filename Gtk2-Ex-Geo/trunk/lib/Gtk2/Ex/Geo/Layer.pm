@@ -87,11 +87,15 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 # @return an anonymous hash containing the dialogs (key: 'dialogs')
 # and commands (key: 'commands')
 sub registration {
+    my($glue) = @_;
+    if ($glue->{resources}{icons}{dir}) {
+	#print STDERR "reg: @{$glue->{resources}{icons}{dir}}\n";
+    }
     my $dialogs = Gtk2::Ex::Geo::Dialogs->new();
     my $commands = [ {
 	tag => 'zoom to all',
-	#stock_id => 'gtk-zoom-fit',
-	icon_widget => Gtk2::Image->new_from_file('/home/ajolma/dev/geoinformatica/icons/gis-0.1/mActionZoomFullExtent.png'),
+	stock_id => 'gtk-zoom-fit',
+	#icon_widget => Gtk2::Image->new_from_file('mActionZoomFullExtent.png'),
 	label => 'Zoom to all',
 	tip => 'Zoom to all layers.',
 	sub => sub {

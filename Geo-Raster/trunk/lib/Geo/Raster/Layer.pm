@@ -43,15 +43,16 @@ use vars qw/%EPSG/;
 sub registration {
     my $dialogs = Geo::Raster::Layer::Dialogs->new();
     my $commands = [
+	tag => 'raster',
+	label => 'Raster',
+	tip => 'Open a raster dataset or save all libral rasters.',
 	{
-	    tag => 'open',
-	    label => 'Open raster',
+	    label => 'Open...',
 	    tip => 'Add a new raster layer.',
 	    sub => \&open_raster
 	},
 	{
-	    tag => 'save_all',
-	    label => 'Save rasters',
+	    label => 'Save all',
 	    tip => 'Save all libral raster layers.',
 	    sub => \&save_all_rasters
 	}

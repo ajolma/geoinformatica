@@ -274,8 +274,44 @@ sub unregister_command {
 # @brief Extend the capabilities by adding new commands
 sub register_commands {
     my($self, $commands) = @_;
-    for my $command (@$commands) {
-	$self->register_command(%$command);
+    unless (ref $commands->[0]) {
+	my @commands;
+	while (ref $commands->[$#$commands]) {
+	    push @commands, pop @$commands;
+	}
+	my $menu = Gtk2::Menu->new;
+	for my $command (reverse @commands) {
+	    my $name = $command->{label};
+	    my $item;
+	    #$item = Gtk2::SeparatorMenuItem->new();
+	    $item = Gtk2::MenuItem->new_with_label($name);
+	    $item->signal_connect(activate => $command->{sub}, $self);
+	    $menu->append($item);
+	}
+	my %args = @$commands;
+	$args{icon_widget} = Gtk2::Label->new($args{label}) unless $args{icon_widget};
+	my $button;
+	if ($args{stock_id}) {
+	    $button = Gtk2::MenuToolButton->new_from_stock($args{stock_id});
+	} else {
+	    $button = Gtk2::MenuToolButton->new($args{icon_widget}, $args{label});
+	}
+	$button->set_icon_name($args{icon_name}) if $args{icon_name};
+	$button->set_label_widget($args{label_widget}) if $args{label_widget};
+	my $tooltips = Gtk2::Tooltips->new;
+	$args{tip} = $args{tip} || '';
+	$button->set_tooltip($tooltips, $args{tip}, '');
+	$tooltips->set_tip($button, $args{tip});
+	$tooltips->enable;
+	$args{pos} = -1 unless defined $args{pos};
+	$button->set_menu($menu);
+	$button->show_all;
+	$menu->show_all;
+	$self->{toolbar}->insert($button, $args{pos});
+    } else {
+	for my $command (@$commands) {
+	    $self->register_command(%$command);
+	}
     }
 }
 
@@ -318,7 +354,7 @@ sub register_class {
 	my $sub = $params{class}.'::upgrade';
 	push @{$self->{upgrades}}, \&$sub if defined &$sub;
 	$sub = $params{class}.'::registration';
-	my $registration = &$sub($params{class});
+	my $registration = &$sub($self);
 	%params = %$registration;
     }
     $self->register_dialogs($params{dialogs}) if $params{dialogs};
