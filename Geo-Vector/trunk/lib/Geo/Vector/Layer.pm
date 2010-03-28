@@ -60,29 +60,27 @@ $BORDER_COLOR = [255, 255, 255];
 ## @ignore
 sub registration {
     my $dialogs = Geo::Vector::Layer::Dialogs->new();
-    my $commands = {
-	new => {
-	    nr => 1,
-	    text => 'New vector',
+    my $commands = [
+	{
+	    tag => 'new',
+	    label => 'New vector',
 	    tip => 'Create a new OGR layer',
-	    pos => 0,
 	    sub => sub {
 		my(undef, $gui) = @_;
 		Geo::Vector::Layer::Dialogs::New::open($gui);
 	    }
 	},
-	open => {
-	    nr => 2,
-	    text => 'Open vector',
+	{
+	    tag => 'open',
+	    label => 'Open vector',
 	    tip => 'Add a new vector layer from a data source.',
-	    pos => 1,
 	    sub => sub {
 		my(undef, $gui) = @_;
 		$gui->{history}->enter(''); # open_vector dialog uses the same history
 		Geo::Vector::Layer::Dialogs::Open::open($gui);
 	    }
 	}
-    };
+	];
     return { dialogs => $dialogs, commands => $commands };
 }
 

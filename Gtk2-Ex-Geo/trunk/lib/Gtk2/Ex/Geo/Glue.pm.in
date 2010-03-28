@@ -240,38 +240,42 @@ sub register_dialogs {
 }
 
 sub register_command {
-    my($self, $label, $sub, $tip, $pos) =  @_;
-    #my $label_widget = Gtk2::Label->new($label) if Gtk2->CHECK_VERSION(2, 18, 0);
-    my $label_widget = Gtk2::Label->new($label);
-    my $button = Gtk2::ToolButton->new($label_widget, $label);
+    my($self, %args) = @_;
+    $args{icon_widget} = Gtk2::Label->new($args{label}) unless $args{icon_widget};
+    my $button;
+    if ($args{stock_id}) {
+	$button = Gtk2::ToolButton->new_from_stock($args{stock_id});
+    } else {
+	$button = Gtk2::ToolButton->new($args{icon_widget}, $args{label});
+    }
+    $button->set_icon_name($args{icon_name}) if $args{icon_name};
+    $button->set_label_widget($args{label_widget}) if $args{label_widget};
     my $tooltips = Gtk2::Tooltips->new;
-    $tip = $tip || '';
-    $button->set_tooltip($tooltips, $tip, '');
-    $tooltips->set_tip($button, $tip);
+    $args{tip} = $args{tip} || '';
+    $button->set_tooltip($tooltips, $args{tip}, '');
+    $tooltips->set_tip($button, $args{tip});
     $tooltips->enable;
-    $pos = -1 unless defined $pos;
-    $self->{toolbar}->insert($button, $pos);
-    $button->signal_connect('clicked', $sub, $self);
-    $self->{commands}{$label} = $sub;
+    $args{pos} = -1 unless defined $args{pos};
+    $self->{toolbar}->insert($button, $args{pos});
+    $button->signal_connect('clicked', $args{sub}, $self);
+    $self->{buttons}{$args{tag}} = $button;
+    $self->{commands}{$args{tag}} = $args{sub};
     $button->show_all;
 }
 
 sub unregister_command {
-    my($self, $label) =  @_;
-    $main::gis->{toolbar}->foreach(
-	sub { $main::gis->{toolbar}->remove($_[0]) if $_[0]->get_label eq $label; });
-    delete $self->{commands}{$label};
+    my($self, $tag) =  @_;
+    $self->{toolbar}->remove($self->{buttons}{$tag}) if $self->{buttons}{$tag};
+    delete $self->{buttons}{$tag};
+    delete $self->{commands}{$tag};
 }
 
 ## @method register_commands($commands)
 # @brief Extend the capabilities by adding new commands
 sub register_commands {
     my($self, $commands) = @_;
-    for (sort {$commands->{$a}{nr} <=> $commands->{$b}{nr}} keys %$commands) {
-	$self->register_command($commands->{$_}{text}, 
-				$commands->{$_}{sub}, 
-				$commands->{$_}{tip},
-				$commands->{$_}{pos});
+    for my $command (@$commands) {
+	$self->register_command(%$command);
     }
 }
 

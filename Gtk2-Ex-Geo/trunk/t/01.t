@@ -47,18 +47,13 @@ if (0) {
     $gis->add_layer($layer);
     
     $gis->register_commands
-	( 
-	  {
-	      'test' => {
-		  nr => 1,
-		  text => 'test',
-		  pos => -1,
-		  sub => sub {
-		      my(undef, $gui) = @_;
-		      croak "test command";
-		  }
-	      }
-	  } );
+	( [ { tag => 'test', 
+	      label => 'test',	
+	      sub => sub {
+		  my(undef, $gui) = @_;
+		  croak "test command";
+	      } 
+	    } ] );
     
     $window->show;
     ok(1);

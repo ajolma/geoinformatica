@@ -151,8 +151,14 @@ sub setup{
     
     tie *STDOUT => "Buffer", \$buffer;
 
-    $gis->register_command('Output', sub { $log->show_all }, 'Output window', 0);
-    $gis->register_command('Extend', \&extend, 'Open an extension', 0);
+    $gis->register_command(tag => 'out', 
+			   label => 'Output',
+			   sub => sub { $log->show_all }, 
+			   tip => 'Output window');
+    $gis->register_command(tag => 'ext', 
+			   label => 'Extend', 
+			   sub => \&extend, 
+			   tip => 'Open an extension');
 
 }
 

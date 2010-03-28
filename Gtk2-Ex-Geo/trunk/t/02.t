@@ -97,18 +97,15 @@ $gis->{overlay}->signal_connect(update_layers =>
 	#print STDERR "in callback: @_\n";
 	});
 
-$gis->register_commands
-    ( 
-      {
-	  'test' => {
-	      nr => 1,
-	      text => 'test',
-	      pos => -1,
-	      sub => sub {
-		  my(undef, $gui) = @_;
-	      }
-	  }
-      } );
+$gis->register_command( 
+    tag => 'test',
+    label => 'test',
+    sub => sub {
+	my(undef, $gui) = @_;
+	print STDERR "exec command 'test'\n";
+    } );
+
+$gis->{toolbar}->set_style('icons');
 
 Gtk2->main;
 

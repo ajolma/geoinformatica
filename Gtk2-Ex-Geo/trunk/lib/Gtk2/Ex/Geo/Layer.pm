@@ -88,18 +88,17 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 # and commands (key: 'commands')
 sub registration {
     my $dialogs = Gtk2::Ex::Geo::Dialogs->new();
-    my $commands = {
-	'zoom to all' => {
-	    nr => 1,
-	    text => 'Zoom to all',
-	    tip => 'Zoom to all layers.',
-	    pos => -1,
-	    sub => sub {
-		my(undef, $gui) = @_;
-		$gui->{overlay}->zoom_to_all;
-	    }
+    my $commands = [ {
+	tag => 'zoom to all',
+	#stock_id => 'gtk-zoom-fit',
+	icon_widget => Gtk2::Image->new_from_file('/home/ajolma/dev/geoinformatica/icons/gis-0.1/mActionZoomFullExtent.png'),
+	label => 'Zoom to all',
+	tip => 'Zoom to all layers.',
+	sub => sub {
+	    my(undef, $gui) = @_;
+	    $gui->{overlay}->zoom_to_all;
 	}
-    };
+		     } ];
     return { dialogs => $dialogs, commands => $commands };
 }
 

@@ -4,7 +4,7 @@
 package ext;
 
 remove();
-$main::gis->register_command('ext', \&ext);
+$main::gis->register_command(tag => 'ovr', label => 'Overlay', sub => \&ext);
 
 #my @buffer = <ext::DATA>;
 my @buffer = `cat /home/ajolma/dev/geoinformatica/Geoinformatica/trunk/ext.glade`;
@@ -13,7 +13,7 @@ shift @buffer if $buffer[0] =~ /^\s*$/;
 $main::gis->register_dialogs(Gtk2::Ex::Geo::DialogMaster->new(buffer => \@buffer));
 
 sub remove {
-    $main::gis->de_register_command('ext');
+    $main::gis->unregister_command('ovr');
 }
 
 sub ext {

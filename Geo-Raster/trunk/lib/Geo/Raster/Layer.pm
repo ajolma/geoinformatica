@@ -42,95 +42,97 @@ use vars qw/%EPSG/;
 
 sub registration {
     my $dialogs = Geo::Raster::Layer::Dialogs->new();
-    my $commands = {
-	open => {
-	    nr => 2,
-	    text => 'Open raster',
+    my $commands = [
+	{
+	    tag => 'open',
+	    label => 'Open raster',
 	    tip => 'Add a new raster layer.',
-	    pos => 0,
-	    sub => sub {
-		my(undef, $gui) = @_;
-		my $file_chooser =
-		    Gtk2::FileChooserDialog->new ('Select a raster file',
-						  undef, 'open',
-						  'gtk-cancel' => 'cancel',
-						  'gtk-ok' => 'ok');
-
-		$file_chooser->set_select_multiple(1);
-		$file_chooser->set_current_folder($gui->{folder}) if $gui->{folder};
-    
-		my @filenames = $file_chooser->get_filenames if $file_chooser->run eq 'ok';
-
-		$gui->{folder} = $file_chooser->get_current_folder();
-    
-		$file_chooser->destroy;
-
-		return unless @filenames;
-
-		for my $filename (@filenames) {
-		    my $dataset = Geo::GDAL::Open($filename);
-		    croak "$filename is not recognized by GDAL" unless $dataset;
-		    my $bands = $dataset->{RasterCount};
-	
-		    for my $band (1..$bands) {
-	    
-			my $layer = Geo::Raster::Layer->new(filename => $filename, band => $band);
-			
-			my $name = fileparse($filename);
-			$name =~ s/\.\w+$//;
-			$name .= "_$band" if $bands > 1;
-			$gui->add_layer($layer, $name, 1);
-			$gui->{overlay}->render;
-			
-		    }
-		}
-		$gui->{tree_view}->set_cursor(Gtk2::TreePath->new(0));
-	    }
+	    sub => \&open_raster
 	},
-	save_all => {
-	    nr => 1,
-	    text => 'Save rasters',
+	{
+	    tag => 'save_all',
+	    label => 'Save rasters',
 	    tip => 'Save all libral raster layers.',
-	    pos => 0,
-	    sub => sub {
-		my(undef, $gui) = @_;
-		my @rasters;
-		if ($gui->{overlay}->{layers}) {
-		    for my $layer (@{$gui->{overlay}->{layers}}) {
-			if (isa($layer, 'Geo::Raster')) {
-			    next if $layer->{GDAL};
-			    push @rasters, $layer;
-			}
-		    }
-		}
-		
-		croak('No libral layers to save.') unless @rasters;
+	    sub => \&save_all_rasters
+	}
+	];
+    return { dialogs => $dialogs, commands => $commands };
+}
 
-		my $uri = file_chooser('Save all rasters into folder', 'select_folder');
-		
-		if ($uri) {
-		    for my $layer (@rasters) {
-			
-			#my $filename = File::Spec->catfile($uri, $layer->name);
-			my $filename = File::Spec->catfile($gui->{folder}, $layer->name);
-			
-			my $save = 1;
-			if ($layer->exists($filename)) {
-			    my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent',
-								  'question',
-								  'yes_no',
-								  "Overwrite existing $filename?");
-			    my $ret = $dialog->run;
-			    $save = 0 if $ret eq 'no';
-			    $dialog->destroy;
-			}
-			$layer->save($filename) if $save;
-		    }
-		}
+sub open_raster {
+    my(undef, $gui) = @_;
+    my $file_chooser =
+	Gtk2::FileChooserDialog->new ('Select a raster file',
+				      undef, 'open',
+				      'gtk-cancel' => 'cancel',
+				      'gtk-ok' => 'ok');
+    
+    $file_chooser->set_select_multiple(1);
+    $file_chooser->set_current_folder($gui->{folder}) if $gui->{folder};
+    
+    my @filenames = $file_chooser->get_filenames if $file_chooser->run eq 'ok';
+    
+    $gui->{folder} = $file_chooser->get_current_folder();
+    
+    $file_chooser->destroy;
+    
+    return unless @filenames;
+    
+    for my $filename (@filenames) {
+	my $dataset = Geo::GDAL::Open($filename);
+	croak "$filename is not recognized by GDAL" unless $dataset;
+	my $bands = $dataset->{RasterCount};
+	
+	for my $band (1..$bands) {
+	    
+	    my $layer = Geo::Raster::Layer->new(filename => $filename, band => $band);
+	    
+	    my $name = fileparse($filename);
+	    $name =~ s/\.\w+$//;
+	    $name .= "_$band" if $bands > 1;
+	    $gui->add_layer($layer, $name, 1);
+	    $gui->{overlay}->render;
+	    
+	}
+    }
+    $gui->{tree_view}->set_cursor(Gtk2::TreePath->new(0));
+}
+
+sub save_all_rasters {
+    my(undef, $gui) = @_;
+    my @rasters;
+    if ($gui->{overlay}->{layers}) {
+	for my $layer (@{$gui->{overlay}->{layers}}) {
+	    if (isa($layer, 'Geo::Raster')) {
+		next if $layer->{GDAL};
+		push @rasters, $layer;
 	    }
 	}
-    };
-    return { dialogs => $dialogs, commands => $commands };
+    }
+    
+    croak('No libral layers to save.') unless @rasters;
+    
+    my $uri = file_chooser('Save all rasters into folder', 'select_folder');
+    
+    if ($uri) {
+	for my $layer (@rasters) {
+	    
+	    #my $filename = File::Spec->catfile($uri, $layer->name);
+	    my $filename = File::Spec->catfile($gui->{folder}, $layer->name);
+	    
+	    my $save = 1;
+	    if ($layer->exists($filename)) {
+		my $dialog = Gtk2::MessageDialog->new(undef,'destroy-with-parent',
+						      'question',
+						      'yes_no',
+						      "Overwrite existing $filename?");
+		my $ret = $dialog->run;
+		$save = 0 if $ret eq 'no';
+		$dialog->destroy;
+	    }
+	    $layer->save($filename) if $save;
+	}
+    }
 }
 
 ## @ignore

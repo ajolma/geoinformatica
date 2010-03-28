@@ -26,18 +26,18 @@ $NODE_RAY = 7;
 
 sub registration {
     my $dialogs;
-    my $commands = {
-	new => {
-	    text => 'New graph',
+    my $commands = [
+	{
+	    tag => 'new',
+	    label => 'New graph',
 	    tip => 'Create a new graph',
-	    pos => 0,
 	    sub => sub {
 		my(undef, $gui) = @_;
 		my $layer = Gtk2::Ex::Geo::Graph->new( name => 'graph' );
 		$gui->add_layer($layer);
 	    }
 	}
-    };
+	];
     return { dialogs => $dialogs, commands => $commands };
 }
 
