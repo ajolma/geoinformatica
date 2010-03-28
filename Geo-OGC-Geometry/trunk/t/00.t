@@ -1,4 +1,3 @@
-use UNIVERSAL qw(isa);
 use Test::More qw(no_plan);
 
 BEGIN { 
