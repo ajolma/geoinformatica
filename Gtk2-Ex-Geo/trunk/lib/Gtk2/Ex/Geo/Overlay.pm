@@ -1097,7 +1097,7 @@ sub button_release_event {
 		    }
 		    $self->add_to_selection($geom);
 		    $self->delete_rubberband;
-		} elsif ($self->{rubberband_geometry} eq 'rect') {
+		} elsif ($self->{rubberband_geometry} =~ /rect/) {
 		    my $geom;
 		    if ($click) {
 			$geom = Geo::OGC::Point->new($wbegin[0], $wbegin[1]);
@@ -1134,7 +1134,7 @@ sub button_release_event {
 		    $self->delete_rubberband;
 		} elsif ($self->{rubberband_geometry} eq 'line') {
 		    $self->delete_rubberband;		    
-		} elsif ($self->{rubberband_geometry} eq 'rect') {
+		} elsif ($self->{rubberband_geometry} eq 'rectangle') {
 		    $self->delete_rubberband;
 		} elsif ($self->{rubberband_geometry} eq 'ellipse') {
 		    $self->delete_rubberband;

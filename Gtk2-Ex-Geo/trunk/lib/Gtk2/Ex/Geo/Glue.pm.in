@@ -48,135 +48,24 @@ sub new {
     my %params = @_;
 
     my $self = {};
+    bless($self, $class);
 
     $self->{folder} = $params{first_file_open_folder} if $params{first_file_open_folder};
 
-    my @columns = qw /name type v a/;
-    my %tooltips = (
-	name => 'name',
-	type => 'type',
-	v => 'visibility',
-	a => 'alpha'
-	);
+    ($self->{tree_view}, $self->{model}) =
+	$self->create_layer_tree_view;
     
-    $self->{model} = Gtk2::TreeStore->new(qw/Glib::String Glib::String Glib::String Glib::String/);
-    $self->{tree_view} = Gtk2::TreeView->new();
-    $self->{tree_view}->set_model($self->{model});
+    ($self->{toolbar}, $self->{mode_button}, $self->{geometry_button}) = 
+	$self->create_toolbar;
 
-    $self->{toolbar} = Gtk2::Toolbar->new();
     $self->{statusbar} = Gtk2::Statusbar->new();
+
     $self->{entry} = Gtk2::Entry->new();
-    $self->{overlay} = Gtk2::Ex::Geo::Overlay->new();
+    $self->{entry}->signal_connect( key_press_event => \&eval_entry, $self );
 
-    my $i = 0;
-    foreach my $column (@columns) {
-	my $cell = Gtk2::CellRendererText->new;
-	if ($column eq 'a') {
-	    $cell->set(editable => 1);
-	    $cell->signal_connect(edited => sub {
-		my($cell, $path, $new_value, $data) = @_;
-		my($self, $column) = @$data;
-		my $layer = $self->{overlay}->get_layer_by_index($path);
-		return unless $layer;
-		if ($column eq 'name') {
-		    $layer->name($new_value) unless $self->{overlay}->get_layer_by_name($new_value);
-		} else {
-		    $layer->alpha($new_value);
-		    $self->update;
-		    $self->{overlay}->render;
-		}
-				  }
-				  , [$self, $column]);
-	}
-	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
-	$self->{tree_view}->append_column($col);
-    }
+    $self->{overlay} = $self->create_overlay(@_);
 
-    my $selection = $self->{tree_view}->get_selection;
-    $selection->set_mode('multiple'); # does not seem to work?!?
-
-    my($menu, $menu_item_setup) = overlay_menu();
-
-    my %overlay_params = ( menu => $menu,
-			   menu_item_setup => $menu_item_setup,
-			   rubberband_mode => 'zoom',
-			   rubberband_geometry => 'rect',
-			   selecting => 'that_intersect',
-	);
-    
-    for my $key (keys %params) {
-	if ($key =~ /^overlay:(\w+)/) {
-	    $overlay_params{$1} = $params{$key};
-	}
-    }
-    
-    $self->{overlay}->my_inits( %overlay_params );
-
-    $self->{tree_view}->signal_connect
-	( cursor_changed => 
-	  sub {
-	      my(undef, $self) = @_;
-	      $self->{focused}->lost_focus($self) if $self->{focused};
-	      my $layer = $self->get_selected_layer();
-	      $layer->got_focus($self) if $layer;
-	      $self->{focused} = $layer;
-	  }, $self);
-
-    $self->{tree_view}->signal_connect
-	( motion_notify_event => 
-	  sub {
-	      my($self, $event, $gis) = @_;
-	      $self->set_has_tooltip(0);
-	      my @res = $self->get_path_at_pos($event->x, $event->y);
-	      return unless $res[0] and defined $res[0]->to_string;
-	      return unless $res[1];
-	      my $layer = $gis->{overlay}->get_layer_by_index($res[0]->to_string);
-	      my $column = $res[1]->get_title;
-	      my $tooltip = $tooltips{$column}.': ';
-	      for ($column) {
-		  $tooltip .= $layer->name if /^name/;
-		  $tooltip .= $layer->type('long') if /^type/;
-		  $tooltip .= $layer->visible ? 'visible' : 'hidden' if /^v/;
-		  $tooltip .= $layer->alpha if /^a/;
-	      }
-	      $self->set_tooltip_text($tooltip);
-	      $self->set_has_tooltip(1);
-	  }, $self) if Gtk2->CHECK_VERSION(2,12,0);
-
-    $self->{tree_view}->signal_connect
-	( leave_notify_event => 
-	  sub {
-	      my($self) = @_;
-	      $self->set_has_tooltip(0);
-	  }) if Gtk2->CHECK_VERSION(2,12,0);
-    
-    $self->{overlay}->signal_connect
-	( pixmap_ready => sub {
-	    my($overlay, $gis) = @_;
-	    my $layer = $self->get_selected_layer();
-	    if ($layer) {
-		my $gc = Gtk2::Gdk::GC->new($overlay->{pixmap});
-		$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
-		$layer->render_selection($gc, $overlay);
-	    }
-	  }, $self);
-    
-    $self->{overlay}->signal_connect
-	( new_selection => 
-	  sub {
-	      my(undef, $gis) = @_;
-	      my $overlay = $gis->{overlay};
-	      my $layer = $gis->get_selected_layer();
-	      if ($layer) {
-		  if ($overlay->{selection}) {
-		      $layer->select($overlay->{selecting} => $overlay->{selection});
-		  } else {
-		      $layer->select();
-		  }
-		  $overlay->update_image;
-		  $layer->open_features_dialog($self, 1);
-	      }
-	  }, $self);
+    $self->set_interaction_mode('Zoom');
     
     if ($params{history}) {
 	my $mode = 0600;
@@ -194,6 +83,7 @@ sub new {
 	}
 	$self->{history_file} = $params{history};
     }
+
     $self->{history} = new Gtk2::Ex::Geo::History(['']) unless $self->{history};
     if ($params{resources}) {
 	my $mode = 0600;
@@ -222,13 +112,221 @@ sub new {
     my @buffer = <Gtk2::Ex::Geo::History::DATA>;
     pop @buffer unless $buffer[$#buffer] =~ /^\</; # remove the extra content
     shift @buffer if $buffer[0] =~ /^\s*$/;
-    register_dialogs($self, Gtk2::Ex::Geo::DialogMaster->new(buffer => \@buffer));
+    register_dialogs($self, Gtk2::Ex::Geo::DialogMaster->new(buffer => \@buffer));  
 
-    $self->{tree_view}->signal_connect(button_press_event => \&layer_menu, $self);
-    $self->{entry}->signal_connect(key_press_event => \&eval_entry, $self);
-    $self->{overlay}->signal_connect(motion_notify => \&show_information, $self);
+    return $self;
+}
 
-    bless($self, $class);
+sub create_layer_tree_view {
+    my($self) = @_;
+    my @columns = qw /name type v a/;
+    my %tooltips = (
+	name => 'name',
+	type => 'type',
+	v => 'visibility',
+	a => 'alpha'
+	);    
+    my $model = Gtk2::TreeStore->new(qw/Glib::String Glib::String Glib::String Glib::String/);
+    my $view = Gtk2::TreeView->new();
+    $view->set_model($model);
+    my $i = 0;
+    foreach my $column (@columns) {
+	my $cell = Gtk2::CellRendererText->new;
+	if ($column eq 'a') {
+	    $cell->set(editable => 1);
+	    $cell->signal_connect(edited => sub {
+		my($cell, $path, $new_value, $data) = @_;
+		my($self, $column) = @$data;
+		my $layer = $self->{overlay}->get_layer_by_index($path);
+		return unless $layer;
+		if ($column eq 'name') {
+		    $layer->name($new_value) unless $self->{overlay}->get_layer_by_name($new_value);
+		} else {
+		    $layer->alpha($new_value);
+		    $self->update;
+		    $self->{overlay}->render;
+		}
+				  }
+				  , [$self, $column]);
+	}
+	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	$view->append_column($col);
+    }
+    my $selection = $view->get_selection;
+    $selection->set_mode('multiple'); # does not seem to work?!?
+    $view->signal_connect
+	( cursor_changed => 
+	  sub {
+	      my(undef, $self) = @_;
+	      $self->{focused}->lost_focus($self) if $self->{focused};
+	      my $layer = $self->get_selected_layer();
+	      $layer->got_focus($self) if $layer;
+	      $self->{focused} = $layer;
+	  }, $self);
+    $view->signal_connect
+	( motion_notify_event => 
+	  sub {
+	      my($self, $event, $gis) = @_;
+	      $self->set_has_tooltip(0);
+	      my @res = $self->get_path_at_pos($event->x, $event->y);
+	      return unless $res[0] and defined $res[0]->to_string;
+	      return unless $res[1];
+	      my $layer = $gis->{overlay}->get_layer_by_index($res[0]->to_string);
+	      my $column = $res[1]->get_title;
+	      my $tooltip = $tooltips{$column}.': ';
+	      for ($column) {
+		  $tooltip .= $layer->name if /^name/;
+		  $tooltip .= $layer->type('long') if /^type/;
+		  $tooltip .= $layer->visible ? 'visible' : 'hidden' if /^v/;
+		  $tooltip .= $layer->alpha if /^a/;
+	      }
+	      $self->set_tooltip_text($tooltip);
+	      $self->set_has_tooltip(1);
+	  }, $self) if Gtk2->CHECK_VERSION(2,12,0);
+    $view->signal_connect
+	( leave_notify_event => 
+	  sub {
+	      my($self) = @_;
+	      $self->set_has_tooltip(0);
+	  }) if Gtk2->CHECK_VERSION(2,12,0);
+    $view->signal_connect
+	( button_press_event => \&layer_menu, $self );
+    return ($view, $model);
+}
+
+sub create_toolbar {
+    my($self) = @_;
+    my $toolbar = Gtk2::Toolbar->new();
+    my $button1 = Gtk2::MenuToolButton->new(Gtk2::Label->new('Zoom'), 'Zoom');
+    my $menu1 = Gtk2::Menu->new;
+    for my $command ('Zoom','Pan','Select','Measure','Draw','Edit') {
+	my $item = Gtk2::MenuItem->new_with_label($command);
+	$item->signal_connect(activate => sub {
+	    my($self, $command) = @{$_[1]};
+	    $self->set_interaction_mode($command);
+			      }, [$self, $command]);
+	$menu1->append($item);
+    }
+    my $tooltips = Gtk2::Tooltips->new;
+    $button1->set_tooltip($tooltips, 'Interaction mode', '');
+    $tooltips->set_tip($button1, 'Interaction mode');
+    $tooltips->enable;
+    $button1->set_menu($menu1);
+    $button1->show_all;
+    $menu1->show_all;
+    my $button2 = Gtk2::MenuToolButton->new(Gtk2::Label->new('Rectangle'), 'Rectangle');
+    my $menu2 = Gtk2::Menu->new;
+    for my $command ('Line','Path','Rectangle','Ellipse','Polygon') {
+	my $item = Gtk2::MenuItem->new_with_label($command);
+	$item->signal_connect(activate => sub {
+	    my($self, $command) = @{$_[1]};
+	    $self->set_interaction_geometry($command);
+			      }, [$self, $command]);
+	$menu2->append($item);
+    }
+    $tooltips = Gtk2::Tooltips->new;
+    $button2->set_tooltip($tooltips, 'Interaction geometry', '');
+    $tooltips->set_tip($button2, 'Interaction geometry');
+    $tooltips->enable;
+    $button2->set_menu($menu2);
+    $button2->show_all;
+    $menu2->show_all;
+    $toolbar->insert($button2, 0);
+    $toolbar->insert($button1, 0);
+    return ($toolbar, $button1, $button2);
+}
+
+sub set_interaction_mode {
+    my($self, $mode) = @_;
+    if ($mode eq 'Zoom') {
+	$self->set_interaction_geometry('Rectangle');
+	$self->{geometry_button}->set_sensitive(0);
+    } elsif ($mode eq 'Pan') {
+	$self->set_interaction_geometry('Line');
+	$self->{geometry_button}->set_sensitive(0);
+    } elsif ($mode eq 'Select') {
+	$self->set_interaction_geometry('Rectangle');
+	$self->{geometry_button}->set_sensitive(1);
+    } elsif ($mode eq 'Measure') {
+	$self->set_interaction_geometry('Line');
+	$self->{geometry_button}->set_sensitive(1);
+    } elsif ($mode eq 'Draw') {
+	$self->set_interaction_geometry('Rectangle');
+	$self->{geometry_button}->set_sensitive(1);
+    } elsif ($mode eq 'Edit') {
+	$self->set_interaction_geometry('Line');
+	$self->{geometry_button}->set_sensitive(0);
+    } else {
+	$self->{geometry_button}->set_sensitive(1);
+    }
+    $self->{overlay}->{rubberband_mode} = lc($mode);
+    $self->{mode_button}->set_label($mode);
+    $self->{mode_button}->set_icon_widget(Gtk2::Label->new($mode));
+    $self->{mode_button}->show_all;
+}
+
+sub set_interaction_geometry {
+    my($self, $geometry) = @_;
+    $self->{overlay}->{rubberband_geometry} = lc($geometry);
+    $self->{geometry_button}->set_label($geometry);
+    $self->{geometry_button}->set_icon_widget(Gtk2::Label->new($geometry));
+    $self->{geometry_button}->show_all;
+}
+
+sub create_overlay {
+    my($self, %params) = @_;
+
+    my $overlay = Gtk2::Ex::Geo::Overlay->new();
+
+    my($menu, $menu_item_setup) = overlay_menu();
+
+    my %overlay_params = ( menu => $menu,
+			   menu_item_setup => $menu_item_setup,
+			   rubberband_mode => 'zoom',
+			   rubberband_geometry => 'rect',
+			   selecting => 'that_intersect',
+	);
+    
+    for my $key (keys %params) {
+	if ($key =~ /^overlay:(\w+)/) {
+	    $overlay_params{$1} = $params{$key};
+	}
+    }
+    
+    $overlay->my_inits( %overlay_params );  
+    
+    $overlay->signal_connect
+	( pixmap_ready => sub {
+	    my($overlay, $gis) = @_;
+	    my $layer = $self->get_selected_layer();
+	    if ($layer) {
+		my $gc = Gtk2::Gdk::GC->new($overlay->{pixmap});
+		$gc->set_rgb_fg_color(Gtk2::Gdk::Color->new(65535,0,0));
+		$layer->render_selection($gc, $overlay);
+	    }
+	  }, $self);
+    
+    $overlay->signal_connect
+	( new_selection => 
+	  sub {
+	      my(undef, $gis) = @_;
+	      my $overlay = $gis->{overlay};
+	      my $layer = $gis->get_selected_layer();
+	      if ($layer) {
+		  if ($overlay->{selection}) {
+		      $layer->select($overlay->{selecting} => $overlay->{selection});
+		  } else {
+		      $layer->select();
+		  }
+		  $overlay->update_image;
+		  $layer->open_features_dialog($self, 1);
+	      }
+	  }, $self);
+
+    $overlay->signal_connect
+	( motion_notify => \&show_information, $self );
+
+    return $overlay;
 }
 
 ## @method register_dialogs($dialogs)
@@ -450,53 +548,6 @@ sub overlay_menu {
 	     my ($item, $self) = @_;
 	     my $zoom = pop @{$self->{zoom_stack}};
 	     $self->zoom(@$zoom, 0, 1) if $zoom;
-	 },
-	 1 => 0,
-	 '_Zoom' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'zoom';
-	 },
-	 '_Pan' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'pan';
-	 },
-	 '_Select' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'select';
-	 },
-	 '_Measure' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'measure';
-	 },
-	 '_Draw' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'draw';
-	 },
-	 'Edit drawing' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'edit';
-	 },
-	 1 => 0,
-	 '_Line' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_geometry} = 'line';
-	 },
-	 'Path' => sub { 
-	     my ($item, $self) = @_;
-	     $self->{rubberband_geometry} = 'path';
-	 },
-	 '_Rectangle' => sub {
-	     my ($item, $self) = @_;
-	     $self->{rubberband_geometry} = 'rect';
-	 },
-	 '_Ellipse' => sub {
-	     my ($item, $self) = @_;
-	     $self->{rubberband_mode} = 'measure';
-	     $self->{rubberband_geometry} = 'ellipse';
-	 },
-	 'Polygon' => sub {
-	     my ($item, $self) = @_;
-	     $self->{rubberband_geometry} = 'polygon';
 	 },
 	 1 => 0,
 	 'Reselect' => sub { 
