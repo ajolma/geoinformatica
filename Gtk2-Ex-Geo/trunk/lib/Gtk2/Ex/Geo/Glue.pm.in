@@ -66,48 +66,9 @@ sub new {
     $self->{overlay} = $self->create_overlay(@_);
 
     $self->set_interaction_mode('Zoom');
-    
-    if ($params{history}) {
-	my $mode = 0600;
-	chmod $mode, $params{history} if -e $params{history};
-	if (open TMP, $params{history}) {
-	    my @history = <TMP>;
-	    CORE::close TMP;
-	    for (@history) {
-		chomp $_;
-		s/\r//;
-	    }
-	    $self->{history} = new Gtk2::Ex::Geo::History(\@history);
-	} else {
-	    carp("$!: $params{history} (it will be created at exit)");
-	}
-	$self->{history_file} = $params{history};
-    }
 
-    $self->{history} = new Gtk2::Ex::Geo::History(['']) unless $self->{history};
-    if ($params{resources}) {
-	my $mode = 0600;
-	chmod $mode, $params{resources} if -e $params{resources};
-	if (open TMP, $params{resources}) {
-	    my $key = '';
-	    while (<TMP>) {
-		chomp $_;
-		s/\r//;
-		if (/^  /) {
-		    s/^  //;
-		    my @value = split /\t/;
-		    my $k = shift @value;
-		    $self->{resources}{$key}{$k} = [@value] if $k;
-		} else {
-		    $key = $_;
-		}
-	    }
-	    CORE::close TMP;
-	} else {
-	    carp("$!: $params{resources} (it will be created at exit)");
-	}
-	$self->{resources_file} = $params{resources};
-    }
+    ($self->{history}, $self->{history_file}) = $self->open_history($params{history});
+    ($self->{resources}, $self->{resources_file}) = $self->open_resources($params{resources});
 
     my @buffer = <Gtk2::Ex::Geo::History::DATA>;
     pop @buffer unless $buffer[$#buffer] =~ /^\</; # remove the extra content
@@ -358,6 +319,56 @@ sub create_overlay {
 	( motion_notify => \&show_information, $self );
 
     return $overlay;
+}
+
+sub open_history {
+    my($self, $filename) = @_;
+    my $history;
+    if ($filename) {
+	my $mode = 0600;
+	chmod $mode, $filename if -e $filename;
+	if (open TMP, $filename) {
+	    my @history = <TMP>;
+	    CORE::close TMP;
+	    for (@history) {
+		chomp $_;
+		s/\r//;
+	    }
+	    $history = new Gtk2::Ex::Geo::History(\@history);
+	} else {
+	    carp("$!: $filename (it will be created at exit)");
+	}
+    }
+    $history = Gtk2::Ex::Geo::History->new(['']) unless $history;
+    return ($history, $filename);
+}
+
+sub open_resources {
+    my($self, $filename) = @_;
+    my %resources;
+    if ($filename) {
+	my $mode = 0600;
+	chmod $mode, $filename if -e $filename;
+	if (open TMP, $filename) {
+	    my $key = '';
+	    while (<TMP>) {
+		chomp $_;
+		s/\r//;
+		if (/^  /) {
+		    s/^  //;
+		    my @value = split /\t/;
+		    my $k = shift @value;
+		    $resources{$key}{$k} = [@value] if $k;
+		} else {
+		    $key = $_;
+		}
+	    }
+	    CORE::close TMP;
+	} else {
+	    carp("$!: $filename (it will be created at exit)");
+	}
+    }
+    return (\%resources, $filename);
 }
 
 ## @method register_dialogs($dialogs)
