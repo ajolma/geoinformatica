@@ -19,9 +19,9 @@ documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 use strict;
 use warnings;
+use Scalar::Util qw(blessed);
 use Carp;
 use FileHandle;
-use UNIVERSAL qw/isa/;
 use Glib qw /TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs;
 use Gtk2::Ex::Geo::Dialogs::Symbols;
@@ -131,11 +131,8 @@ sub label_placements {
 #
 # @brief Upgrade a known data object to a layer object.
 #
-# It is usually a good idea to test the data objects class strictly,
-# i.e. using ref($object) eq '' instead of isa().
-#
-# @return true if object is known (no need to look further) and false
-# otherwise.
+# @return true (either 1 or a new object) if object is known (no need
+# to look further) and false otherwise.
 sub upgrade {
     my($object) = @_;
     return 0;
@@ -242,11 +239,9 @@ sub defaults {
 ##@ignore
 sub DESTROY {
     my $self = shift;
-    for (keys %$self) {
-	if (isa($self->{$_}, 'Gtk2::Widget')) {
-	    $self->{$_}->destroy;
-	}
-	delete $self->{$_};
+    while (my($key, $widget) = each %$self) {
+	$widget->destroy if blessed($widget) and $widget->isa("Gtk2::Widget");
+	delete $self->{$key};
     }
 }
 
@@ -256,7 +251,7 @@ sub DESTROY {
 sub close {
     my $self = shift;
     for (keys %$self) {
-	if (isa($self->{$_}, "Gtk2::GladeXML")) {
+	if (blessed($self->{$_}) and $self->{$_}->isa("Gtk2::GladeXML")) {
 	    $self->{$_}->get_widget($_)->destroy;
 	}
 	delete $self->{$_};
@@ -1033,14 +1028,14 @@ sub bootstrap_dialog {
 	if ($combos) {
 	    for my $n (@$combos) {
 		my $combo = $self->{$dialog}->get_widget($n);
-		unless (isa($combo, 'Gtk2::ComboBoxEntry')) {
+		unless ($combo->isa('Gtk2::ComboBoxEntry')) {
 		    my $renderer = Gtk2::CellRendererText->new;
 		    $combo->pack_start($renderer, TRUE);
 		    $combo->add_attribute($renderer, text => 0);
 		}
 		my $model = Gtk2::ListStore->new('Glib::String');
 		$combo->set_model($model);
-		$combo->set_text_column(0) if isa($combo, 'Gtk2::ComboBoxEntry');
+		$combo->set_text_column(0) if $combo->isa('Gtk2::ComboBoxEntry');
 	    }
 	}
 	$boot = 1;

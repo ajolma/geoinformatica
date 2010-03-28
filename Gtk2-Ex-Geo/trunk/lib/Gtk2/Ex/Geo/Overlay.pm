@@ -8,8 +8,8 @@
 package Gtk2::Ex::Geo::Overlay;
 
 use strict;
-use UNIVERSAL qw(isa);
 use POSIX;
+use Scalar::Util qw(blessed);
 use Carp;
 use Glib qw/TRUE FALSE/;
 use Geo::OGC::Geometry;
@@ -104,9 +104,9 @@ sub INIT_INSTANCE {
 # @brief Attempt to delete all widgets within this widget.
 sub close {
     my $self = shift;
-    for (keys %$self) {
-	$self->{$_}->destroy if isa($self->{$_}, "Gtk2::Widget");
-	delete $self->{$_};
+    while (my($key, $widget) = each %$self) {
+	$widget->destroy if blessed($widget) and $widget->isa("Gtk2::Widget");
+	delete $self->{$key};
     }
 }
 
@@ -148,8 +148,7 @@ sub my_inits {
 sub add_layer {
     my($self, $layer, $do_not_zoom_to) = @_;
 
-    croak "blocked an attempt to put a non Gtk2::Ex::Geo::Layer into overlay" unless 
-	isa($layer, 'Gtk2::Ex::Geo::Layer');
+    return unless blessed($layer) and $layer->isa('Gtk2::Ex::Geo::Layer');
 
     push @{$self->{layers}}, $layer;
 
@@ -503,20 +502,20 @@ sub render {
 # @param geom A Geo::OGC::Geometry object.
 sub render_geometry {
     my($self, $gc, $geom, %param) = @_;
-    if (isa($geom, 'Geo::OGC::GeometryCollection')) 
+    if ($geom->isa('Geo::OGC::GeometryCollection')) 
     {
 	for my $g ($geom->NumGeometries) {
 	    $self->render_geometry($gc, $g, %param);
 	}
 	return;
     } 
-    elsif (isa($geom, 'Geo::OGC::Point')) 
+    elsif ($geom->isa('Geo::OGC::Point')) 
     {
 	my @p = $self->point2pixmap_pixel($geom->X, $geom->Y);
 	$self->{pixmap}->draw_line($gc, $p[0]-4, $p[1], $p[0]+4, $p[1]);
 	$self->{pixmap}->draw_line($gc, $p[0], $p[1]-4, $p[0], $p[1]+4);
     } 
-    elsif (isa($geom, 'Geo::OGC::LineString')) 
+    elsif ($geom->isa('Geo::OGC::LineString')) 
     {
 	my @points;
 	for my $p ($geom->NumPoints) {
@@ -533,7 +532,7 @@ sub render_geometry {
 	    }
 	}
     }
-    elsif (isa($geom, 'Geo::OGC::Polygon')) 
+    elsif ($geom->isa('Geo::OGC::Polygon')) 
     {
 	$self->render_geometry($gc, $geom->ExteriorRing, %param);
 	for my $i (0..$geom->NumInteriorRing-1) {
@@ -790,7 +789,7 @@ sub add_to_selection {
 	
 	# create first a multi something, then fall back to collection if need be
 
-	if (!$self->{$store} or !isa($self->{$store}, 'Geo::OGC::GeometryCollection')) {
+	unless ($self->{$store} and $self->{$store}->isa('Geo::OGC::GeometryCollection')) {
 	    my $coll = Geo::OGC::GeometryCollection->new;
 	    $coll->AddGeometry($self->{$store}) if $self->{$store};
 	    $self->{$store} = $coll;
@@ -798,7 +797,7 @@ sub add_to_selection {
 	$self->{$store}->AddGeometry($geom) if $geom;
     } elsif ($self->{_shift_down}) {
 	my $polygon = $self->{$store}->LastPolygon;
-	if ($polygon and isa($geom, 'Geo::OGC::Polygon')) {
+	if ($polygon and $geom->isa('Geo::OGC::Polygon')) {
 	    $geom = $geom->ExteriorRing;
 	    # exterior is ccw, interior is cw
 	    $geom->Rotate;

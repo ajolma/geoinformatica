@@ -62,7 +62,7 @@ sub get_value_from_combo {
     return unless $model;
     my $a = $combo->get_active();
     if ($a == -1) { # comboboxentry
-	if (isa($combo, 'Gtk2::ComboBoxEntry')) {
+	if ($combo->isa('Gtk2::ComboBoxEntry')) {
 	    return $combo->child->get_text;
 	} else {
 	    return '';
