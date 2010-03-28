@@ -67,6 +67,10 @@ Gtk2->init;
 	my($self) = @_;
 	print STDERR $self->name," got focus\n";
     }
+    sub lost_focus {
+	my($self, $gui) = @_;
+	print STDERR $self->name," lost focus\n";
+    }
     sub select {
 	my($self, %params) = @_;
 	for my $k (keys %params) {
