@@ -172,6 +172,91 @@ sub render {
     
 }
 
+sub menu_items {
+    my($self) = @_;
+    my @items;
+    push @items, ( 'S_ave...' => sub {
+	my($self, $gui) = @{pop()};
+	my $filename = file_chooser('Open a saved graph', 'save');	
+	if ($filename) {
+	    if (-e $filename) {
+		my $dialog = Gtk2::MessageDialog->new(undef, 'destroy-with-parent',
+						      'question',
+						      'yes_no',
+						      "Overwrite existing $filename?");
+		my $ret = $dialog->run;
+		$dialog->destroy;
+		return if $ret eq 'no';
+	    }
+	    $self->save($filename);
+	}});
+    push @items, ( 'Nodes...' => \&open_nodes_dialog );
+    push @items, ( 'Links...' => \&open_links_dialog );
+    push @items, ( 1 => 0 );
+    push @items, $self->SUPER::menu_items();    
+    return @items;
+}
+
+sub open_nodes_dialog {
+    my($self, $gui) = @{pop()};
+    my $dialog = Gtk2::Dialog->new('Nodes of '.$self->name, undef, [], 'gtk-close' => 'close');
+    $dialog->set_default_size(600, 500);
+    $dialog->set_modal(0);
+    $dialog->signal_connect(response => sub { 
+	$_[0]->destroy;
+	delete $self->{nodes_view};
+	delete $self->{nodes_dialog} }, $self);
+    my $model = Gtk2::TreeStore->new(qw/Glib::Int/);
+    my $view = Gtk2::TreeView->new();
+    my $selection = $view->get_selection;
+    $selection->set_mode('multiple');
+    $view->set_model($model);
+    my $i = 0;
+    my @columns = qw /id/;
+    for my $column (@columns) {
+	my $cell = Gtk2::CellRendererText->new;
+	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	$view->append_column($col);
+    }
+    my @v;
+    for my $v ($self->{graph}->vertices) {
+	push @v, $v;
+    }
+    for my $v (sort {$a->{index} <=> $b->{index}} @v) {
+	my $iter = $model->append(undef);
+	$model->set($iter, 0, $v->{index});
+    }
+    my $list = Gtk2::ScrolledWindow->new();
+    $list->set_policy("never", "automatic");
+    $list->add($view);
+    $dialog->get_content_area()->add($list);
+    $view->signal_connect( cursor_changed => \&nodes_selected, [$self, $gui] );
+    $dialog->show_all;
+    $self->{nodes_dialog} = $dialog;
+    $self->{nodes_view} = $view;
+}
+
+sub nodes_selected {
+    my($view) = @_;
+    my($self, $gui) = @{pop()};
+    return if $self->{ignore_cursor_change};
+    my $s = get_selected_from_selection($view->get_selection);
+    $self->select();
+    for my $v ($self->{graph}->vertices) {
+	push @{$self->selected_features}, $v if $s->{$v->{index}};
+    }
+    $gui->{overlay}->render;
+}
+
+sub open_links_dialog {
+    my($self, $gui) = @{pop()};
+    my $dialog = Gtk2::Dialog->new('Nodes of '.$self->name, undef, [], 'gtk-close' => 'close');
+    $dialog->set_default_size(600, 500);
+    $dialog->set_transient_for(undef);
+    $dialog->signal_connect(response => sub { $_[0]->destroy });
+    $dialog->show_all;
+}
+
 sub bounds {
     $_[0] < $_[1] ? $_[1] : ($_[0] > $_[2] ? $_[2] : $_[0]);
 }
@@ -251,7 +336,30 @@ sub new_selection {
     my $selection = $gui->{overlay}->{selection};
     $self->select();
     $self->_select($gui, $selection);
+    if ($self->{nodes_dialog}) {
+	my $view = $self->{nodes_view};
+	my $model = $view->get_model;
+	my $selection = $view->get_selection;
+	$self->{ignore_cursor_change} = 1;
+	$selection->unselect_all;
+	for my $v (@{$self->selected_features}) {
+	    next if ref($v) eq 'ARRAY';
+	    $model->foreach( \&select_in_selection, [$selection, $v->{index}]);
+	    
+	}
+	delete $self->{ignore_cursor_change};
+    }
     $gui->{overlay}->render;
+}
+
+sub select_in_selection {
+    my($selection, $index) = @{pop()};
+    my($model, $path, $iter) = @_;
+    my($x) = $model->get($iter);
+    if ($x == $index) {
+	$selection->select_iter($iter);
+	return 1;
+    }
 }
 
 sub _select {
