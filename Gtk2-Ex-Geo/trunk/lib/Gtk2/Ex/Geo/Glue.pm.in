@@ -447,9 +447,9 @@ sub register_commands {
 	$args{icon_widget} = Gtk2::Label->new($args{label}) unless $args{icon_widget};
 	my $button;
 	if ($args{stock_id}) {
-	    $button = Gtk2::MenuToolButton->new_from_stock($args{stock_id});
+	    $button = Gtk2::ToolButton->new_from_stock($args{stock_id});
 	} else {
-	    $button = Gtk2::MenuToolButton->new($args{icon_widget}, $args{label});
+	    $button = Gtk2::ToolButton->new($args{icon_widget}, $args{label});
 	}
 	$button->set_icon_name($args{icon_name}) if $args{icon_name};
 	$button->set_label_widget($args{label_widget}) if $args{label_widget};
@@ -459,9 +459,14 @@ sub register_commands {
 	$tooltips->set_tip($button, $args{tip});
 	$tooltips->enable;
 	$args{pos} = -1 unless defined $args{pos};
-	$button->set_menu($menu);
+	#$button->set_menu($menu);
 	$button->show_all;
 	$menu->show_all;
+
+	$button->signal_connect(clicked => sub {
+	    $menu->popup(undef, undef, undef, undef, 0, 0);
+				});
+	
 	$self->{toolbar}->insert($button, $args{pos});
     } else {
 	for my $command (@$commands) {
