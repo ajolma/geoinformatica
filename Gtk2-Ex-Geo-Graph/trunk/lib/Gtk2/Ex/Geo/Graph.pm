@@ -68,6 +68,12 @@ sub new {
     return bless $self => $package;
 }
 
+sub close {
+    my($self, $gui) = @_;
+    $self->lost_focus($gui);
+    $self->SUPER::close(@_);
+}
+
 sub save {
     my($self, $filename) = @_;
     open(my $fh, '>', $filename) or croak $!;
@@ -80,7 +86,7 @@ sub save {
 	my $w = $self->{graph}->get_edge_weight($u, $v);
 	print $fh "$u->{index}\t$v->{index}\t$w\n";
     }
-    close $fh;
+    CORE::close $fh;
 }
 
 sub open {
@@ -93,7 +99,6 @@ sub open {
 	chomp;
 	my @l = split /\t/;
 	$vertex = 0, next if $l[0] eq 'edges';
-	print STDERR "$vertex, @l\n";
 	if ($vertex) {
 	    my $v = { index => $l[0],
 		      point => Geo::OGC::Point->new($l[1], $l[2]) };
@@ -105,7 +110,7 @@ sub open {
 	    $self->{graph}->add_weighted_edge($u, $v, $l[2]);
 	}
     }
-    close $fh;
+    CORE::close $fh;
 }
 
 sub world {
@@ -187,9 +192,10 @@ sub got_focus {
 
 sub lost_focus {
     my($self, $gui) = @_;
-    $gui->{overlay}->signal_handler_disconnect($self->{_tag1}) if $self->{_tag1};
-    $gui->{overlay}->signal_handler_disconnect($self->{_tag2}) if $self->{_tag2};
-    $gui->{overlay}->signal_handler_disconnect($self->{_tag3}) if $self->{_tag3};
+    for (qw/_tag1 _tag2 _tag3/) {
+	$gui->{overlay}->signal_handler_disconnect($self->{$_}) if $self->{$_};
+	delete $self->{$_};
+    }
 }
 
 sub drawing_changed {

@@ -1070,35 +1070,39 @@ sub move_up {
 
 ## @method remove_layer
 # @brief Removes the selected layer.
-# @deprecated Use delete_selected
+# @return Success or failure
 sub remove_layer {
-    my($self, $name) = @_;
+    my($self, $name, $do_not_render) = @_;
     my $layer = $self->{overlay}->get_layer_by_name($name);
     return unless $layer;
     $self->{model}->remove($layer->{_tree_index});
     $self->{overlay}->remove_layer_by_name($name);
-    $self->{overlay}->render;
+    delete($self->{focused}) if $self->{focused} and $self->{focused}->name eq $layer->name;
+    $layer->close($self);
+    $self->{overlay}->render unless $do_not_render;
+    return 1;
 }
 
 ## @method delete_selected
 # @brief Removes the selected layer and destroys it.
+# @return Success or failure
 sub delete_selected {
     my($self, $do_not_render) = @_;
     my $n = $#{$self->{overlay}->{layers}};
-    return 0 if $n < 0;
+    return if $n < 0;
     my ($path, $focus_column) = $self->{tree_view}->get_cursor;
     return unless $path;
     my $index = $path->to_string;
-    if ($index >= 0 and $index <= $n) {
-	my($layer) = splice(@{$self->{overlay}->{layers}},$n-$index,1);
-	$self->{model}->remove($layer->{_tree_index});
-	if ($n > 0) {
-	    $index-- if $index == $n;
-	    $self->{tree_view}->set_cursor(Gtk2::TreePath->new($index));
-	}
-	$layer->close;
-	$self->{overlay}->render unless $do_not_render;
-    }
+    return if $index < 0 or $index > $n;
+    my($layer) = splice(@{$self->{overlay}->{layers}}, $n-$index, 1);
+    $self->{model}->remove($layer->{_tree_index});
+    delete($self->{focused}) if $self->{focused} and $self->{focused}->name eq $layer->name;
+    $layer->close($self);
+    if ($n > 0) {
+	$index-- if $index == $n;
+	$self->{tree_view}->set_cursor(Gtk2::TreePath->new($index));
+    }    
+    $self->{overlay}->render unless $do_not_render;
     return 1;
 }
 

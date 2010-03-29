@@ -237,11 +237,16 @@ sub DESTROY {
     }
 }
 
-##@ignore
-# called when the layer is removed from the GUI
-# destroy all (open) dialogs
+## @method close($gui)
+# @brief Close and destroy all resources of this layer, as it has been
+# removed from the GUI.
+#
+# If you override this, remember to call the super method:
+# @code
+# $self->SUPER::close(@_);
+# @endcode
 sub close {
-    my $self = shift;
+    my($self, $gui) = @_;
     for (keys %$self) {
 	if (blessed($self->{$_}) and $self->{$_}->isa("Gtk2::GladeXML")) {
 	    $self->{$_}->get_widget($_)->destroy;
