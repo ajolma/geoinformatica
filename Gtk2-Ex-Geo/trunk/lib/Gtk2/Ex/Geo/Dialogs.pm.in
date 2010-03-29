@@ -31,7 +31,8 @@ our @ISA = qw(Exporter Gtk2::Ex::Geo::DialogMaster);
 
 our %EXPORT_TAGS = ( 
     'all' => [ 
-	qw(&progress &get_value_from_combo &get_selected_from_selection &file_chooser &get_number_from_entry) ] );
+	qw(&progress &get_value_from_combo &set_combo_to
+&get_selected_from_selection &file_chooser &get_number_from_entry) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -71,6 +72,17 @@ sub get_value_from_combo {
     my $iter = $model->get_iter_from_string($a);
     return unless $iter;
     return $model->get_value($iter);
+}
+
+## @ignore
+sub set_combo_to {
+    my($combo, $value) = @{pop()};
+    my($model, $path, $iter) = @_;
+    my($x) = $model->get($iter);
+    if ($x eq $value) {
+	$combo->set_active_iter($iter);
+	return 1;
+    }
 }
 
 ##@ignore

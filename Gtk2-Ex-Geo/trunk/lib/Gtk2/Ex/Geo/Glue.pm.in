@@ -95,20 +95,7 @@ sub create_layer_tree_view {
 	my $cell = Gtk2::CellRendererText->new;
 	if ($column eq 'a') {
 	    $cell->set(editable => 1);
-	    $cell->signal_connect(edited => sub {
-		my($cell, $path, $new_value, $data) = @_;
-		my($self, $column) = @$data;
-		my $layer = $self->{overlay}->get_layer_by_index($path);
-		return unless $layer;
-		if ($column eq 'name') {
-		    $layer->name($new_value) unless $self->{overlay}->get_layer_by_name($new_value);
-		} else {
-		    $layer->alpha($new_value);
-		    $self->update;
-		    $self->{overlay}->render;
-		}
-				  }
-				  , [$self, $column]);
+	    $cell->signal_connect(edited => \&layer_list_edit, [$self, $column]);
 	}
 	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	$view->append_column($col);
@@ -156,48 +143,60 @@ sub create_layer_tree_view {
     return ($view, $model);
 }
 
+sub layer_list_edit {
+    my($cell, $path, $new_value, $data) = @_;
+    my($self, $column) = @$data;
+    my $layer = $self->{overlay}->get_layer_by_index($path);
+    return unless $layer;
+    if ($column eq 'name') {
+	$layer->name($new_value) unless $self->{overlay}->get_layer_by_name($new_value);
+    } else {
+	$layer->alpha($new_value);
+	$self->update;
+	$self->{overlay}->render;
+    }
+}
+
 sub create_toolbar {
     my($self) = @_;
     my $toolbar = Gtk2::Toolbar->new();
-    my $button1 = Gtk2::MenuToolButton->new(Gtk2::Label->new('Zoom'), 'Zoom');
-    my $menu1 = Gtk2::Menu->new;
+
+    my $button1 = Gtk2::ComboBox->new;
+    my $renderer = Gtk2::CellRendererText->new;
+    $button1->pack_start($renderer, TRUE);
+    $button1->add_attribute($renderer, text => 0);
+    my $model = Gtk2::ListStore->new('Glib::String');
+    $button1->set_model($model);
     for my $command ('Zoom','Pan','Select','Measure','Draw','Edit') {
-	my $item = Gtk2::MenuItem->new_with_label($command);
-	$item->signal_connect(activate => sub {
-	    my($self, $command) = @{$_[1]};
-	    $self->set_interaction_mode($command);
-			      }, [$self, $command]);
-	$menu1->append($item);
+	$model->set($model->append, 0, $command);
     }
-    my $tooltips = Gtk2::Tooltips->new;
-    $button1->set_tooltip($tooltips, 'Interaction mode', '');
-    $tooltips->set_tip($button1, 'Interaction mode');
-    $tooltips->enable;
-    $button1->set_menu($menu1);
+    $button1->signal_connect(changed => \&_set_interaction_mode, $self);
+    $button1->set_tooltip_text('Interaction mode');
     $button1->show_all;
-    $menu1->show_all;
-    my $button2 = Gtk2::MenuToolButton->new(Gtk2::Label->new('Rectangle'), 'Rectangle');
-    my $menu2 = Gtk2::Menu->new;
+
+    my $button2 = Gtk2::ComboBox->new;
+    $renderer = Gtk2::CellRendererText->new;
+    $button2->pack_start($renderer, TRUE);
+    $button2->add_attribute($renderer, text => 0);
+    $model = Gtk2::ListStore->new('Glib::String');
+    $button2->set_model($model);
     for my $command ('Line','Path','Rectangle','Ellipse','Polygon') {
-	my $item = Gtk2::MenuItem->new_with_label($command);
-	$item->signal_connect(activate => sub {
-	    my($self, $command) = @{$_[1]};
-	    $self->set_interaction_geometry($command);
-			      }, [$self, $command]);
-	$menu2->append($item);
+	$model->set($model->append, 0, $command);
     }
-    $tooltips = Gtk2::Tooltips->new;
-    $button2->set_tooltip($tooltips, 'Interaction geometry', '');
-    $tooltips->set_tip($button2, 'Interaction geometry');
-    $tooltips->enable;
-    $button2->set_menu($menu2);
+    $button2->signal_connect(changed => \&_set_interaction_geometry, $self);
+    $button2->set_tooltip_text('Interaction geometry');
     $button2->show_all;
-    $menu2->show_all;
-    $toolbar->insert($button2, 0);
-    $toolbar->insert($button1, 0);
+
+    my $item = Gtk2::ToolItem->new;
+    $item->add($button2);
+    $toolbar->insert($item, 0);
+
+    $item = Gtk2::ToolItem->new;
+    $item->add($button1);
+    $toolbar->insert($item, 0);
 
     my $button = Gtk2::ToolButton->new_from_stock('gtk-zoom-in');
-    $tooltips = Gtk2::Tooltips->new;
+    my $tooltips = Gtk2::Tooltips->new;
     my $tip = 'Zoom in one tenth.';
     $button->set_tooltip($tooltips, $tip, '');
     $tooltips->set_tip($button, $tip);
@@ -229,8 +228,12 @@ sub create_toolbar {
     return ($toolbar, $button1, $button2);
 }
 
-sub set_interaction_mode {
-    my($self, $mode) = @_;
+sub _set_interaction_mode {
+    my($combo, $self) = @_;
+    my $model = $combo->get_model;
+    my $a = $combo->get_active();
+    my $iter = $model->get_iter_from_string($a);
+    my $mode = $model->get_value($iter);
     if ($mode eq 'Zoom') {
 	$self->set_interaction_geometry('Rectangle');
 	$self->{geometry_button}->set_sensitive(0);
@@ -253,17 +256,28 @@ sub set_interaction_mode {
 	$self->{geometry_button}->set_sensitive(1);
     }
     $self->{overlay}->{rubberband_mode} = lc($mode);
-    $self->{mode_button}->set_label($mode);
-    $self->{mode_button}->set_icon_widget(Gtk2::Label->new($mode));
-    $self->{mode_button}->show_all;
 }
+
+sub set_interaction_mode {
+    my($self, $mode) = @_;
+    my $model = $self->{mode_button}->get_model;
+    $model->foreach(\&set_combo_to, [$self->{mode_button}, $mode]);
+}
+
+sub _set_interaction_geometry {
+    my($combo, $self) = @_;
+    my $model = $combo->get_model;
+    my $a = $combo->get_active();
+    my $iter = $model->get_iter_from_string($a);
+    my $geometry = $model->get_value($iter);
+    $self->{overlay}->{rubberband_geometry} = lc($geometry);
+}
+
 
 sub set_interaction_geometry {
     my($self, $geometry) = @_;
-    $self->{overlay}->{rubberband_geometry} = lc($geometry);
-    $self->{geometry_button}->set_label($geometry);
-    $self->{geometry_button}->set_icon_widget(Gtk2::Label->new($geometry));
-    $self->{geometry_button}->show_all;
+    my $model = $self->{geometry_button}->get_model;
+    $model->foreach(\&set_combo_to, [$self->{geometry_button}, $geometry]);
 }
 
 sub create_overlay {
@@ -544,6 +558,12 @@ sub close {
     delete $self->{commands};
     delete $self->{functions};
     $self->{overlay}->close;
+    delete $self->{overlay};
+    delete $self->{model};
+    for my $key ('mode_button', 'geometry_button', 'toolbar', 'tree_view', 'entry', 'statusbar') {
+	$self->{$key}->destroy;
+	delete $self->{$key};
+    }
     while (my($key, $widget) = each %$self) {
 	next if $key eq 'treedumper';
 	$widget->destroy if blessed($widget) and $widget->isa("Gtk2::Widget");

@@ -171,5 +171,6 @@ sub close_the_app {
     my($window, $gis) = @{$_[1]};
     $gis->close();
     Gtk2->main_quit;
+    #print STDERR "** exit **\n";
     exit(0);
 }
