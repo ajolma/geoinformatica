@@ -171,7 +171,7 @@ sub create_toolbar {
 	$model->set($model->append, 0, $command);
     }
     $button1->signal_connect(changed => \&_set_interaction_mode, $self);
-    $button1->set_tooltip_text('Interaction mode');
+    $button1->set_tooltip_text('Interaction mode') if Gtk2->CHECK_VERSION(2,12,0);
     $button1->show_all;
 
     my $button2 = Gtk2::ComboBox->new;
@@ -184,7 +184,7 @@ sub create_toolbar {
 	$model->set($model->append, 0, $command);
     }
     $button2->signal_connect(changed => \&_set_interaction_geometry, $self);
-    $button2->set_tooltip_text('Interaction geometry');
+    $button2->set_tooltip_text('Interaction geometry') if Gtk2->CHECK_VERSION(2,12,0);
     $button2->show_all;
 
     my $item = Gtk2::ToolItem->new;
