@@ -210,6 +210,7 @@ sub open_nodes_dialog {
     my $view = Gtk2::TreeView->new();
     my $selection = $view->get_selection;
     $selection->set_mode('multiple');
+    $selection->signal_connect( changed => \&nodes_selected, [$self, $gui] );
     $view->set_model($model);
     my $i = 0;
     my @columns = qw /id/;
@@ -230,20 +231,19 @@ sub open_nodes_dialog {
     $list->set_policy("never", "automatic");
     $list->add($view);
     $dialog->get_content_area()->add($list);
-    $view->signal_connect( cursor_changed => \&nodes_selected, [$self, $gui] );
     $dialog->show_all;
     $self->{nodes_dialog} = $dialog;
     $self->{nodes_view} = $view;
 }
 
 sub nodes_selected {
-    my($view) = @_;
+    my($selection) = @_;
     my($self, $gui) = @{pop()};
     return if $self->{ignore_cursor_change};
-    my $s = get_selected_from_selection($view->get_selection);
+    my $selected = get_selected_from_selection($selection);
     $self->select();
     for my $v ($self->{graph}->vertices) {
-	push @{$self->selected_features}, $v if $s->{$v->{index}};
+	push @{$self->selected_features}, $v if $selected->{$v->{index}};
     }
     $gui->{overlay}->render;
 }
