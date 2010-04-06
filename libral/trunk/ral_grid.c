@@ -1261,13 +1261,21 @@ int ral_grid_and_grid(ral_grid *gd1, ral_grid *gd2)
     RAL_CHECKM(gd1->M == gd2->M AND gd1->N == gd2->N, RAL_ERRSTR_ARGS_OVERLAYABLE);
     RAL_CHECKM(gd1->datatype == RAL_INTEGER_GRID AND gd2->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ARGS_INTEGER);
     RAL_FOR(c, gd1) {
-	if (RAL_INTEGER_GRID_DATACELL(gd1, c) AND RAL_INTEGER_GRID_DATACELL(gd2, c)) {
-	    RAL_INTEGER_GRID_CELL(gd1, c) = RAL_INTEGER_GRID_CELL(gd1, c) AND RAL_INTEGER_GRID_CELL(gd2, c);
-	} else 
+	if (RAL_INTEGER_GRID_DATACELL(gd1, c)) {
+	    if (RAL_INTEGER_GRID_CELL(gd1, c)) {
+		if (!RAL_INTEGER_GRID_DATACELL(gd2, c))
+		    RAL_INTEGER_GRID_SETNODATACELL(gd1, c);
+		else
+		    RAL_INTEGER_GRID_CELL(gd1, c) = 1 AND RAL_INTEGER_GRID_CELL(gd2, c);
+	    } else
+		RAL_INTEGER_GRID_CELL(gd1, c) = 0;
+	} else if (RAL_INTEGER_GRID_DATACELL(gd2, c) AND !RAL_INTEGER_GRID_CELL(gd2, c))
+	    RAL_INTEGER_GRID_CELL(gd1, c) = 0;
+	else
 	    RAL_INTEGER_GRID_SETNODATACELL(gd1, c);
     }
     return 1;
- fail:
+fail:
     return 0;
 }
 
@@ -1278,9 +1286,18 @@ int ral_grid_or_grid(ral_grid *gd1, ral_grid *gd2)
     RAL_CHECKM(gd1->M == gd2->M AND gd1->N == gd2->N, RAL_ERRSTR_ARGS_OVERLAYABLE);
     RAL_CHECKM(gd1->datatype == RAL_INTEGER_GRID AND gd2->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ARGS_INTEGER);
     RAL_FOR(c, gd1) {
-	if (RAL_INTEGER_GRID_DATACELL(gd1, c) AND RAL_INTEGER_GRID_DATACELL(gd2, c)) {
-	    RAL_INTEGER_GRID_CELL(gd1, c) = RAL_INTEGER_GRID_CELL(gd1, c) OR RAL_INTEGER_GRID_CELL(gd2, c);
-	} else 
+	if (RAL_INTEGER_GRID_DATACELL(gd1, c)) {
+	    if (RAL_INTEGER_GRID_CELL(gd1, c))
+		RAL_INTEGER_GRID_CELL(gd1, c) = 1;
+	    else {
+		if (!RAL_INTEGER_GRID_DATACELL(gd2, c))
+		    RAL_INTEGER_GRID_SETNODATACELL(gd1, c);
+		else 
+		    RAL_INTEGER_GRID_CELL(gd1, c) = 1 AND RAL_INTEGER_GRID_CELL(gd2, c);
+	    }
+	} else if (RAL_INTEGER_GRID_DATACELL(gd2, c) AND RAL_INTEGER_GRID_CELL(gd2, c))
+	    RAL_INTEGER_GRID_CELL(gd1, c) = 1;
+	else
 	    RAL_INTEGER_GRID_SETNODATACELL(gd1, c);
     }
     return 1;

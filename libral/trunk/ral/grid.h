@@ -428,8 +428,45 @@ int RAL_CALL ral_real_grid_get_value_range(ral_grid *gd, ral_real_range *range);
 /** makes a binary grid: 1: there is data (GD_DATACELL), 0: there is no data */
 int RAL_CALL ral_grid_data(ral_grid *gd);
 
+/** computes NOT gd for all cells according to 3VL:
+    <table>
+    <tr><td><strong>gd</strong></td><td><strong>NOT gd</strong></td></tr>
+    <tr><td>true</td><td>false</td></tr>
+    <tr><td>false</td><td>true</td></tr>
+    <tr><td>unknown</td><td>unknown</td></tr>
+    </table>
+ */
 int RAL_CALL ral_grid_not(ral_grid *gd);
+/** computes gd1 AND gd2 for all cells according to 3VL:
+    <table>
+    <tr><td><strong>gd1</strong></td><td><strong>gd2</strong></td><td><strong>gd1 AND gd2</strong></td></tr>
+    <tr><td>true</td><td>true</td><td>true</td></tr>
+    <tr><td>true</td><td>false</td><td>false</td></tr>
+    <tr><td>true</td><td>unknown</td><td>unknown</td></tr>
+    <tr><td>false</td><td>true</td><td>false</td></tr>
+    <tr><td>false</td><td>false</td><td>false</td></tr>
+    <tr><td>false</td><td>unknown</td><td>false</td></tr>
+    <tr><td>unknown</td><td>true</td><td>unknown</td></tr>
+    <tr><td>unknown</td><td>false</td><td>false</td></tr>
+    <tr><td>unknown</td><td>unknown</td><td>unknown</td></tr>
+    </table>
+
+*/
 int RAL_CALL ral_grid_and_grid(ral_grid *gd1, ral_grid *gd2);
+/** computes gd1 OR gd2 for all cells according to 3VL:
+    <table>
+    <tr><td><strong>gd1</strong></td><td><strong>gd2</strong></td><td><strong>gd1 OR gd2</strong></td></tr>
+    <tr><td>true</td><td>true</td><td>true</td></tr>
+    <tr><td>true</td><td>false</td><td>true</td></tr>
+    <tr><td>true</td><td>unknown</td><td>true</td></tr>
+    <tr><td>false</td><td>true</td><td>true</td></tr>
+    <tr><td>false</td><td>false</td><td>false</td></tr>
+    <tr><td>false</td><td>unknown</td><td>unknown</td></tr>
+    <tr><td>unknown</td><td>true</td><td>true</td></tr>
+    <tr><td>unknown</td><td>false</td><td>unknown</td></tr>
+    <tr><td>unknown</td><td>unknown</td><td>unknown</td></tr>
+    </table>
+*/
 int RAL_CALL ral_grid_or_grid(ral_grid *gd1, ral_grid *gd2);
 
 int RAL_CALL ral_grid_add_real(ral_grid *gd, RAL_REAL x);
