@@ -607,7 +607,16 @@ sub copy {
     $params{driver} = $self->driver unless $params{driver};
     $params{schema} = $self->schema unless $params{schema};
     my $copy = Geo::Vector->new(%params);
-    my $fd = Geo::OGR::FeatureDefn->create($params{schema});
+    my $fd = Geo::OGR::FeatureDefn->new();
+    $fd->GeometryType($params{schema}{GeometryType}) if $params{schema}{GeometryType};
+    if ($params{schema}{Fields}) {
+	for my $f (@{$params{schema}{Fields}}) {
+	    if (ref($f) eq 'HASH') {
+		$f = Geo::OGR::FieldDefn->create(%$f);
+	    }
+	    $fd->AddFieldDefn($f);
+	}
+    }
     my $i = 0;
     $self->init_iterate(%params);
     while (my $f = $self->next_feature()) {
