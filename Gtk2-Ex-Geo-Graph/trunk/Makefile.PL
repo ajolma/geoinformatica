@@ -13,7 +13,7 @@ print "Following required/optional modules are missing: @missing_modules\n" if @
 exit 0 if @missing_modules;
 
 require ExtUtils::Depends;
-require ExtUtils::PkgConfig;
+#require ExtUtils::PkgConfig;
 
 our $deps = ExtUtils::Depends->new('Gtk2::Ex::Geo::Graph', 'Gtk2::Ex::Geo');
 
