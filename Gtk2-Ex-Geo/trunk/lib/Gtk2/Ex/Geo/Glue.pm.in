@@ -396,7 +396,9 @@ sub register_dialogs {
 
 sub register_command {
     my($self, %args) = @_;
-    $args{icon_widget} = Gtk2::Label->new($args{label}) unless $args{icon_widget};
+    if (!$args{icon_widget} and $Config::Config{'osname'} ne 'MSWin32') {
+	$args{icon_widget} = Gtk2::Label->new($args{label});
+    }
     my $button;
     if ($args{stock_id}) {
 	$button = Gtk2::ToolButton->new_from_stock($args{stock_id});
@@ -444,7 +446,9 @@ sub register_commands {
 	    $menu->append($item);
 	}
 	my %args = @$commands;
-	$args{icon_widget} = Gtk2::Label->new($args{label}) unless $args{icon_widget};
+	if (!$args{icon_widget} and $Config::Config{'osname'} ne 'MSWin32') {
+	    $args{icon_widget} = Gtk2::Label->new($args{label});
+	}
 	my $button;
 	if ($args{stock_id}) {
 	    $button = Gtk2::ToolButton->new_from_stock($args{stock_id});
