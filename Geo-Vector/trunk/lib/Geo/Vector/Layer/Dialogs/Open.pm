@@ -7,6 +7,7 @@ use Carp;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
+require Win32::DriveInfo if $Config::Config{'osname'} eq 'MSWin32';
 
 ## @ignore
 sub open {
@@ -282,11 +283,14 @@ sub fill_directory_treeview {
 
     if ($self->{path} eq '') {
 	@{$self->{dir_list}} = ();
-	my @d;
+	my @d = Win32::DriveInfo::DrivesInUse();
 
-	my $fso = Win32::OLE->new('Scripting.FileSystemObject');
-	for ( in $fso->Drives ) {
-	    push @d, $_->{DriveLetter}.':';
+	#my $fso = Win32::OLE->new('Scripting.FileSystemObject');
+	#for ( in $fso->Drives ) {
+	#    push @d, $_->{DriveLetter}.':';
+	#}
+	for (@d) {
+	    $_ .= ':';
 	}
 
 	for (@d) {
@@ -315,7 +319,7 @@ sub fill_directory_treeview {
 	next if /^\s*$/;
 	my $filename = Glib->filename_to_unicode($_);
 	#my $label = Gtk2::Label->new($filename) if Gtk2->CHECK_VERSION(2, 18, 0);
-	my $label = Gtk2::Label->new($filename);
+	my $label = Gtk2::Label->new($filename) unless $Config::Config{'osname'} eq 'MSWin32';
 	my $b = Gtk2::ToolButton->new($label, $filename);
 	$b->signal_connect(
 	    clicked => sub {
