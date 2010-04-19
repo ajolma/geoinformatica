@@ -2707,16 +2707,27 @@ ral_fdg_drain_depressions(fdg, dem)
 		if (ral_has_msg())
 			croak(ral_get_msg());
 
-NO_OUTPUT int
-ral_water_route(water, dem, fdg, flow, k, d, f, r)
+ral_grid *
+ral_water_route(water, dem, fdg, k, r)
 	ral_grid *water
 	ral_grid *dem
 	ral_grid *fdg
-	ral_grid *flow
 	ral_grid *k
-	ral_grid *d
-	int f
 	double r
+	POSTCALL:
+		if (ral_has_msg())
+			croak(ral_get_msg());
+
+ral_grid *
+ral_water_route2(water, dem, k, r)
+	ral_grid *water
+	ral_grid *dem
+	ral_grid *k
+	double r
+	CODE:
+		RETVAL = ral_water_route(water, dem, NULL, k, r);
+  	OUTPUT:	
+		RETVAL
 	POSTCALL:
 		if (ral_has_msg())
 			croak(ral_get_msg());

@@ -142,9 +142,13 @@ int RAL_CALL ral_dem_breach(ral_grid *dem, ral_grid *fdg, int limit);
 */
 int RAL_CALL ral_fdg_drain_depressions(ral_grid *fdg, ral_grid *dem);
 
-#define RAL_ROUTE_TO_ALL_DOWNSTREAM_CELLS 1
-
-int RAL_CALL ral_water_route(ral_grid *water, ral_grid *dem, ral_grid *fdg, ral_grid *flow, ral_grid *k, ral_grid *d, int f, double r);
+/** Route water downstream. Routes to all downstream cells that share
+    boundary with a cell (0 to 4 cells) unless FDG is given. Returns
+    the changes in cell water storage. Amount of water routed
+    downstream is computed as k*Sqrt(slope)*water. r is the unit of
+    elevation divided by the unit of x and y in DEM.
+ */
+ral_grid_handle RAL_CALL ral_water_route(ral_grid *water, ral_grid *dem, ral_grid *fdg, ral_grid *k, double r);
 
 /** the path as defined by the fdg (it goes through cell center
     points), the path ends at non-direction cell in fdg, at the border of

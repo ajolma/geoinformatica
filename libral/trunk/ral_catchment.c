@@ -1437,86 +1437,58 @@ ral_grid *ral_fdg_upslope_count(ral_grid *fdg, ral_grid *op, int include_self)
 }
 
 
-void ral_rroute_internal(ral_grid *water, ral_grid *dem, ral_grid *fdg, ral_grid *flow, ral_cell c, ral_grid *k, ral_grid *d, int f, double r)
-{
-    int dir;
-    ral_cell up, down;
-    RAL_DIRECTIONS(dir) {
-	up = ral_cell_move(c, dir);
-	if (RAL_GRID_CELL_IN(fdg, up) AND (RAL_INTEGER_GRID_CELL(fdg, up) == RAL_INV_DIR(dir))) {
-	    ral_rroute_internal(water, dem, fdg, flow, up, k, d, f, r);
-	}
-    }
-    if (f == RAL_ROUTE_TO_ALL_DOWNSTREAM_CELLS) { 
-	/* this is broken since there may be contributing upslope
-	   cells which have not been calculated at this point */
-	double h = RAL_GRID_CELL(dem, c);
-	double q;
-	double k2 = 1;
-	int i;
-	for (i = 0; i < 2; i++) {
-	    q = 0;
-	    RAL_DIRECTIONS(dir) {
-		down = ral_cell_move(c, dir);
-		if (RAL_GRID_CELL_IN(dem, down) AND RAL_GRID_DATACELL(dem, down) AND (RAL_GRID_CELL(dem, down) <= h)) {
-		    double slope, qd;
-		    slope =  r * (RAL_GRID_CELL(dem, c) - RAL_GRID_CELL(dem, down)) / (dem->cell_size * RAL_DISTANCE_UNIT(dir));
-		    qd = k2 * RAL_REAL_GRID_CELL(k, c) * (slope + RAL_REAL_GRID_CELL(d, c)) * RAL_REAL_GRID_CELL(water, c);
-		    if (i) RAL_REAL_GRID_CELL(water, down) += qd;
-		    q += qd;
-		}
-	    }
-	    if (q > RAL_REAL_GRID_CELL(water, c)) {
-		k2 = RAL_REAL_GRID_CELL(water, c) / q;
-		q = RAL_REAL_GRID_CELL(water, c);
-	    }
-	}
-	RAL_REAL_GRID_CELL(flow, c) = q;
-	RAL_REAL_GRID_CELL(water, c) -= q;
-    } else {
-	double slope, q;
-	dir = RAL_INTEGER_GRID_CELL(fdg, c);
-	down = ral_cell_move(c, dir);
-	if (RAL_GRID_CELL_IN(dem, down) AND RAL_GRID_DATACELL(dem, down)) {
-	    slope = r * (RAL_GRID_CELL(dem, c) - RAL_GRID_CELL(dem, down)) / (dem->cell_size * RAL_DISTANCE_UNIT(dir));
-	    q = RAL_REAL_GRID_CELL(k, c) * (slope + RAL_REAL_GRID_CELL(d, c)) * RAL_REAL_GRID_CELL(water, c);
-	} else {
-	    q = RAL_REAL_GRID_CELL(water, c);
-	}
-	if (q > RAL_REAL_GRID_CELL(water, c))
-	    q = RAL_REAL_GRID_CELL(water, c);
-	RAL_REAL_GRID_CELL(flow, c) = q;
-	RAL_REAL_GRID_CELL(water, c) -= q;
-	if (RAL_GRID_CELL_IN(water, down) AND RAL_REAL_GRID_DATACELL(water, down))
-	    RAL_REAL_GRID_CELL(water, down) += q;
-    }
-}
-
-
-int ral_water_route(ral_grid *water, ral_grid *dem, ral_grid *fdg, ral_grid *flow, ral_grid *k, ral_grid *d, int f, double r)
+ral_grid_handle RAL_CALL ral_water_route(ral_grid *water, ral_grid *dem, ral_grid *fdg, ral_grid *k, double r)
 {
     ral_cell c;
+    ral_grid *f = NULL;
     RAL_CHECKM(ral_grid_overlayable(water, dem) AND 
-	    ral_grid_overlayable(water, fdg) AND 
-	    ral_grid_overlayable(water, flow) AND 
-	    ral_grid_overlayable(water, k) AND 
-	    ral_grid_overlayable(water, d), RAL_ERRSTR_ARGS_OVERLAYABLE);
+	       (!fdg OR ral_grid_overlayable(water, fdg)) AND 
+	       ral_grid_overlayable(water, k), RAL_ERRSTR_ARGS_OVERLAYABLE);
     RAL_CHECKM((water->datatype == RAL_REAL_GRID) AND 
-	    (fdg->datatype == RAL_INTEGER_GRID) AND 
-	    (flow->datatype == RAL_REAL_GRID) AND 
-	    (k->datatype == RAL_REAL_GRID) AND 
-	    (d->datatype == RAL_REAL_GRID), RAL_ERRSTR_ARGS_REAL);
+	       (!fdg OR (fdg->datatype == RAL_INTEGER_GRID)) AND 
+	       (k->datatype == RAL_REAL_GRID), RAL_ERRSTR_ARGS_REAL);
+    RAL_CHECK(f = ral_grid_create_like(water, RAL_REAL_GRID));
+
     RAL_FOR(c, water) {
-	/* start at outlet cells */
-	if (RAL_INTEGER_GRID_DATACELL(fdg, c)) {
+
+	double S = RAL_REAL_GRID_CELL(water, c);
+
+	if (fdg AND RAL_INTEGER_GRID_DATACELL(fdg, c)) {
+	    
 	    ral_cell down = ral_cell_move(c, RAL_INTEGER_GRID_CELL(fdg, c));
+
 	    if (RAL_GRID_CELL_OUT(fdg, down) OR RAL_INTEGER_GRID_NODATACELL(fdg, down))
-		ral_rroute_internal(water, dem, fdg, flow, c, k, d, f, r);
+		RAL_REAL_GRID_CELL(f, c) -= S;
+	    else {
+		double u = RAL_DISTANCE_UNIT(RAL_INTEGER_GRID_CELL(fdg, c));
+		double slope = r * (RAL_GRID_CELL(dem, c) - RAL_GRID_CELL(dem, down)) / (dem->cell_size * u);
+		double dS = RAL_REAL_GRID_CELL(k, c) * sqrt(slope) * S;
+		RAL_REAL_GRID_CELL(f, c) -= dS;
+		RAL_REAL_GRID_CELL(f, down) += dS;
+	    }
+
+	} else if (RAL_GRID_DATACELL(dem, c)) {
+
+	    int dir;
+	    for (dir = 1; dir < 9; dir += 2) { /* N, E, S, W */
+		ral_cell down = ral_cell_move(c, dir);
+		if (RAL_GRID_CELL_OUT(water, down) OR RAL_INTEGER_GRID_NODATACELL(water, down))
+		    RAL_REAL_GRID_CELL(f, c) -= S;
+		else {
+		    double slope = r * (RAL_GRID_CELL(dem, c) - RAL_GRID_CELL(dem, down)) / dem->cell_size;
+		    double dS = RAL_REAL_GRID_CELL(k, c) * sqrt(slope) * S;
+		    if (slope > 0) {
+			RAL_REAL_GRID_CELL(f, c) -= dS;
+			RAL_REAL_GRID_CELL(f, down) += dS;
+		    }
+		}
+	    }
 	}
     }
-    return 1;
+    return f;
  fail:
-    return 0;
+    if (f) ral_grid_destroy(&f);
+    return NULL;
 }
 
 

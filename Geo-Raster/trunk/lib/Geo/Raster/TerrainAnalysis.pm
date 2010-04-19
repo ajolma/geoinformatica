@@ -1026,36 +1026,32 @@ sub save_catchment_structure {
     $catchment->SyncToDisk;
 }
 
-## @method route(Geo::Raster dem, Geo::Raster fdg, Geo::Raster flow, Geo::Raster k, Geo::Raster d, $f, $r)
+## @method route(Geo::Raster dem, Geo::Raster fdg, Geo::Raster k, $r)
 #
 # @brief Route water downstream (a water state raster method).
 #
-# The water in each cell of the self raster is routed downstream. A
-# recursive routing method is applied, which first routes water from
-# upslope cells.
-#
-# Example of routing water out from a catchment:
-# @code
-# $water_grid->route($dem, $fdg, $flow, $k, $d, $f, $r);
-# @endcode
+# Water in each cell of the self raster is routed downstream one time step.
 #
 # @param[in] dem The DEM.
-# @param[in] fdg The flow directions raster.
-# @param[out] flow The amount of water routed forward (leaving each
-# cell).
-# @param[in] k Values to be added to the slope.
-# @param[in] d Values to be used for multiplying the effect of slopes (current?).
-# @param[in] f (optional). If true then water is routed from each cell to all of 
-# its neighbors having the same or lower elevation, else if false only to a 
-# single cell pointed by FDG. Default value is 1 (true).
-# @param[in] r (optional). Unit of z dived by the unit of x and y. By default is 1.
+# @param[in] fdg [optional] The flow directions raster.
+# @param[in] k The flow coefficient.
+# @param[in] r [optional]. Unit of z divided by the unit of x and y in
+# the DEM. Default is 1.
 # @todo IN DEVELOPMENT DO NOT USE
+# @return The change in water state.
 sub route {
-    my($water, $dem, $fdg, $flow, $k, $d, $f, $r) = @_;
-    $f = 1 unless defined $f;
+    my $water = shift;
+    my $dem = shift;
+    my $fdg = shift if @_ > 1 and ref($_[1]);
+    my $k = shift;
+    my $r = shift;
     $r = 1 unless defined $r;
-    croak ("usage: $water->route($dem, $fdg, $flow, $k, $d, $f, $r)") unless $flow;
-    return water_route($water->{GRID}, $dem->{GRID}, $fdg->{GRID}, $flow->{GRID}, $k->{GRID}, $d->{GRID}, $f, $r);
+    croak ("usage: $water->route($dem, [$fdg,] $k, $r)") unless $k and ref($k);
+    if ($fdg) {
+	return Geo::Raster->new(ral_water_route($water->{GRID}, $dem->{GRID}, $fdg->{GRID}, $k->{GRID}, $r));
+    } else {
+	return Geo::Raster->new(ral_water_route2($water->{GRID}, $dem->{GRID}, $k->{GRID}, $r));
+    }
 }
 
 ## @method void vectorize_streams(Geo::Raster fdg, @cell)

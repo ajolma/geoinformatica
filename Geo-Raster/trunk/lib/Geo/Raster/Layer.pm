@@ -24,6 +24,7 @@ use File::Basename;
 use Glib qw/TRUE FALSE/;
 use Gtk2;
 use Gtk2::Ex::Geo::Layer qw /:all/;
+use Gtk2::Ex::Geo::Dialogs qw /:all/;
 use Geo::Raster::Layer::Dialogs;
 use Geo::Raster::Layer::Dialogs::Copy;
 use Geo::Raster::Layer::Dialogs::Polygonize;
