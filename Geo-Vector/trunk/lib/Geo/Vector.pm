@@ -1246,7 +1246,8 @@ sub rasterize {
     
     croak "Not a valid rendering mode: $params{render_as}" unless defined $RENDER_AS{$params{render_as}};
     
-    croak "Geo::Vector->rasterize: empty layer" unless $self->{OGR}->{Layer};
+    croak "Geo::Vector->rasterize: only OGR layers can be currently rasterized" 
+	unless $self->{OGR}->{Layer};
     my $handle = OGRLayerH( $self->{OGR}->{Layer} );
     
     ( $params{M}, $params{N} ) = $params{like}->size(of_GDAL=>1) if $params{like};
@@ -1268,6 +1269,7 @@ sub rasterize {
 		    unless $schema->{Type} eq 'Integer'
 		    or $schema->{Type}     eq 'Real';
 	$params{datatype} = $schema->{Type};
+	$field = $schema->{Index};
     }
     
     my $gd = Geo::Raster->new(

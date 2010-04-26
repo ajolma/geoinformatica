@@ -928,6 +928,7 @@ sub field {
     my $i = 0;
     for my $f (@{$schema->{Fields}}) {
 	if ($field_name eq $f->{Name}) {
+	    $f->{Index} = $i;
 	    return $f;
 	}
 	$i++;
