@@ -47,7 +47,7 @@ if ($OS eq 'MSWin32') {
     $directories = File::Spec->catfile(@dirs);
 
     Geo::GDAL::SetConfigOption(
-	'PROJSO', File::Spec->catpath( $volume, $directories, 'libproj.dll' ));
+	'PROJSO', File::Spec->catpath( $volume, $directories, 'libproj-0.dll' ));
 
     pop @dirs;
     push @dirs, ('share');
