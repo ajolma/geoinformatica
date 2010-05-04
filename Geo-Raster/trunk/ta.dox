@@ -139,9 +139,9 @@ flat areas are drained first using the multiple pour point method and
 then the one pour point method. $fdg is required if no_iteration is
 set to true.
 
-If no_iteration is specified the depressions are removed iteratively
-until all depressions are removed or the number of depressions does
-not diminish in one iteration loop.
+Unless no_iteration is specified, the depressions are removed
+iteratively until all depressions are removed or the number of
+depressions does not diminish in one iteration loop.
 
 Another method, which produces a depressionless FDG is 
 
