@@ -286,7 +286,7 @@ double ral_flatness_threshold(ral_grid *dem)
     if (dem->datatype == RAL_INTEGER_GRID)
 	return 0;
     else
-	return 0.001;
+	return 0.0; /* there is a problem draining flat areas if this is left non-zero */
 }
 
 
