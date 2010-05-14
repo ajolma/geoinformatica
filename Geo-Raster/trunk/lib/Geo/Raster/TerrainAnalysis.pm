@@ -9,6 +9,7 @@ package Geo::Raster;
 
 use strict;
 use Scalar::Util qw(blessed);
+use Geo::OGC::Geometry;
 
 ## @method @fit_surface($z_factor)
 #
@@ -128,10 +129,10 @@ sub fdg {
 	    my $c = $fdg->contents();
 	    my $pits = $$c{0} || 0;
 	    my $flats = $$c{-1} || 0;
-	    print STDERR "drain_all: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
+	    print "drain_all: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
 	    last if ($pits == 0 and $flats == 0);
 	    my $n = ral_fdg_drain_depressions($fdg->{GRID}, $dem->{GRID});
-	    print STDERR "drain_all: iteration step $step: $n depressions fixed\n" unless $opt{quiet};
+	    print "drain_all: iteration step $step: $n depressions fixed\n" unless $opt{quiet};
 	    croak "there is no progress" if ($pits_last_time == $pits and $flats_last_time == $flats);
 	    $pits_last_time = $pits;
 	    $flats_last_time = $flats;	    
@@ -191,6 +192,8 @@ sub movecell {
     return ($i, $j);
 }
 
+*downstream = *movecell;
+
 ## @fn $dirsum($dir, $add)
 #
 # @brief Increases the given direction with <i>add</i> steps clockwise.
@@ -242,10 +245,10 @@ sub drain_flat_areas {
     $opt{method} = 'one pour point' unless $opt{method};
     if ($opt{method} =~ /^m/) {
 	my $n = ral_fdg_drain_flat_areas1($fdg->{GRID}, $dem->{GRID});
-	print STDERR "drain_flat_areas (multiple pour points): $n flat cells drained\n" unless $opt{quiet};
+	print "drain_flat_areas (multiple pour points): $n flat cells drained\n" unless $opt{quiet};
     } elsif ($opt{method} =~ /^o/) {
 	my $n = ral_fdg_drain_flat_areas2($fdg->{GRID}, $dem->{GRID});
-	print STDERR "drain_flat_areas (one pour point): $n flat areas drained\n" unless $opt{quiet};
+	print "drain_flat_areas (one pour point): $n flat areas drained\n" unless $opt{quiet};
     } else {
 	croak "drain_flat_areas: $opt{method}: unknown method";
     }
@@ -354,7 +357,7 @@ sub raise_pits {
     $opt{z_limit} = 0 unless defined($opt{z_limit});
     $dem = Geo::Raster->new($dem) if defined wantarray;
     my $n = ral_dem_raise_pits($dem->{GRID}, $opt{z_limit});
-    print STDERR "raise_pits: $n pit cells raised\n" unless $opt{quiet};
+    print "raise_pits: $n pit cells raised\n" unless $opt{quiet};
     return $dem if defined wantarray;
 }
 
@@ -376,7 +379,7 @@ sub lower_peaks {
     $opt{z_limit} = 0 unless defined($opt{z_limit});
     $dem = Geo::Raster->new($dem) if defined wantarray;
     my $n = ral_dem_lower_peaks($dem->{GRID}, $opt{z_limit});
-    print STDERR "lower_peaks: $n peak cells lowered\n" unless $opt{quiet};
+    print "lower_peaks: $n peak cells lowered\n" unless $opt{quiet};
     return $dem if defined wantarray;
 }
 
@@ -449,14 +452,15 @@ sub fill_depressions {
 	    my $c = $fdg->contents();
 	    my $pits = $$c{0} || 0;
 	    my $flats = $$c{-1} || 0;
-	    print STDERR "fill_depressions: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
+	    print "fill_depressions: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
 	    return $fdg if ($pits == 0 and $flats == 0);
 	    croak "there is no progress" if ($pits_last_time == $pits and $flats_last_time == $flats);
 	    my $n = ral_dem_fill_depressions($dem->{GRID}, $fdg->{GRID});
-	    print STDERR "fill_depressions: iteration step $step: $n depressions filled\n" unless $opt{quiet};
+	    print "fill_depressions: iteration step $step: $n depressions filled\n" unless $opt{quiet};
 	    $pits_last_time = $pits;
 	    $flats_last_time = $flats;
 	    $step++;
+	    Gtk2->main_iteration while Gtk2->events_pending;
 	}
     }
 }
@@ -529,11 +533,11 @@ sub breach {
 	    my $c = $fdg->contents();
 	    my $pits = $$c{0} || 0;
 	    my $flats = $$c{-1} || 0;
-	    print STDERR "breach: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
+	    print "breach: iteration step $step: $pits pits and $flats flat cells\n" unless $opt{quiet};
 	    return $fdg if ($pits == 0 and $flats == 0);
 	    return $fdg if ($pits_last_time == $pits and $flats_last_time == $flats);
 	    my $n = ral_dem_breach($dem->{GRID}, $fdg->{GRID}, $opt{limit});
-	    print STDERR "breach: iteration step $step: $n depressions filled\n" unless $opt{quiet};
+	    print "breach: iteration step $step: $n depressions filled\n" unless $opt{quiet};
 	    $pits_last_time = $pits;
 	    $flats_last_time = $flats;
 	    $step++;
@@ -816,113 +820,106 @@ sub subcatchments {
     my $i = shift;
     if ($i and blessed($i) and $i->isa('Geo::Raster')) {
 	$lakes = $i;
-	$i = shift;
+	$i = undef;
     }
-    my $j = shift;
-    my $headwaters = shift;
-    $headwaters = 0 unless defined($headwaters);
-    if ($lakes) {
-	my $subs = new Geo::Raster(like=>$streams);
-	$i = -1 unless defined $i;
-	my $r = ral_ws_subcatchments($subs->{GRID}, 
-				     $streams->{GRID}, 
-				     $fdg->{GRID}, 
-				     $lakes->{GRID}, $i, $j, $headwaters);
-	
-	# drainage structure:
-	# head -> stream (if exist)<
-	# sub -> lake or stream
-	# lake -> stream
-	# stream -> lake or stream
-
-	my %ds;
-
-	for my $key (keys %{$r}) {
-	    ($i, $j) = split (/,/, $key);
-	    my($i_down, $j_down) = split (/,/, $r->{$key});
-	    my $sub = $subs->get($i, $j);
-	    my $stream = $streams->get($i, $j);
-	    my $lake = $lakes->get($i, $j);
-	    my $sub_down = $subs->get($i_down, $j_down);
-	    my $stream_down = $streams->get($i_down, $j_down);
-	    my $lake_down = $lakes->get($i_down, $j_down);
-	    if ($lake <= 0) {
-		if ($lake_down > 0) {
-		    $ds{"sub $sub $i $j"} = "stream $stream";
-		} elsif ($stream != $stream_down or ($i == $i_down and $j == $j_down)) {
-		    $ds{"sub $sub $i $j"} = "stream $stream";
-		    $ds{"stream $stream $i $j"} = "stream $stream_down";
-		} else {
-		    $ds{"head $sub $i $j"} = "stream $stream";
-		}
-	    } else {
-		$ds{"sub $sub $i $j"} = "lake $lake";
-		$ds{"lake $lake $i $j"} = "stream $stream_down";
-	    }
-	    if ($lake_down > 0) {
-		$ds{"stream $stream $i $j"} = "lake $lake_down";
-	    }
-	}
-
-	return wantarray ? ($subs,\%ds) : $subs;
+    my $j;
+    my $headwaters;
+    if (@_ == 3) {
+	($i, $j, $headwaters) = @_;
     } else {
-	$i = -1 unless defined $i;
-	return new Geo::Raster(ral_streams_subcatchments($streams->{GRID}, $fdg->{GRID}, $i, $j));
+	($headwaters) = @_;
     }
+    $headwaters = 0 unless defined $headwaters;
+    unless ($lakes) {
+	$lakes = Geo::Raster->new(like=>$streams);
+	$lakes->set(0);
+    }
+    my $subs = Geo::Raster->new(like=>$streams);
+    unless (defined $i) {
+	$i = -1;
+	$j = -1;
+    }
+    my $r = ral_catchment_create($subs->{GRID}, 
+				 $streams->{GRID}, 
+				 $fdg->{GRID}, 
+				 $lakes->{GRID}, $i, $j, $headwaters);
+    
+    # drainage structure:
+    # head -> stream (if exist)<
+    # sub -> lake or stream
+    # lake -> stream
+    # stream -> lake or stream
+    
+    my %ds;
+    
+    for my $key (keys %{$r}) {
+	($i, $j) = split (/,/, $key);
+	my($i_down, $j_down) = split (/,/, $r->{$key});
+	my $sub = $subs->get($i, $j);
+	my $stream = $streams->get($i, $j);
+	next unless defined $stream;
+	my $lake = $lakes->get($i, $j);
+	my $sub_down = $subs->get($i_down, $j_down);
+	my $stream_down = $streams->get($i_down, $j_down);
+	next unless defined $stream_down;
+	my $lake_down = $lakes->get($i_down, $j_down);
+	if (!defined($lake) or $lake <= 0) {
+	    if (defined($lake_down) and $lake_down > 0) {
+		$ds{"sub $sub $i $j"} = "stream $stream";
+	    } elsif ($stream != $stream_down or ($i == $i_down and $j == $j_down)) {
+		$ds{"sub $sub $i $j"} = "stream $stream";
+		$ds{"stream $stream $i $j"} = "stream $stream_down";
+	    } else {
+		$ds{"head $sub $i $j"} = "stream $stream";
+	    }
+	} else {
+	    $ds{"sub $sub $i $j"} = "lake $lake";
+	    $ds{"lake $lake $i $j"} = "stream $stream_down";
+	}
+	if (defined($lake_down) and $lake_down > 0) {
+	    $ds{"stream $stream $i $j"} = "lake $lake_down";
+	}
+    }
+    return wantarray ? ($subs, \%ds) : $subs;
 }
 
-## @method save_catchment_structure(hashref topology, Geo::Raster streams, Geo::Raster lakes, $datasource, $layer)
+## @method vectorize_catchment(hashref topology, Geo::Raster streams, Geo::Raster lakes)
 #
 # @brief Save the subcatchment structure as a vector layer (a subcatchments raster method).
 #
 # @param[in] topology Reference to an hash having as keys = type id i j, and as 
 # values = type id.
-# @param[in] streams Streams raster.
-# @param[in] lakes (optional) Lakes raster.
-# @param[in] datasource OGR datasource string, e.g., a directory.
-# @param[in] layer Name for the new layer.
-sub save_catchment_structure {
-    my ($self, $topology, $streams, $lakes, $datasource_string, $layer) = @_;
+# @param[in] fdg Flow direction raster.
+# @param[in] streams Streams raster with unique ids for segments.
+# @param[in] lakes (required if topology contains lakes) Lakes raster.
+# @return Two Geo::Vector objects in an array: ($subcatchments, $streams).
+sub vectorize_catchment {
+    my $self = shift;
+    my $topology = shift;
+    my $fdg = shift;
+    my $streams = shift;
+    my $lakes = shift if ref($_[0]);
+    my %params = @_;
 
     my $cell_size = $self->cell_size();
 
     my ($minX, $minY, $maxX, $maxY) = $self->world();
 
-    my $datasource = Geo::OGR::Open($datasource_string, 1) or 
-	croak "can't open '$datasource_string' as an OGR datasource";
+    my %schema = ( Fields => [
+		       { Name => 'element', Type => 'Integer' },
+		       { Name => 'type', Type => 'String' },
+		       { Name => 'down', Type => 'Integer' },
+		       { Name => 'type_down', Type => 'String' },
+		   ]);
+    my $catchments = $self->polygonize(%params, 
+				       create => 'subcatchments',
+				       schema => \%schema, 
+				       pixel_value_field => 'element');
 
-    my $osr;
-    #$osr = new osr::SpatialReference;
-    #$osr->SetWellKnownGeogCS('WGS84');
-
-    my $catchment = $datasource->CreateLayer($layer, $osr, $Geo::OGR::wkbPolygon);
-    my $defn = new Geo::OGR::FieldDefn('element', $Geo::OGR::OFTInteger);
-    $defn->SetWidth(5);
-    $catchment->CreateField($defn);
-    $defn = new Geo::OGR::FieldDefn('type', $Geo::OGR::OFTString);
-    $defn->SetWidth(10);
-    $catchment->CreateField($defn);
-    $defn = new Geo::OGR::FieldDefn('down', $Geo::OGR::OFTInteger);
-    $defn->SetWidth(5);
-    $catchment->CreateField($defn);
-    $defn = new Geo::OGR::FieldDefn('type_down', $Geo::OGR::OFTString);
-    $defn->SetWidth(10);
-    $catchment->CreateField($defn);
-    my $schema = $catchment->GetLayerDefn();
-
-    $layer = $self*1;
-    my ($minval, $maxval) = $layer->value_range();
-
-    # add only lakes which exist in the structure
-    # use unique id's for different subcatchment types, lakes, and streams
-    # lakes and subcatchments fill the area completely
-    # streams are add-ons
-    # so we need two polygonize passes
 
     my %subs;
     my %streams;
-    my %lake_maps;
-    my %stream_maps;
+    my %lakes;
 
     # topology, keys = type id i j, values = type id
     for my $key (keys %$topology) {
@@ -931,18 +928,13 @@ sub save_catchment_structure {
 	    my $element = $2;
 	    if ($topology->{$key} =~ /^(\w+) (\d+)/) {
 		if ($type eq 'stream') {
-		    $maxval++;
-		    $stream_maps{$element} = $maxval;
-		    $element = $maxval;
 		    $streams{$element}{type_down} = $1;
 		    $streams{$element}{down} = $2;
+		} elsif ($type eq 'lake') {
+		    $lakes{$element}{type_down} = $1;
+		    $lakes{$element}{down} = $2;
 		} else {
-		    if ($type eq 'lake') {
-			$maxval++;
-			$lake_maps{$element} = $maxval;
-			$layer->if($lakes == $element, $maxval);
-			$element = $maxval;
-		    }
+		    #print STDERR "subs $type $1 $2\n";
 		    $subs{$element}{type} = $type;
 		    $subs{$element}{type_down} = $1;
 		    $subs{$element}{down} = $2;
@@ -950,80 +942,103 @@ sub save_catchment_structure {
 	    }
 	}
     }
-    for my $element_storage (\%subs, \%streams) {
-	for my $element (keys %$element_storage) {
-	    my $down = $element_storage->{$element}{down};
-	    if ($element_storage->{$element}{type_down} eq 'lake') {
-		$element_storage->{$element}{down} = $lake_maps{$down} if $lake_maps{$down};
-	    } elsif ($element_storage->{$element}{type_down} eq 'stream') {
-		$element_storage->{$element}{down} = $stream_maps{$down} if $stream_maps{$down};
-	    }
-	}
-    }
 
-    # polygonize and add subcatchment and lake polygons
+    for my $catchment (@{$catchments->features}) {
 
-    my $polygons = $layer->polygonize();
+	# add subcatchment and lake polygons
 
-    for my $k (keys %$polygons) {
-	my $element = $polygons->{$k}->{value};
+	my $element = $catchment->GetField('element');
+
+	#print STDERR "$subs{$element} $subs{$element}{type}\n";
 	
 	next unless $subs{$element};
 	
-	my $f = new Geo::OGR::Feature($schema);
-	my $g = new Geo::OGR::Geometry($Geo::OGR::wkbPolygon);
-	my $r = new Geo::OGR::Geometry($Geo::OGR::wkbLinearRing);
-	
-	my $path = the_border_of_a_polygon($polygons->{$k}->{lines});
-	
-	for my $point (@$path) {
-	    $r->AddPoint($minX + $point->[1] * $cell_size, $maxY - $point->[0] * $cell_size);
+	$catchment->SetField('type', $subs{$element}{type});
+	$catchment->SetField('down', $subs{$element}{down});
+	$catchment->SetField('type_down', $subs{$element}{type_down});
+	$catchments->feature($catchment->GetFID, $catchment);
+    }
+
+    %schema = ( Fields => [
+		    { Name => 'element', Type => 'Integer' },
+		    { Name => 'down', Type => 'Integer' },
+		    { Name => 'type_down', Type => 'String' },
+		]);
+    my $tree = Geo::Vector->new(%params,
+				create => 'stream_segments',
+				schema => \%schema);
+
+    my %done;
+    my($M, $N) = $streams->size;
+    for my $i (0..$M-1) {
+	for my $j (0..$N-1) {
+	    my $s = $streams->get($i, $j);
+	    next unless defined($s);
+	    next if $done{$s};
+	    next unless $streams{$s};
+	    print "segment $s\n";
+	    my $segment = $streams->segment($fdg, $i, $j);
+	    $tree->feature({ Geometry => $segment, 
+			     element => $s, 
+			     down => $streams{$s}{down}, 
+			     type_down => $streams{$s}{type_down}
+			   });
+	    $done{$s} = 1;
 	}
-	
-	$g->AddGeometry($r);
-	$g->CloseRings;
-	$f->SetGeometry($g);
-	$f->SetField(0, $element);
-	$f->SetField(1, $subs{$element}{type});
-	$f->SetField(2, $subs{$element}{down});
-	$f->SetField(3, $subs{$element}{type_down});
-	$catchment->CreateFeature($f);	
     }
+    return($catchments, $tree);
+}
 
-    # polygonize and add streams
-
-    $layer = $streams*($self>0);
-    for my $lake (keys %lake_maps) {
-	$layer->if($lakes == $lake, 0);
+sub segment {
+    my($self, $fdg, $i, $j) = @_;
+    my $s = $self->get($i, $j);
+    # upstream until not s, Note: assuming a clean segment
+    while (1) {
+	$i--;
+	my $x = $fdg->get($i, $j);
+	my $s2 = $self->get($i, $j);
+	next if defined($x) and $x == 5 and defined($s2) and $s2 == $s;
+	$j++;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 6 and defined($s2) and $s2 == $s;
+	$i++;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 7 and defined($s2) and $s2 == $s;
+	$i++;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 8 and defined($s2) and $s2 == $s;
+	$j--;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 1 and defined($s2) and $s2 == $s;
+	$j--;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 2 and defined($s2) and $s2 == $s;
+	$i--;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 3 and defined($s2) and $s2 == $s;
+	$i--;
+	$x = $fdg->get($i, $j);
+	$s2 = $self->get($i, $j);
+	next if defined($x) and $x == 4 and defined($s2) and $s2 == $s;
+	$i++;
+	$j++;
+	last;
     }
-    $polygons = $layer->polygonize();
-
-    for my $k (keys %$polygons) {
-	my $element = $polygons->{$k}->{value};
-	$element = $stream_maps{$element};
-	
-	next unless $streams{$element};
-	
-	my $f = new Geo::OGR::Feature($schema);
-	my $g = new Geo::OGR::Geometry($Geo::OGR::wkbPolygon);
-	my $r = new Geo::OGR::Geometry($Geo::OGR::wkbLinearRing);
-	
-	my $path = the_border_of_a_polygon($polygons->{$k}->{lines});
-	
-	for my $point (@$path) {
-	    $r->AddPoint($minX + $point->[1] * $cell_size, $maxY - $point->[0] * $cell_size);
-	}
-	
-	$g->AddGeometry($r);
-	$g->CloseRings;
-	$f->SetGeometry($g);
-	$f->SetField(0, $element);
-	$f->SetField(1, 'stream');
-	$f->SetField(2, $streams{$element}{down});
-	$f->SetField(3, $streams{$element}{type_down});
-	$catchment->CreateFeature($f);	
+    # downstream until not s, create the segment
+    my $segment = Geo::OGC::LineString->new;
+    while (1) {
+	$segment->AddPoint(Geo::OGC::Point->new($self->g2w($i, $j)));
+	my $x = $self->get($i, $j);
+	last if !defined($x) or $x != $s;
+	($i, $j) = $fdg->downstream($i, $j);
     }
-    $catchment->SyncToDisk;
+    return $segment;
 }
 
 ## @method route(Geo::Raster dem, Geo::Raster fdg, Geo::Raster k, $r)

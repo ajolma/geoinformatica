@@ -2611,14 +2611,15 @@ ral_dem_fdg(dem, method)
 			croak(ral_get_msg());
 
 AV *
-ral_fdg_outlet(fdg, i, j)
+ral_fdg_outlet(fdg, streams, i, j)
 	ral_grid *fdg
+	ral_grid *streams
 	int i
 	int j
 	CODE:
 	{
 		ral_cell c = {i, j};
-		c = ral_fdg_outlet(fdg, c);
+		c = ral_fdg_outlet(fdg, streams, c);
 		AV *av = newAV();
 		sv_2mortal((SV*)av);
 		if (av) {

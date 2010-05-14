@@ -270,16 +270,16 @@ To give an unique id for each stream section use the number_streams
 method:
 
 \code
-    $streams->number_streams($fdg, $lakes, $i, $j);
+    $streams->number_streams($fdg, $lakes, $i, $j, 4id);
 \endcode
 
 or
 
 \code
-    $streams->number_streams($fdg, $i, $j);
+    $streams->number_streams($fdg, $i, $j, $id);
 \endcode
 
-The outlet cell is optional.
+The outlet cell is optional as is also the id for the first stream segment.
 
 \section index_struct Subcatchment structure
 
@@ -287,8 +287,11 @@ The method
 
 \code
     ($subcatchments, $topology) = $streams->subcatchments($fdg, $lakes, @cell, $head_catchments);
+    ($subcatchments, $topology) = $streams->subcatchments($fdg, @cell, $head_catchments);
     ($subcatchments, $topology) = $streams->subcatchments($fdg, $lakes, $head_catchments);
+    ($subcatchments, $topology) = $streams->subcatchments($fdg, $head_catchments);
     ($subcatchments, $topology) = $streams->subcatchments($fdg, $lakes);
+    ($subcatchments, $topology) = $streams->subcatchments($fdg);
     $subcatchments = $streams->subcatchments($fdg, @cell, $head_catchments);
     $subcatchments = $streams->subcatchments($fdg, $head_catchments);
     $subcatchments = $streams->subcatchments($fdg, @cell);
@@ -300,9 +303,11 @@ Divides the catchment into stream elements, lakes, and subcatchments.
 The method
 
 \code
-    $subcatchments = save_catchment_structure($topology, $streams, $lakes, $datasource, $layer);
+    $subcatchments->save_catchment_structure($topology, $streams, $lakes, $datasource, $layer);
 \endcode
 
-saves the catchment structure as a vector layer into a OGR datasource with name $layer.
+saves the catchment structure as a vector layer into a OGR datasource
+with name $layer. The $lakes parameter is optional, but needed, i.e.,
+it may be a raster layer or a non-true value.
 
 */
