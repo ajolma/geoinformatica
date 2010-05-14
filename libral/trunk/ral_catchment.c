@@ -359,21 +359,21 @@ ral_grid *ral_dem_fdg(ral_grid *dem, int method)
 }
 
 
-int ral_fdg_is_outlet(ral_grid *fdg, ral_cell c)
+int ral_fdg_is_outlet(ral_grid *fdg, ral_grid *streams, ral_cell c)
 {
-    if (RAL_GRID_CELL_IN(fdg, c) AND RAL_GRID_DATACELL(fdg, c) AND RAL_GRID_CELL(fdg, c) > 0) {
+    if (RAL_GRID_CELL_IN(fdg, c) AND RAL_GRID_DATACELL(fdg, c) AND RAL_GRID_CELL(fdg, c) > 0 AND RAL_GRID_CELL(streams, c)) {
 	c = RAL_FLOW(fdg, c);
-	if (RAL_GRID_CELL_OUT(fdg, c) OR RAL_GRID_NODATACELL(fdg, c))
+	if (RAL_GRID_CELL_OUT(fdg, c) OR RAL_GRID_NODATACELL(fdg, c) OR RAL_GRID_NODATACELL(streams, c))
 	    return 1;
     }
     return 0;
 }
 
 
-ral_cell ral_fdg_outlet(ral_grid *fdg, ral_cell c)
+ral_cell ral_fdg_outlet(ral_grid *fdg, ral_grid *streams, ral_cell c)
 {
     ral_cell previous = c;
-    while (RAL_GRID_CELL_IN(fdg, c) AND RAL_GRID_DATACELL(fdg, c) AND RAL_GRID_CELL(fdg, c) > 0) {
+    while (RAL_GRID_CELL_IN(fdg, c) AND RAL_GRID_DATACELL(fdg, c) AND RAL_GRID_CELL(fdg, c) > 0 AND RAL_GRID_DATACELL(streams, c)) {
 	previous = c;
 	c = RAL_FLOW(fdg, c);
     }
@@ -1670,7 +1670,7 @@ ral_grid *ral_streams_subcatchments2(ral_grid *streams, ral_grid *fdg)
     RAL_CHECKM((streams->datatype = RAL_INTEGER_GRID) AND (fdg->datatype = RAL_INTEGER_GRID), RAL_ERRSTR_ARGS_INTEGER);
     RAL_CHECK(ral_init_pour_point_struct(&pp, fdg, NULL, ral_grid_create_like(fdg, RAL_INTEGER_GRID)));
     RAL_FOR(c, fdg) {
-	if (ral_fdg_is_outlet(fdg, c))
+	if (RAL_INTEGER_GRID_DATACELL(streams, c) AND ral_fdg_is_outlet(fdg, streams, c))
 	    RAL_CHECK(k = ral_mb(&pp, streams, c, k));
     }
     return pp.mark;
@@ -1765,7 +1765,7 @@ int ral_streams_number2(ral_grid *streams, ral_grid *fdg, int sid0)
     RAL_CHECKM(fdg->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_FDG_INTEGER);
     RAL_CHECKM(streams->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_STREAMS_INTEGER);
     RAL_FOR(c, fdg) {
-	if (ral_fdg_is_outlet(fdg, c))
+	if (ral_fdg_is_outlet(fdg, streams, c))
 	    sid0 = ral_number_tree(streams, fdg, c, sid0)+1;
     }
     return 1;
@@ -2099,7 +2099,7 @@ int ral_streams_prune2(ral_grid *streams, ral_grid *fdg, ral_grid *lakes, double
     RAL_CHECKM(!lakes OR lakes->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ARGS_INTEGER);
     RAL_CHECK(ld.mark = ral_grid_create_like(fdg, RAL_INTEGER_GRID));
     RAL_FOR(c, fdg) {
-	if (ral_fdg_is_outlet(fdg, c))
+	if (ral_fdg_is_outlet(fdg, streams, c))
 	    RAL_CHECK(ral_rprune(&ld, c, 0, NULL));
     }
     ral_grid_destroy(&ld.mark);
@@ -2474,7 +2474,7 @@ ral_catchment *ral_catchment_create_complete(ral_grid *subs, ral_grid *streams, 
     RAL_CHECK(streams = ral_grid_create_copy(streams, 0));
     td.streams = streams;
     RAL_FOR(c, fdg) {
-	if (ral_fdg_is_outlet(fdg, c)) {
+	if (ral_fdg_is_outlet(fdg, streams, c)) {
 	    td.last_stream_section_end = c;
 	    RAL_CHECK(ral_tree(&td, c));
 	    ral_mark_upslope_cells(&(td.pp), c, td.k);

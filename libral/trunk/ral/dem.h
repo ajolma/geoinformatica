@@ -41,7 +41,7 @@ ral_grid_handle RAL_CALL ral_dem_fdg(ral_grid *dem, int method);
    returns the outlet cell (cell which drains to pit, flat, nodata, or outside) 
    of the catchment in which c is 
 */
-ral_cell RAL_CALL ral_fdg_outlet(ral_grid *fdg, ral_cell c);
+ral_cell RAL_CALL ral_fdg_outlet(ral_grid *fdg, ral_grid *streams, ral_cell c);
 
 /** 
    upslope cells grid, upslope cells are all 8-neighbors which are higher, 
