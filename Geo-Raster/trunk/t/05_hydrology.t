@@ -38,7 +38,7 @@ sub diff {
     $fdg->drain_depressions($dem);
     ok($fdg, "drain_depressions");
     $fdg = $dem->fdg;
-    @o = $fdg->outlet(10,10);
+    @o = $fdg->outlet($fdg, 10,10);
     ok(@o == 2, "outlet");
     $fdg = $dem->fdg;
     $ucg = $fdg->ucg;

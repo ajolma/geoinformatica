@@ -279,8 +279,8 @@ sub drain_depressions {
 # @param[in] cell A cell on the catchment.
 # @return the outlet cell of the catchment.
 sub outlet {
-    my($fdg, @cell) = @_;
-    my $cell = ral_fdg_outlet($fdg->{GRID}, @cell);
+    my($fdg, $streams, @cell) = @_;
+    my $cell = ral_fdg_outlet($fdg->{GRID}, $streams->{GRID}, @cell);
     return @{$cell};
 }
 
@@ -883,7 +883,7 @@ sub subcatchments {
     return wantarray ? ($subs, \%ds) : $subs;
 }
 
-## @method vectorize_catchment(hashref topology, Geo::Raster streams, Geo::Raster lakes)
+## @method vectorize_catchment(hashref topology, Geo::Raster streams, Geo::Raster lakes, %params)
 #
 # @brief Save the subcatchment structure as a vector layer (a subcatchments raster method).
 #
@@ -892,6 +892,7 @@ sub subcatchments {
 # @param[in] fdg Flow direction raster.
 # @param[in] streams Streams raster with unique ids for segments.
 # @param[in] lakes (required if topology contains lakes) Lakes raster.
+# @param[in] params Parameters (driver, data_source) for the new Geo::Vectors.
 # @return Two Geo::Vector objects in an array: ($subcatchments, $streams).
 sub vectorize_catchment {
     my $self = shift;
@@ -977,6 +978,7 @@ sub vectorize_catchment {
 	    next if $done{$s};
 	    next unless $streams{$s};
 	    print "segment $s\n";
+	    Gtk2->main_iteration while Gtk2->events_pending;
 	    my $segment = $streams->segment($fdg, $i, $j);
 	    $tree->feature({ Geometry => $segment, 
 			     element => $s, 
@@ -1037,6 +1039,7 @@ sub segment {
 	my $x = $self->get($i, $j);
 	last if !defined($x) or $x != $s;
 	($i, $j) = $fdg->downstream($i, $j);
+	last unless defined $i;
     }
     return $segment;
 }
