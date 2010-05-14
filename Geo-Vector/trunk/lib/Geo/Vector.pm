@@ -898,12 +898,13 @@ sub feature {
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
 	}
-	my $features = $self->selected_features();
-	if (@$features) {
-	    my @fids;
-	    for (@$features) {push @fids, $_->GetFID}
-	    $self->select( with_id => \@fids );
-	}
+	# selected_features is a layer method, this is a bug perhaps
+	#my $features = $self->selected_features();
+	#if (@$features) {
+	#    my @fids;
+	#    for (@$features) {push @fids, $_->GetFID}
+	#    $self->select( with_id => \@fids );
+	#}
     } elsif (ref $fid) {
 
 	# add
