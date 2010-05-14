@@ -2478,6 +2478,7 @@ ral_catchment *ral_catchment_create_complete(ral_grid *subs, ral_grid *streams, 
 	    td.last_stream_section_end = c;
 	    RAL_CHECK(ral_tree(&td, c));
 	    ral_mark_upslope_cells(&(td.pp), c, td.k);
+	    td.k++;
 	    RAL_CHECK(ral_catchment_add(td.catchment, c, c));
 	}
     }
