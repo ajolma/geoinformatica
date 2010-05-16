@@ -4,7 +4,7 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
     if 0; # not running under some shell
 
 use Carp;
-use Geo::Raster qw(:db :types :logics);
+use Geo::Raster qw(:types :logics);
 #use Timeseries;
 use Term::ReadLine;
 use Math::MatrixReal;
