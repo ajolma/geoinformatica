@@ -985,6 +985,23 @@ sub geometry {
     }
 }
 
+sub geometries {
+    my $self = shift;
+    my @g = ();
+    if ( $self->{features} ) {
+	for my $fid (@_) {
+	    my $f = $self->{features}{$fid} if exists $self->{features}{$fid};
+	    push @g, $f->Geometry->Clone if $f;
+	}
+    } else {
+	for my $fid (@_) {
+	    my $f = $self->{OGR}->{Layer}->GetFeature($fid);
+	    push @g, $f->Geometry->Clone if $f;
+	}
+    }
+    return @g;
+}
+
 sub make_geometry {
     my($input) = @_;
     my $geometry;
@@ -1225,6 +1242,9 @@ sub world {
 # 'Points', 'Lines' or 'Polygons'.
 # - \a feature (optional). Number of the feature to render.
 # - \a value_field (optional). Value fields name.
+# - \a nodata_value (optional). What value to use for nodata. Default
+# is -9999 and to initialize the raster to nodata. Set to undef to not
+# to use nodata values at all (and initialize to zero).
 # @return A new Geo::Raster, which has the size and extent of the given as
 # @todo make this work for schema free layers
 # parameters and values
@@ -1279,8 +1299,10 @@ sub rasterize {
 			      N        => $params{N},
 			      world    => $params{world}
 			      );
-    $gd->nodata_value( $params{nodata_value} );
-    $gd->set('nodata');
+    if (defined($params{nodata_value})) {
+	$gd->nodata_value( $params{nodata_value} );
+	$gd->set('nodata');
+    }
     
     xs_rasterize( $handle, $gd->{GRID},
 		  $RENDER_AS{ $params{render_as} },
