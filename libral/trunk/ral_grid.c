@@ -4404,6 +4404,7 @@ int ral_grid_rasterize_feature(ral_grid *gd, OGRFeatureH f, int value_field, OGR
     default:
 	RAL_CHECKM(0, ral_msg("render_as is %i", render_as));
     }
+    ral_geometry_destroy(&g);
     return 1;
 fail:
     ral_geometry_destroy(&g);
