@@ -114,6 +114,11 @@ sub do_polygonize {
 	    if ($layers and $layers->{$params{create}});
 	$params{schema} = { Fields => [{ Name => 'value', Type => 'Integer' }] };
     }
+    if ($dialog->get_widget('connectedness_checkbutton')->get_active) {
+	$params{options} = { '8CONNECTED' => 1 };
+    } else {
+	$params{options} = undef;
+    }
     $params{callback} = \&progress;
     $params{callback_date} = $dialog->get_widget('polygonize_progressbar');
     my $vector = $self->polygonize(%params);

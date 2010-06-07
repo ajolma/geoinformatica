@@ -178,7 +178,7 @@ sub polygonize {
     my $band = $dataset->Band(1);
     my $layer = $vector->{OGR}->{Layer};
     eval {
-	Geo::GDAL::Polygonize($band, undef, $layer, $params{pixel_value_field}, undef, $params{callback}, $params{callback_date});
+	Geo::GDAL::Polygonize($band, undef, $layer, $params{pixel_value_field}, $params{options}, $params{callback}, $params{callback_date});
 	};
     croak "$@" if $@;
 
