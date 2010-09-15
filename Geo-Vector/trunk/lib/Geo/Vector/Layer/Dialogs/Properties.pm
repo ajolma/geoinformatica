@@ -47,7 +47,7 @@ sub open {
     my $ds = $self->data_source;
     my $driver = $self->driver;
     $dialog->get_widget('properties_driver_label')->set_text($driver ? $driver : 'unknown');
-    $dialog->get_widget('properties_data_source_label')->set_text($ds);
+    $dialog->get_widget('properties_data_source_label')->set_text(Glib->filename_to_unicode($ds));
     $dialog->get_widget('properties_SQL_label')->set_text($self->{SQL});
     
     $dialog->get_widget('properties_name_entry')->set_text($self->name);

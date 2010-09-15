@@ -431,7 +431,7 @@ sub fill_layer_treeview {
     if (@layers) {
         for my $name (@layers) {
             my $iter = $model->insert (undef, 0);
-            $model->set ($iter, 0, $name, 1, $layers->{$name});
+            $model->set ($iter, 0, Glib->filename_to_unicode($name), 1, $layers->{$name});
         }
         $treeview->set_cursor(Gtk2::TreePath->new(0));
     } 
