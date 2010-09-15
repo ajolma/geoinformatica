@@ -318,7 +318,11 @@ sub fill_directory_treeview {
     
     for (reverse @dirs) {
 	next if /^\s*$/;
-	my $filename = Glib->filename_to_unicode($_);
+	my $filename;
+	eval {
+	    $filename = Glib->filename_to_unicode($_);
+	};
+	next if $@;
 	#my $label = Gtk2::Label->new($filename) if Gtk2->CHECK_VERSION(2, 18, 0);
 	my $label = Gtk2::Label->new($filename) unless $Config::Config{'osname'} eq 'MSWin32';
 	my $b = Gtk2::ToolButton->new($label, $filename);
@@ -389,7 +393,11 @@ sub fill_directory_treeview {
 	
     for (@{$self->{dir_list}}) {
 	my $iter = $model->insert(undef, 0);
-	$model->set($iter, 0, Glib->filename_to_unicode($_) );
+	eval {
+	    $_ = Glib->filename_to_unicode($_);
+	};
+	next if $@;
+	$model->set($iter, 0, $_ );
     }
 	
     $treeview->set_cursor(Gtk2::TreePath->new(0));
@@ -431,7 +439,12 @@ sub fill_layer_treeview {
     if (@layers) {
         for my $name (@layers) {
             my $iter = $model->insert (undef, 0);
-            $model->set ($iter, 0, Glib->filename_to_unicode($name), 1, $layers->{$name});
+	    my $u;
+	    eval {
+		$u = Glib->filename_to_unicode($name);
+	    };
+	    next if $@;
+            $model->set ($iter, 0, $u, 1, $layers->{$name});
         }
         $treeview->set_cursor(Gtk2::TreePath->new(0));
     } 
