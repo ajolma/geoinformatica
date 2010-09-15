@@ -4,6 +4,7 @@ package Geo::Vector::Layer::Dialogs::Open;
 use strict;
 use warnings;
 use Carp;
+use Encode;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
@@ -356,14 +357,14 @@ sub fill_directory_treeview {
 	my @files = sort {$b cmp $a} readdir(DIR);
 	closedir DIR;
 
+	$_ = decode('utf8', $_) for (@files);
+
 	my @dirs;
 	my @fs;
 	for (@files) {
 	    my $test = File::Spec->catpath( $volume, $directories, $_ );
 	    next if (/^\./ and not $_ eq File::Spec->updir);
-	    #next unless -d $test;
-	    my $dir = 1 if -d $test;
-	    #print STDERR "$test -> $dir\n";
+	    my $dir = -d $test ? 1 : 0;
 	    next if $_ eq File::Spec->curdir;
 	    s/&/&amp;/g;
 	    s/</&lt;/g;
