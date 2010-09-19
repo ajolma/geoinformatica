@@ -39,7 +39,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw();
 our $VERSION = 0.03;
 
-use vars qw/%EPSG/;
+use vars qw/%EPSG @EPSG/;
 
 sub registration {
     my $dialogs = Geo::Raster::Layer::Dialogs->new();
@@ -390,17 +390,13 @@ sub open_polygonize_dialog {
 }
 
 ##@ignore
-sub update_srs_labels {
-    my($self, $gui, $dialog) = @{$_[1]};
-    $dialog = $self->{$dialog};
-    my $from = $dialog->get_widget('from_EPSG_entry')->get_text;
-    my $to = $dialog->get_widget('to_EPSG_entry')->get_text;
+sub epsg_help {
+    my $entry = shift;
+    my $text = $entry->get_text;
+    my $auto = $entry->get_completion;
+    my $list = $auto->get_model if $auto;
 
     unless (defined $EPSG{2000}) {
-	my $dir = Geo::GDAL::GetConfigOption('GDAL_DATA');
-	$dir = '/usr/local/share/gdal' unless $dir;
-
-	#for my $f ("$dir/gcs.csv","$dir/gcs.override.csv","$dir/pcs.csv","$dir/pcs.override.csv") {
 	for my $d ("gcs.csv","gcs.override.csv","pcs.csv","pcs.override.csv") {
 	    my $f = Geo::GDAL::FindFile('gdal', $d);
 	    if (CORE::open(EPSG, $f)) {
@@ -409,21 +405,25 @@ sub update_srs_labels {
 		    my @t = split/,/;
 		    $t[1] =~ s/^"//;
 		    $t[1] =~ s/"$//;
-		    $EPSG{$t[0]} = $t[1];
+		    $EPSG{$t[1].' ['.$t[0].']'} = $t[0];
 		}
 		close EPSG;
 	    }
 	}
+	@EPSG = sort {$a cmp $b} keys %EPSG;
     }
 
-    $from = $EPSG{$from};
-    $from = 'srs not found' unless $from;
-    $to = $EPSG{$to};
-    $to = 'srs not found' unless $to;
+    if ($list) {
+	$list->clear;
+	my $i = 0;
+	for (@EPSG) {
+	    next unless /$text/i;
+	    my $iter = $list->append();
+	    $list->set($iter, 0, $_);
+	    last if ($i++) > 10;
+	}
+    }
 
-    $dialog->get_widget('from_srs_label')->set_text($from);
-    $dialog->get_widget('to_srs_label')->set_text($to);
-    $dialog->get_widget('copy_projection_checkbutton')->set_active(1);
 }
 
 1;

@@ -21,8 +21,8 @@ sub open {
 	     copy_dialog => [delete_event => \&cancel_copy, [$self, $gui]],
 	     copy_cancel_button => [clicked => \&cancel_copy, [$self, $gui]],
 	     copy_ok_button => [clicked => \&do_copy, [$self, $gui, 1]],
-	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui, 'copy_dialog']],
-	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::update_srs_labels, [$self, $gui, 'copy_dialog']],
+	     from_EPSG_entry => [changed => \&Geo::Raster::Layer::epsg_help],
+	     to_EPSG_entry => [changed => \&Geo::Raster::Layer::epsg_help],
 	     copy_add_button => [clicked => \&add_to_mappings, $self],
 	     copy_delete_button => [clicked => \&delete_from_mappings, $self],
 	     copy_driver_combobox => [changed => \&copy_driver_changed, $self],
@@ -36,6 +36,22 @@ sub open {
 	);
     
     if ($boot) {
+	my $from = $dialog->get_widget('from_EPSG_entry');
+	my $auto = Gtk2::EntryCompletion->new;
+	$auto->set_match_func(sub {1});
+	my $list = Gtk2::ListStore->new('Glib::String');
+	$auto->set_model($list);
+	$auto->set_text_column(0);
+	$from->set_completion($auto);
+
+	my $to = $dialog->get_widget('to_EPSG_entry');
+	$auto = Gtk2::EntryCompletion->new;
+	$auto->set_match_func(sub {1});
+	$list = Gtk2::ListStore->new('Glib::String');
+	$auto->set_model($list);
+	$auto->set_text_column(0);
+	$to->set_completion($auto);
+
 	$dialog->get_widget('copy_datasource_button')
 	    ->signal_connect( clicked=> sub {
 		my(undef, $self) = @_;
@@ -147,9 +163,9 @@ sub do_copy {
     my $p = $dialog->get_widget('copy_projection_checkbutton')->get_active;
     #print STDERR "do proj: $p\n";
     if ($p) {
-	if ($EPSG{$from} and $EPSG{$to}) {
-	    my $src = Geo::OSR::SpatialReference->create( EPSG => $from );
-	    my $dst = Geo::OSR::SpatialReference->create( EPSG => $to );
+	if ($Geo::Raster::Layer::EPSG{$from} and $Geo::Raster::Layer::EPSG{$to}) {
+	    my $src = Geo::OSR::SpatialReference->create( EPSG => $Geo::Raster::Layer::EPSG{$from} );
+	    my $dst = Geo::OSR::SpatialReference->create( EPSG => $Geo::Raster::Layer::EPSG{$to} );
 	    eval {
 		$ct = Geo::OSR::CoordinateTransformation->new($src, $dst);
 	    };
