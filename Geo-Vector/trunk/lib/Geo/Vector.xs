@@ -88,7 +88,7 @@ xs_rasterize(l, gd, render_override, fid_to_rasterize, value_field)
 	fail:
 	POSTCALL:
 		if (ral_has_msg())
-			croak(ral_get_msg());
+			croak("%s",ral_get_msg());
 
 ral_pixbuf *
 gtk2_ex_geo_pixbuf_create(int width, int height, double minX, double maxY, double pixel_size, int bgc1, int bgc2, int bgc3)
@@ -100,7 +100,7 @@ gtk2_ex_geo_pixbuf_create(int width, int height, double minX, double maxY, doubl
     RETVAL
 	POSTCALL:
 		if (ral_has_msg())
-			croak(ral_get_msg());
+			croak("%s",ral_get_msg());
 
 void 
 gtk2_ex_geo_pixbuf_destroy(pb)
@@ -147,12 +147,12 @@ ral_pixbuf_save(pb, filename, type, option_keys, option_values)
 			free(ov);
 		}
 		if (error) {
-			croak(error->message);
+			croak("%s",error->message);
 			g_error_free(error);
 		}
 	POSTCALL:
 		if (ral_has_msg())
-			croak(ral_get_msg());
+			croak("%s",ral_get_msg());
 
 ral_visual_layer *
 ral_visual_layer_create(perl_layer, ogr_layer)
@@ -174,7 +174,7 @@ ral_visual_layer_create(perl_layer, ogr_layer)
     RETVAL
 	POSTCALL:
 		if (ral_has_msg())
-			croak(ral_get_msg());
+			croak("%s",ral_get_msg());
 
 void
 ral_visual_layer_destroy(layer)
@@ -192,7 +192,7 @@ ral_visual_layer_render(layer, pb)
 		ral_render_visual_layer(&rpb, layer);
 	POSTCALL:
 	if (ral_has_msg())
-		croak(ral_get_msg());
+		croak("%s",ral_get_msg());
 
 ral_visual_feature_table *
 ral_visual_feature_table_create(perl_layer, features)
@@ -223,7 +223,7 @@ ral_visual_feature_table_create(perl_layer, features)
     RETVAL
 	POSTCALL:
 		if (ral_has_msg())
-			croak(ral_get_msg());
+			croak("%s",ral_get_msg());
 
 void
 ral_visual_feature_table_destroy(layer)
@@ -241,7 +241,7 @@ ral_visual_feature_table_render(layer, pb)
 		ral_render_visual_feature_table(&rpb, layer);
 	POSTCALL:
 	if (ral_has_msg())
-		croak(ral_get_msg());
+		croak("%s",ral_get_msg());
 
 GdkPixbuf_noinc *
 gtk2_ex_geo_pixbuf_get_pixbuf(ral_pixbuf *pb)
@@ -252,7 +252,7 @@ gtk2_ex_geo_pixbuf_get_pixbuf(ral_pixbuf *pb)
 		RETVAL
 	POSTCALL:
 		if (ral_has_msg())
-			croak(ral_get_msg());
+			croak("%s",ral_get_msg());
 
 cairo_surface_t_noinc *
 gtk2_ex_geo_pixbuf_get_cairo_surface(pb)
