@@ -27,13 +27,11 @@ for (@Geo::OGR::Geometry::GEOMETRY_TYPES) {
     next if $_ =~ /None/;
     next if $_ =~ /Ring/;
     eval {
-	$test = Geo::Vector->new(driver=>'ESRI Shapefile', data_source=>'./t', create=>'test'.$_, geometry_type=>$_);
+	$test = Geo::Vector->new(create=>'test'.$_, geometry_type=>$_);
     };
-    my $tt = $test->geometry_type() unless $@;
+    my $tt = '';
+    $tt = $test->geometry_type() unless $@;
     ok($_ eq $tt,"Create layer with $_ type: $@");
-    for my $e ('dbf','prj','shp','shx') {
-	unlink "t/test$_.$e";
-    }
 }
 
 eval {
