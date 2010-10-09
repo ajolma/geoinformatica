@@ -356,36 +356,33 @@ sub fill_directory_treeview {
     }
     
     @{$self->{dir_list}} = ();
-    if (opendir(DIR, $self->{path})) {
-	
-	my @files = sort {$b cmp $a} readdir(DIR);
-	closedir DIR;
 
-	$_ = decode('utf8', $_) for (@files);
-
-	my @dirs;
-	my @fs;
-	for (@files) {
-	    my $test = File::Spec->catpath( $volume, $directories, $_ );
-	    next if (/^\./ and not $_ eq File::Spec->updir);
-	    my $dir = -d $test ? 1 : 0;
-	    next if $_ eq File::Spec->curdir;
-	    s/&/&amp;/g;
-	    s/</&lt;/g;
-	    s/>/&gt;/g;
-	    if ($dir) {
-		push @dirs, "<b>[$_]</b>";
-	    } else {
-		push @fs, $_;
-	    }
+    my @files;
+    eval {
+	@files = Geo::GDAL::ReadDir($self->{path});
+    };
+    @dirs = ();
+    my @fs;
+    for (sort {$b cmp $a} @files) {
+	my $test = File::Spec->catfile($self->{path}, $_);
+	my($m) = Geo::GDAL::Stat($test);
+	my $is_dir = $m eq 'd';
+	next if (/^\./ and not $_ eq File::Spec->updir);
+	next if $_ eq File::Spec->curdir;
+	s/&/&amp;/g;
+	s/</&lt;/g;
+	s/>/&gt;/g;
+	if ($is_dir) {
+	    push @dirs, "<b>[$_]</b>";
+	} else {
+	    push @fs, $_;
 	}
-	for (@fs) {
-	    push @{$self->{dir_list}}, $_;
-	}
-	for (@dirs) {
-	    push @{$self->{dir_list}}, $_;
-	}
-
+    }
+    for (@fs) {
+	push @{$self->{dir_list}}, $_;
+    }
+    for (@dirs) {
+	push @{$self->{dir_list}}, $_;
     }
 
     # in a file
