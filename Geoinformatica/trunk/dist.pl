@@ -5,6 +5,7 @@
 # - libral is compiled and works
 # - other Geo:: modules are compiled and work
 # - GDAL docs are made (make docs)
+# - Geo::GDAL docs are made (doxygen in swig/perl)
 # - libral docs are made (doxygen in libral)
 # - Geoinformatica docs are made (doxygen in Geo-Raster)
 

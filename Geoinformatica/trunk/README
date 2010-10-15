@@ -8,6 +8,17 @@ also be used for running command line geospatial Perl programs.
 
 MANIFEST
 
+The Perl layer is r410 
+
+Geoinformatica Perl modules are
+
+IPC::Gnuplot
+Geo::OGC::Geometry
+Gtk2::Ex::Geo
+Gtk2::Ex::Geo::Graph
+Geo::Raster
+Geo::Vector
+
 The compiled layer 
 
 Geoinformatica contains GTK+, Curl, Perl, Gnuplot, GEOS,
@@ -17,75 +28,41 @@ GTK+ is 2.16.6 from http://www.gtk.org/download-windows.html
      libglade 2.6.4-1 and librsvg 2.26.0-1 from http://ftp.gnome.org/pub/GNOME/binaries/win32/
      libxml2 2.7.6 from ftp://xmlsoft.org/libxml2/win32/
 Curl is 7.19.7 from sources
-Perl is 5.10.0 from sources
+Perl is 5.10.1 from sources
 Gnuplot is 4.4rc1 from http://sourceforge.net/projects/gnuplot/files/
-GDAL is 1.7.0 rc1 (r18506) from sources
+GDAL is trunk (r20829) from sources
 GEOS is 3.2.0 from sources
 Proj4 is 4.6.1 from sources
-libral is r170
+libral is r410
 
 The Perl modules layer.
 
-Archive-Zip-1.24
-AutoLoader-5.67
-Bit-Vector-6.4
+Bit-Vector-7.1
 Cairo-1.061
-Carp-Clan-5.9
-Data-TreeDumper-0.33
-Data-TreeDumper-Renderer-GTK-0.01
-Date-Calc-5.4
-DBD-Pg-2.8.0
-DBD-XBase-0.241
-Devel-Size-0.67
-Devel-StackTrace-1.15
-Devel-Symdump-2.07
-ExtUtils-Depends-0.301
-ExtUtils-MakeMaker-6.52
-ExtUtils-PkgConfig-1.11
-File-Type-0.22
-Font-FreeType-0.03
-Geo-Constants-0.06
-Geo-Distance-0.11
-Geo-Ellipsoid-0.904
-Geo-Ellipsoids-0.14
-Geo-Forward-0.11
-Geo-Functions-0.07
-Geo-Inverse-0.05
-Geo-Proj4-1.00
-Geo-Shapelib-0.20
-Getopt-ArgvFile-1.11
-Getopt-Long-2.36
+Carp-Clan-6.04
+Date-Calc-6.3
+ExtUtils-Depends-0.302
+ExtUtils-F77-1.16
+ExtUtils-PkgConfig-1.12
 Glib-1.222
 Gnome2-Rsvg-0.10
-Graph-0.81
+Graph-0.94
 Graphics-ColorUtils-0.17
 Gtk2-1.221
-Gtk2-Ex-Dialogs-0.11
-Gtk2-Ex-Simple-List-0.50
-Gtk2-Ex-Simple-Tree-0.50
-Gtk2-Ex-Utils-0.09
 Gtk2-GladeXML-1.007
-Heap-0.71
-HTML-Parser-3.59
-HTML-Tagset-3.10
-Log-Report-0.17
-Math-ConvexHull-1.01
-Module-ScanDeps-0.84
-Object-Deadly-0.09
-Pango-1.220
-PAR-0.983
-PAR-Dist-0.32
-PAR-Packer-0.982
-Parse-Binary-0.10
-Parse-RecDescent-1.94
-PDL-2.4.5_005 (includes HDF4 support)
+JSON-XS-2.27
+PDL-2.4.6
 PDL-NetCDF-0.93
-Sort-Naturally-1.02
-Statistics-Descriptive-2.6
-Sub-Uplevel-0.14
-Term-ReadLine-Perl-1.0302
-TermReadKey-2.30
-Tree-R-0.05
-Win32-API-0.55
-Win32-Exe-0.11
-Win32-TieRegistry-0.25
+Pango-1.221
+Statistics-Descriptive-3.0100
+Storable-2.21
+Sub-Uplevel-0.2002
+Test-Exception-0.29
+Unicode-String-2.09
+Win32-API-0.59
+Win32-DriveInfo-0.06
+Win32-TieRegistry-0.26
+Win32API-File-0.1101
+Win32API-Registry-0.31
+common-sense-3.0
+libwin32-0.28
