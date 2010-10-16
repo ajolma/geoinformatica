@@ -279,6 +279,9 @@ ral_grid_get_world(gd)
   OUTPUT:
     RETVAL
 
+int
+ral_grid_overlayable(ral_grid *g1, ral_grid *g2)
+
 void
 ral_grid_set_bounds_csnn(gd, cell_size, minX, minY)
 	ral_grid *gd

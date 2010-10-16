@@ -336,6 +336,14 @@ sub world {
     #$self->_attributes;
 }
 
+## @method overlayable(Geo::Raster other)
+#
+# @brief Test if two rasters are overlayable.
+sub overlayable {
+    my($self, $other) = @_;
+    ral_grid_overlayable($self->{GRID}, $other->{GRID});
+}
+
 ## @ignore
 *bounding_box = *world;
 

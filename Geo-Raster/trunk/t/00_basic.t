@@ -234,3 +234,13 @@ for my $datatype1 ('','int','real') {
 	
     }  
 }
+
+{
+    my $g1 = new Geo::Raster('int',5,5);
+    my $g2 = new Geo::Raster('int',5,5);
+    my $g3 = new Geo::Raster('int',1,5);
+    my $t1 = $g1->overlayable($g2);
+    my $t2 = $g1->overlayable($g3);
+    ok($t1 == 1, "overlayability");
+    ok($t2 == 0, "overlayability");
+}
