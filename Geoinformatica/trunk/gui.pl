@@ -2,6 +2,7 @@
 
 use Carp;
 use Config;
+use Encode;
 use Cwd;
 use Glib qw/TRUE FALSE/;
 use Geo::Raster;
@@ -165,19 +166,18 @@ sub setup{
 }
 
 sub exception_handler {
-    
-    if ($_[0] =~ /\@INC contains/) {
-	$_[0] =~ s/\(\@INC contains.*?\)//;
+    my $msg = decode("utf8", $_[0]);
+    if ($msg =~ /\@INC contains/) {
+	$msg =~ s/\(\@INC contains.*?\)//;
     }
-    $_[0] =~ s/\s+at [\/\w\.]gui\.pl line \d+//;
+    $msg =~ s/\s+at [\/\w\.]gui\.pl line \d+//;
     my $dialog = Gtk2::MessageDialog->new(undef,
 					  'destroy-with-parent',
 					  'info',
 					  'close',
-					  $_[0]);
+					  $msg);
     $dialog->signal_connect(response => \&destroy_dialog);
     $dialog->show_all;
-    
     return 1;
 }
 
