@@ -1034,6 +1034,7 @@ sub bootstrap_dialog {
 	    }
 	}
 	$boot = 1;
+	$widget->set_position('center');
     } else {
 	$widget = $self->{$dialog}->get_widget($dialog);
 	$widget->move(@{$self->{$dialog.'_position'}}) unless $widget->get('visible');
