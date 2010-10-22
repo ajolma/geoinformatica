@@ -121,6 +121,7 @@ sub setup{
     $window->add($vbox);
     $window->signal_connect("destroy", \&close_the_app);
     $window->set_default_size(850,600);
+    $window->set_position('center');
     $window->show_all;
 
     # add logger and redirect STDOUT to it
@@ -135,6 +136,7 @@ sub setup{
     $log->add($sc);
     $log->signal_connect( delete_event => sub { $log->hide_all; 1; }); 
     $log->set_default_size(600,400);
+    $log->set_position('center');
 
     {   
 	package Buffer;
