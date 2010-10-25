@@ -95,6 +95,12 @@ sub open {
 sub schema_to_treeview {
     my($self, $treeview, $editable, $schema) = @_;
 
+    # remove existing columns from treeview first
+    my $column;
+    while ($column = $treeview->get_column(0)) {
+	$treeview->remove_column($column);
+    }
+
     my $model = Gtk2::TreeStore->new(qw/Glib::String Glib::String Glib::String Glib::Int Glib::Int/);
     $treeview->set_model($model);
 
@@ -102,7 +108,7 @@ sub schema_to_treeview {
     my $cell = Gtk2::CellRendererText->new;
     $cell->set(editable => $editable);
     $cell->signal_connect(edited => \&schema_changed, [$self, $i]);
-    my $column = Gtk2::TreeViewColumn->new_with_attributes('Name', $cell, text => $i++);
+    $column = Gtk2::TreeViewColumn->new_with_attributes('Name', $cell, text => $i++);
     $treeview->append_column($column);
 
     # replace with @Geo::OGR::FieldDefn::FIELD_TYPES
