@@ -30,6 +30,7 @@ sub open {
 	 [
 	  'open_vector_driver_combobox',
 	  'filesystem_driver_combobox',
+	  'open_vector_datasource_combobox'
 	 ]
 	);
     
@@ -143,7 +144,7 @@ sub fill_named_data_sources_combobox {
     my($self, $default) = @_;
     $default = '' unless $default;
     my $model = Gtk2::ListStore->new('Glib::String');
-    $model->set ($model->append, 0, '');
+    $model->set($model->append, 0, '');
     my $i = 1;
     my $active = 0;
     for my $data_source (sort keys %{$self->{gui}{resources}{datasources}}) {
@@ -152,11 +153,6 @@ sub fill_named_data_sources_combobox {
 	$i++;
     }
     my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
-    if ($combo->get_active == -1) {
-	my $renderer = Gtk2::CellRendererText->new;
-	$combo->pack_start ($renderer, TRUE);
-	$combo->add_attribute ($renderer, text => 0);
-    }
     $combo->set_model($model);
     $combo->set_active($active);
 }
