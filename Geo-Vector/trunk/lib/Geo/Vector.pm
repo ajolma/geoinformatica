@@ -1120,6 +1120,7 @@ sub features {
 	    while ( my $f = $self->next_feature() ) {
 		$i++;
 		next if $i < $from;
+		next unless $f->GetGeometry->Contains($params{that_contain});
 		push @features, $f;
 		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
@@ -1130,6 +1131,7 @@ sub features {
 	    while ( my $f = $self->next_feature() ) {
 		$i++;
 		next if $i < $from;
+		next unless $f->GetGeometry->Within($params{that_are_within});
 		push @features, $f;
 		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
@@ -1140,6 +1142,7 @@ sub features {
 	    while ( my $f = $self->next_feature() ) {
 		$i++;
 		next if $i < $from;
+		next unless $f->GetGeometry->Intersect($params{that_intersect});
 		push @features, $f;
 		$is_all = 0, last if $limit and $i >= $limit-1;
 	    }
