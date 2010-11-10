@@ -1,0 +1,8 @@
+LICENCE
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Gnuplot.t
+lib/IPC/Gnuplot.pm
+META.yml

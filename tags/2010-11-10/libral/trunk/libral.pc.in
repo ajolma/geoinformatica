@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libral
+Description: Raster algebra functions for in-memory grids
+Version: @VERSION@
+Requires: @REQUIRES@
+Libs: @PC_LIBS@ -L${exec_prefix}/lib -lral
+Cflags: @PC_CPPFLAGS@ -I${prefix}/include

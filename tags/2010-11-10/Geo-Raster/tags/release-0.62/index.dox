@@ -1,0 +1,75 @@
+/*! \mainpage Geoinformatica
+
+\section index_intro Introduction
+
+<a
+href="http://geoinformatics.tkk.fi/twiki/bin/view/Main/GeoinformaticaSoftware">Geoinformatica</a>
+is a geospatial software toolkit, which builds on Perl, GTK+, GDAL,
+and libral. These pages document the Perl modules specific to
+Geoinformatica.
+
+The source code for these modules and libral are developed at <a
+href="https://hoslab.cs.helsinki.fi/savane/">HOSLAB</a>. HOSLAB does
+not yet offer an anonymous access to the subversion repository, there
+are nightly snapshots available at <a
+href="http://map.hut.fi/files/Geoinformatica/">http://map.hut.fi/files/Geoinformatica/</a>. In
+the same ftp site there are Windows binaries available.
+
+Geo::Raster and Geo::Vector contain Perl interfaces and access to
+computational methods for geospatial data that are mainly in GEOS and
+libral. In the Gtk2::Ex::Geo namespace there are respective visual
+classes. The Gtk2::Ex::Geo contains also a set of widgets, dialogs,
+and glue code for managing a stack of geospatial data layers.
+
+The Geo::OGC::Geometry is (or is intended as) a place for Perl-space
+geometry data storage and computational code.
+
+The IPC::Gnuplot implements a simple pipe to a gnuplot program which
+can be linked to Gtk2::Ex::Geo::Glue for plotting.
+
+\section index_geo_raster Introduction to Geo::Raster
+
+A Geo::Raster object (a blessed reference to an anonymous hash) is
+either a temporary cache of one band of a GDAL raster dataset or an
+in-memory libral raster. Geo::Raster objects are either integer or
+real valued grids. The Perl layer overlays the basic operators and
+functions to make raster algebra easy.
+
+Many Geo::Raster methods can be used in-place or to return a value. For example: 
+@code
+$a->sin(); 
+@endcode
+vs. 
+@code
+$b = $a->sin();
+@endcode
+
+\section index_geo_vector Introduction to Geo::Vector
+
+A Geo::Vector object (a blessed reference to an anonymous hash) is a
+either an extra layer on top of an OGR layer or an array of OGR
+features.
+
+\section index_gtk2_ex_geo Introduction to Gtk2::Ex::Geo modules
+
+The Gtk2::Ex::Geo modules provide a plaform for developing geospatial
+applications. 
+
+The Gtk2::Ex::Geo::Layer is an abstract base class for geospatial data
+layers, it itself is a subclass of Geo::Layer. There are also classes
+Gtk2::Ex::Geo::Raster and Gtk2::Ex::Geo::Vector, which derive also
+from Geo::Raster and Geo::Vector.
+
+The Gtk2::Ex::Geo::Overlay is a widget class derived from
+Gtk2::ScrolledWindow. Gtk2::Ex::Geo::Overlay objects maintain a list
+of geospatial data layers. The Gtk2::Ex::Geo::Overlay class contains a
+method for rendering the data onto a geocanvas that is first a cairo
+surface and then a gdk pixbuf. It also contains methods for user
+interaction with the widget: zoom, pan, select.
+
+The Gtk2::Ex::Geo::Glue is for maintaining a set of objects:
+Gtk2::Ex::Geo::Overlay, Gtk2::TreeView, Gtk2::Entry, Gtk2::Toolbar,
+and Gtk2::Statusbar and linking them. Gtk2::Ex::Geo::Glue can be used
+to maintain a link to a gnuplot instance.
+
+*/	
