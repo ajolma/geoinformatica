@@ -3,7 +3,12 @@
 package Geo::Raster;
 
 use strict;
-use Geo::Vector;
+# use Geo::Vector but allow silent failure
+# which is useful when testing Geo::Raster without Geo::Vector
+# if Geo::Vector is not available polygonize will not work
+eval {
+    require Geo::Vector;
+};
 
 ## @method Geo::Raster interpolate(%params)
 #
