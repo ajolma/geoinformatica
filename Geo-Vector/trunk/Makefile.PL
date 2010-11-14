@@ -7,6 +7,7 @@ my %missing_modules;
 $missing_modules{chk_module('ExtUtils::Depends')} = 1;
 $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
 $missing_modules{chk_module('File::Basename')} = 1;
+$missing_modules{chk_module('JSON::XS')} = 1;
 $missing_modules{chk_module('Geo::GDAL')} = 1;
 $missing_modules{chk_module('Geo::Raster')} = 1;
 $missing_modules{chk_module('Geo::OGC::Geometry')} = 1;
@@ -129,7 +130,7 @@ sub chk_module {
 	require $p; 
     };
     if ($@) {
-	print " failed\n";
+	print " failed with $@ \@INC = @INC\n";
 	return $pkg;
     } else {
 	print " ok\n";
