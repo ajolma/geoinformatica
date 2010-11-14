@@ -12,6 +12,48 @@ OCTNewCoordinateTransformation(
 #define to255(i,s) floor((255.0*(double)(i)/(double)(s))+0.5)
 
 /* after www.cs.rit.edu/~ncs/color/t_convert.html */
+GDALColorEntry ral_rgb2hsv(GDALColorEntry rgb) {
+    float r = (float)rgb.c1/256;
+    float g = (float)rgb.c2/256;
+    float b = (float)rgb.c3/256;
+    float min, max, delta;
+    float h,s,v;
+    
+    min = MIN( r, MIN(g, b) );
+    max = MAX( r, MAX(g, b) );
+    v = max;				// v
+    
+    delta = max - min;
+
+    if( max != 0 )
+	s = delta / max;		// s
+    else {
+	// r = g = b = 0		// s = 0, v is undefined
+	s = 0;
+	h = -1;
+	rgb.c1 = -1;
+	rgb.c2 = 0;
+	rgb.c3 = floor(v * 100.999);
+	return rgb;
+    }
+    
+    if( r == max )
+	h = ( g - b ) / delta;		// between yellow & magenta
+    else if( g == max )
+	h = 2 + ( b - r ) / delta;	// between cyan & yellow
+    else
+	h = 4 + ( r - g ) / delta;	// between magenta & cyan
+    
+    h *= 60;				// degrees
+    if( h < 0 )
+	h += 360;
+    
+    rgb.c1 = floor(h);
+    rgb.c2 = floor(s * 100.999);
+    rgb.c3 = floor(v * 100.999);
+    return rgb;
+}
+
 GDALColorEntry ral_hsv2rgb(GDALColorEntry hsv)
 {
     int i;
@@ -213,56 +255,102 @@ int ral_render_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer)
 {
     ral_interpolator i2c;
     ral_grid *gd = layer->gd;
-    ral_double_range y;
     RAL_CHECKM(layer->gd, "No grid to render.");
     RAL_CHECKM(!layer->alpha_grid OR layer->alpha_grid->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ALPHA_IS_INTEGER);
 
     switch(layer->palette_type) {
-    case RAL_PALETTE_SINGLE_COLOR:
+    case RAL_PALETTE_SINGLE_COLOR: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	break;
-    case RAL_PALETTE_GRAYSCALE:
+    }
+    case RAL_PALETTE_GRAYSCALE: {
+	ral_double_range y;
+	if (layer->color_scale.max <= layer->color_scale.min) {
+	    ral_integer_range r;
+	    ral_integer_grid_get_value_range(gd, &r);
+	    layer->color_scale.min = r.min;
+	    layer->color_scale.max = r.max;
+	}
+	y.min = 0;
+	switch(layer->scale) {
+	case RAL_SCALE_GRAY:
+	case RAL_SCALE_OPACITY:
+	    y.max = 255.999;
+	    break;
+	case RAL_SCALE_HUE:
+	    y.max = 360.999;
+	    break;
+	case RAL_SCALE_SATURATION:
+	case RAL_SCALE_VALUE:
+	    y.max = 100.999;
+	    break;
+	default:
+	    y.max = 0;
+	}
+	if (layer->invert) {
+	    y.min = y.max;
+	    y.max = 0;
+	}
+	RAL_INTERPOLATOR_SETUP(i2c, layer->color_scale, y);
+	break;
+    }
     case RAL_PALETTE_RED_CHANNEL:
     case RAL_PALETTE_GREEN_CHANNEL:
-    case RAL_PALETTE_BLUE_CHANNEL:
-	if (layer->range.max <= layer->range.min)
-	    ral_integer_grid_get_value_range(gd, &(layer->range));
-	y.min = 0;
-	if (layer->hue < 0)
-	    y.max = 255.99;
-	else {
-	    layer->hue = max(min(layer->hue,360),0);
-	    y.max = 100.99;
+    case RAL_PALETTE_BLUE_CHANNEL: {
+	ral_double_range y;	
+	if (layer->color_scale.max <= layer->color_scale.min) {
+	    ral_integer_range r;
+	    ral_integer_grid_get_value_range(gd, &r);
+	    layer->color_scale.min = r.min;
+	    layer->color_scale.max = r.max;
 	}
-	RAL_INTERPOLATOR_SETUP(i2c, layer->range, y);
+	y.min = 0;
+	y.max = 255.999;
+	RAL_INTERPOLATOR_SETUP(i2c, layer->color_scale, y);
 	break;
-    case RAL_PALETTE_RAINBOW: {
+    }
+    case RAL_PALETTE_RAINBOW:{
 	ral_int_range r = layer->hue_at;
 	r.min = max(min(r.min, 360), 0);
 	r.max = max(min(r.max, 360), 0);
-	if (layer->hue_dir == RAL_RGB_HUE) {
+	if (layer->invert == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
 	}
-	if (layer->range.max <= layer->range.min)
-	    ral_integer_grid_get_value_range(gd, &(layer->range));
-	RAL_INTERPOLATOR_SETUP(i2c, layer->range, r);
+	if (layer->color_scale.max <= layer->color_scale.min) {
+	    ral_integer_range r;
+	    ral_integer_grid_get_value_range(gd, &r);
+	    layer->color_scale.min = r.min;
+	    layer->color_scale.max = r.max;
+	}
+	RAL_INTERPOLATOR_SETUP(i2c, layer->color_scale, r);
 	break;
     }
-    case RAL_PALETTE_COLOR_TABLE:
+    case RAL_PALETTE_COLOR_TABLE: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	/*RAL_CHECKM(layer->color_table, "No color table although color table palette.");*/
 	break;
-    case RAL_PALETTE_COLOR_BINS:
+    }
+    case RAL_PALETTE_COLOR_BINS: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	/*RAL_CHECKM(layer->color_bins, "No color bins although color bins palette.");*/
 	break;
-    default:
+    }
+    default: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	RAL_CHECKM(0, ral_msg("Invalid palette type for integer grid: %i.", layer->palette_type));
+    }
     }
 
     if (layer->gd->cell_size/pb->pixel_size >= 5.0) {
 	double symbol_k = 0;
-	if (layer->symbol_size_max > layer->symbol_size_min)
-	    symbol_k = (double)layer->symbol_pixel_size/(double)(layer->symbol_size_max - layer->symbol_size_min);
+	if (layer->symbol_size_scale.max > layer->symbol_size_scale.min)
+	    symbol_k = (double)layer->symbol_pixel_size/(double)(layer->symbol_size_scale.max - layer->symbol_size_scale.min);
 	switch (layer->symbol) {
 	case RAL_SYMBOL_FLOW_DIRECTION:
 	    ral_render_flow_direction_integer_grid(pb, layer);
@@ -290,32 +378,43 @@ int ral_render_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer)
 #define RAL_APPLY_ALPHA(pixel, layer, color)				\
     if ((layer)->alpha_grid AND (layer)->alpha_grid->data) {		\
 	ral_cell c;							\
-	RAL_PIXEL2CELL(pixel, (layer)->alpha_grid, c);		\
+	RAL_PIXEL2CELL(pixel, (layer)->alpha_grid, c);			\
 	if (RAL_GRID_CELL_IN((layer)->alpha_grid, c) AND RAL_INTEGER_GRID_DATACELL((layer)->alpha_grid, c)) \
-	    (color).c4 = RAL_INTEGER_GRID_CELL((layer)->alpha_grid, c);		\
+	    (color).c4 = RAL_INTEGER_GRID_CELL((layer)->alpha_grid, c);	\
     } else if ((layer)->alpha >= 0)					\
 	(color).c4 = ((color).c4*(layer)->alpha)/255;
 
 #define RAL_NV2COLOR(pixel, layer, nv, color, i2c)			\
     switch((layer)->palette_type) {					\
-    case RAL_PALETTE_GRAYSCALE:						\
-	if ((layer)->hue < 0) {						\
-	    (color).c1 = (color).c2 = (color).c3 = floor(RAL_INTERPOLATE(i2c, (double)nv)); \
-	    (color).c4 = 255;						\
-	} else {							\
-            (color).c1 = layer->hue;                                    \
-            (color).c2 = 100;                                           \
-            (color).c3 = floor(RAL_INTERPOLATE(i2c, (double)nv));	\
-	    (color) = ral_hsv2rgb(color);				\
-	    (color).c4 = 255;     	                                \
-	}								\
-	break;								\
-    case RAL_PALETTE_RED_CHANNEL:					\
-        (color).c1 = floor(RAL_INTERPOLATE(i2c, (double)nv));           \
-        (color).c4 = 255;						\
-        break;								\
-    case RAL_PALETTE_GREEN_CHANNEL:					\
-        (color).c2 = floor(RAL_INTERPOLATE(i2c, (double)nv));           \
+case RAL_PALETTE_GRAYSCALE:						\
+if ((layer)->scale == RAL_SCALE_GRAY) {					\
+    (color).c1 = (color).c2 = (color).c3 = floor(RAL_INTERPOLATE(i2c, (double)nv)); \
+    (color).c4 = (layer)->grayscale_base_color.c4;			\
+} else {								\
+(color) = ral_rgb2hsv((layer)->grayscale_base_color);			\
+switch((layer)->scale) {						\
+case RAL_SCALE_HUE:							\
+    (color).c1 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
+    break;								\
+case RAL_SCALE_SATURATION:						\
+    (color).c2 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
+    break;								\
+case RAL_SCALE_VALUE:							\
+    (color).c3 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
+    break;								\
+case RAL_SCALE_OPACITY:							\
+    (color).c4 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
+    break;								\
+}									\
+(color) = ral_hsv2rgb(color);						\
+}									\
+break;									\
+case RAL_PALETTE_RED_CHANNEL:						\
+(color).c1 = floor(RAL_INTERPOLATE(i2c, (double)nv));			\
+       (color).c4 = 255;						\
+       break;								\
+case RAL_PALETTE_GREEN_CHANNEL:						\
+       (color).c2 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
         (color).c4 = 255;						\
         break;								\
     case RAL_PALETTE_BLUE_CHANNEL:					\
@@ -323,7 +422,7 @@ int ral_render_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer)
         (color).c4 = 255;						\
         break;								\
     case RAL_PALETTE_RAINBOW:						\
-	(color).c1 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
+	       (color).c1 = floor(RAL_INTERPOLATE(i2c, (double)nv));		\
         if (((color).c1) > 360) (color).c1 -= 360;                      \
         if (((color).c1) < 0) (color).c1 += 360;                        \
 	(color).c2 = (color).c3 = 100;					\
@@ -340,7 +439,7 @@ int ral_render_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer)
 		break;							\
     default:								\
 	break;								\
-    }									\
+	       }							\
     RAL_APPLY_ALPHA(pixel, layer, color)
 
 #define RAL_STR2COLOR(pixel, layer, str, color, io)			\
@@ -620,7 +719,7 @@ int ral_render_square_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer
 	    RAL_INITIAL_COLOR(pb, layer, pixel, color);
 	    RAL_NV2COLOR(pixel, layer, value, color, io);
 	    symbol_size = symbol_k > 0 ? 
-		floor((value - layer->symbol_size_min)*symbol_k + 0.5) :
+		floor((value - layer->symbol_size_scale.min)*symbol_k + 0.5) :
 		layer->symbol_pixel_size;
 	    if (symbol_size < 1) continue;
 	    if (symbol_size == 1) {
@@ -653,7 +752,7 @@ int ral_render_dot_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer, r
 	    RAL_INITIAL_COLOR(pb, layer, pixel, color);
 	    RAL_NV2COLOR(pixel, layer, value, color, io);
 	    r = symbol_k > 0 ? 
-		floor((value - layer->symbol_size_min)*symbol_k + 0.5) :
+		floor((value - layer->symbol_size_scale.min)*symbol_k + 0.5) :
 		layer->symbol_pixel_size;
 	    if (r < 1) continue;
 	    if (r == 1) {
@@ -683,7 +782,7 @@ int ral_render_cross_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer,
 	    RAL_INITIAL_COLOR(pb, layer, pixel, color);
 	    RAL_NV2COLOR(pixel, layer, value, color, io);
 	    symbol_size = symbol_k > 0 ? 
-		floor((value - layer->symbol_size_min)*symbol_k + 0.5) :
+		floor((value - layer->symbol_size_scale.min)*symbol_k + 0.5) :
 		layer->symbol_pixel_size;
 	    if (symbol_size < 1) continue;
 	    if (symbol_size == 1) {
@@ -708,52 +807,83 @@ int ral_render_cross_real_grid(ral_pixbuf *pb, ral_real_grid_layer *layer, ral_i
 int ral_render_real_grid(ral_pixbuf *pb, ral_real_grid_layer *layer)
 {
     ral_interpolator i2c;
-    ral_double_range y;
     ral_grid *gd;
     RAL_CHECKM(layer->gd, "No grid to render.");
     RAL_CHECKM(!layer->alpha_grid OR layer->alpha_grid->datatype == RAL_INTEGER_GRID, RAL_ERRSTR_ALPHA_IS_INTEGER);
     gd = layer->gd;
 
     switch(layer->palette_type) {
-    case RAL_PALETTE_SINGLE_COLOR:
+    case RAL_PALETTE_SINGLE_COLOR: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	break;
-    case RAL_PALETTE_GRAYSCALE:
-	if (layer->range.max <= layer->range.min)
-	    ral_real_grid_get_value_range(gd, &(layer->range));
-	y.min = 0;
-	if (layer->hue < 0)
-	    y.max = 255.99;
-	else {
-	    layer->hue = max(min(layer->hue,360),0);
-	    y.max = 100.99;
+    }
+    case RAL_PALETTE_GRAYSCALE: {
+	ral_double_range y;    
+	if (layer->color_scale.max <= layer->color_scale.min) {
+	    ral_real_range r;
+	    ral_real_grid_get_value_range(gd, &r);
+	    layer->color_scale.min = r.min;
+	    layer->color_scale.max = r.max;
 	}
-	RAL_INTERPOLATOR_SETUP(i2c, layer->range, y);
+	y.min = 0;
+	switch(layer->scale) {
+	case RAL_SCALE_GRAY:
+	case RAL_SCALE_OPACITY:
+	    y.max = 255.999;
+	    break;
+	case RAL_SCALE_HUE:
+	    y.max = 360.999;
+	    break;
+	case RAL_SCALE_SATURATION:
+	case RAL_SCALE_VALUE:
+	    y.max = 100.999;
+	    break;
+	default:
+	    y.max = 0;
+	}
+	if (layer->invert) {
+	    y.min = y.max;
+	    y.max = 0;
+	}
+	RAL_INTERPOLATOR_SETUP(i2c, layer->color_scale, y);
 	break;
+    }
     case RAL_PALETTE_RAINBOW: {
 	ral_int_range r = layer->hue_at;
 	r.min = max(min(r.min,360),0);
 	r.max = max(min(r.max,360),0);
-	if (layer->hue_dir == RAL_RGB_HUE) {
+	if (layer->invert == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
 	}
-	if (layer->range.max <= layer->range.min)
-	    ral_real_grid_get_value_range(gd, &(layer->range));
-	RAL_INTERPOLATOR_SETUP(i2c, layer->range, r);
+	if (layer->color_scale.max <= layer->color_scale.min) {
+	    ral_real_range r;
+	    ral_real_grid_get_value_range(gd, &r);
+	    layer->color_scale.min = r.min;
+	    layer->color_scale.max = r.max;
+	}
+	RAL_INTERPOLATOR_SETUP(i2c, layer->color_scale, r);
 	break;
     }
-    case RAL_PALETTE_COLOR_BINS:
+    case RAL_PALETTE_COLOR_BINS: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	/*RAL_CHECKM(layer->color_bins, "No color bins although color bins palette.");*/
 	break;
-    default:
+    }
+    default: {
+	ral_double_range x = {0,1}, y = {0,1};
+	RAL_INTERPOLATOR_SETUP(i2c, x, y);
 	RAL_CHECKM(0, ral_msg("Invalid palette type for real grid: %i.", layer->palette_type));
+    }
     }
 
     if (layer->gd->cell_size/pb->pixel_size >= 5.0) {
 	double symbol_k = 0;
-	if (layer->symbol_size_max > layer->symbol_size_min)
-	    symbol_k = (double)layer->symbol_pixel_size/(double)(layer->symbol_size_max - layer->symbol_size_min);
+	if (layer->symbol_size_scale.max > layer->symbol_size_scale.min)
+	    symbol_k = (double)layer->symbol_pixel_size/(double)(layer->symbol_size_scale.max - layer->symbol_size_scale.min);
 	switch (layer->symbol) {
 	case RAL_SYMBOL_SQUARE:
 	    ral_render_square_real_grid(pb, layer, i2c, symbol_k);
@@ -812,7 +942,7 @@ int ral_render_square_real_grid(ral_pixbuf *pb, ral_real_grid_layer *layer, ral_
 	    RAL_INITIAL_COLOR(pb, layer, pixel, color);
 	    RAL_NV2COLOR(pixel, layer, value, color, i2c);
 	    symbol_size = symbol_k > 0 ? 
-		floor((value - layer->symbol_size_min)*symbol_k + 0.5) :
+		floor((value - layer->symbol_size_scale.min)*symbol_k + 0.5) :
 		layer->symbol_pixel_size;
 	    if (symbol_size < 1) continue;
 	    if (symbol_size == 1) {
@@ -845,7 +975,7 @@ int ral_render_dot_real_grid(ral_pixbuf *pb, ral_real_grid_layer *layer, ral_int
 	    RAL_INITIAL_COLOR(pb, layer, pixel, color);
 	    RAL_NV2COLOR(pixel, layer, value, color, i2c);
 	    r = symbol_k > 0 ? 
-		floor((value - layer->symbol_size_min)*symbol_k + 0.5) :
+		floor((value - layer->symbol_size_scale.min)*symbol_k + 0.5) :
 		layer->symbol_pixel_size;
 	    if (r < 1) continue;
 	    if (r == 1) {
@@ -875,7 +1005,7 @@ int ral_render_cross_real_grid(ral_pixbuf *pb, ral_real_grid_layer *layer, ral_i
 	    RAL_INITIAL_COLOR(pb, layer, pixel, color);
 	    RAL_NV2COLOR(pixel, layer, value, color, i2c);
 	    symbol_size = symbol_k > 0 ? 
-		floor((value - layer->symbol_size_min)*symbol_k + 0.5) :
+		floor((value - layer->symbol_size_scale.min)*symbol_k + 0.5) :
 		layer->symbol_pixel_size;
 	    if (symbol_size < 1) continue;
 	    if (symbol_size == 1) {
@@ -1098,18 +1228,27 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
     case RAL_PALETTE_GRAYSCALE: {
 	ral_double_range y;
 	y.min = 0;
-	if (visualization.hue < 0)
-	    y.max = 255.99;
-	else {
-	    visualization.hue = max(min(visualization.hue,360),0);
-	    y.max = 100.99;
+	switch(visualization.scale) {
+	case RAL_SCALE_GRAY:
+	case RAL_SCALE_OPACITY:
+	    y.max = 255.999;
+	    break;
+	case RAL_SCALE_HUE:
+	    y.max = 360.999;
+	    break;
+	case RAL_SCALE_SATURATION:
+	case RAL_SCALE_VALUE:
+	    y.max = 100.999;
+	    break;
+	default:
+	    y.max = 0;
 	}
 	switch (feature->color_field_type) {
 	case OFTInteger:					
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_int, y);
+	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_int, y);
 	    break;							
 	case OFTReal:							
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_double, y);   
+	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_double, y);   
 	    break;							
 	default:							
 	    RAL_CHECKM(0, ral_msg("Invalid field type for grayscale palette: %i.", feature->color_field_type));
@@ -1120,17 +1259,17 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	ral_int_range r = visualization.hue_at;
 	r.min = max(min(r.min, 360), 0);
 	r.max = max(min(r.max, 360), 0);
-	if (visualization.hue_dir == RAL_RGB_HUE) {
+	if (visualization.invert == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
 	}
 	switch (feature->color_field_type) {					
 	case OFTInteger:						
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_int, r); 
+	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_int, r); 
 	    break;							
 	case OFTReal:							
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_double, r); 
+	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_double, r); 
 	    break;							
 	case OFTString:							
 	    break;							
@@ -1202,15 +1341,26 @@ void ral_set_color(ral_visual *visual, ral_feature *feature)
 	default:
 	    break;
 	}
-	if (visual->hue < 0) {
+	if (visual->scale == RAL_SCALE_GRAY) {
 	    feature->color.c1 = feature->color.c2 = feature->color.c3 = c;
 	    feature->color.c4 = visual->alpha;
 	} else {
-	    feature->color.c1 = visual->hue;
-	    feature->color.c2 = 100;
-	    feature->color.c3 = c;
+	    feature->color = ral_rgb2hsv(visual->grayscale_base_color);
+	    switch(visual->scale) {
+	    case RAL_SCALE_HUE:
+		feature->color.c1 = c;
+		break;
+	    case RAL_SCALE_SATURATION:
+		feature->color.c2 = c;
+		break;
+	    case RAL_SCALE_VALUE:
+		feature->color.c3 = c;
+		break;	
+	    case RAL_SCALE_OPACITY:
+		feature->color.c4 = c;
+		break;	
+	    }
 	    feature->color = ral_hsv2rgb(feature->color);
-	    feature->color.c4 = visual->alpha;
 	}
 	break;
     }
@@ -1415,7 +1565,6 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
     ral_double_range y;
     int ret = 1;
     OGRFeatureDefnH defn = OGR_L_GetLayerDefn(layer->layer);
-    OGRCoordinateTransformationH transformation = NULL;
     
     feature.feature = NULL;
     feature.symbol_size_field_type = 0;
@@ -1434,10 +1583,10 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
     y.max = layer->visualization.symbol_pixel_size+1;
     switch (feature.symbol_size_field_type) {
     case OFTInteger:
-	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_int, y);
+	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_scale_int, y);
 	break;
     case OFTReal:
-	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_double, y);
+	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_scale_double, y);
 	break;
     default:
 	RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", feature.symbol_size_field_type));
@@ -1445,55 +1594,7 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 
     RAL_CHECK(ral_setup_color_interpolator(layer->visualization, defn, &feature));
 
-    if (layer->EPSG_from AND layer->EPSG_to) {
-	OGRSpatialReferenceH sr_from = OSRNewSpatialReference(NULL);
-	OGRSpatialReferenceH sr_to = OSRNewSpatialReference(NULL);
-	RAL_CHECK(OSRImportFromEPSG(sr_from, layer->EPSG_from) == OGRERR_NONE);
-	RAL_CHECK(OSRImportFromEPSG(sr_to, layer->EPSG_to) == OGRERR_NONE);
-	transformation = OCTNewCoordinateTransformation(sr_from, sr_to);
-	RAL_CHECK(transformation);
-    }
-
-    if (transformation) {
-	OGRGeometryH ll = OGR_G_CreateGeometry(wkbPoint);
-	OGRGeometryH ul = OGR_G_CreateGeometry(wkbPoint);
-	OGRGeometryH lr = OGR_G_CreateGeometry(wkbPoint);
-	OGRGeometryH ur = OGR_G_CreateGeometry(wkbPoint);
-	ral_point llp, ulp, lrp, urp;
-	double z;
-	int t;
-	OGR_G_SetCoordinateDimension(ll,3);
-	OGR_G_SetCoordinateDimension(ul,3);
-	OGR_G_SetCoordinateDimension(lr,3);
-	OGR_G_SetCoordinateDimension(ur,3);
-	OGR_G_SetPoint(ll, 0, pb->world.min.x, pb->world.min.y, 1);
-	fprintf(stderr,"ll: %f %f %f\n", pb->world.min.x, pb->world.min.y, 1);
-	OGR_G_SetPoint(ul, 0, pb->world.min.x, pb->world.max.y, 1);
-	OGR_G_SetPoint(lr, 0, pb->world.max.x, pb->world.min.y, 1);
-	OGR_G_SetPoint(ur, 0, pb->world.max.x, pb->world.max.y, 1);
-	fprintf(stderr,"a\n");
-	RAL_CHECK(OGR_G_Transform(ll, transformation) == OGRERR_NONE);
-	fprintf(stderr,"b\n");
-	RAL_CHECK(OGR_G_Transform(ul, transformation) == OGRERR_NONE);
-	fprintf(stderr,"c\n");
-	RAL_CHECK(OGR_G_Transform(lr, transformation) == OGRERR_NONE);
-	fprintf(stderr,"d\n");
-	RAL_CHECK(OGR_G_Transform(ur, transformation) == OGRERR_NONE);
-	fprintf(stderr,"e\n");
-	OGR_G_GetPoint(ll, 0, &(llp.x), &(llp.y), &z);
-	OGR_G_GetPoint(ul, 0, &(ulp.x), &(ulp.y), &z);
-	OGR_G_GetPoint(lr, 0, &(lrp.x), &(lrp.y), &z);
-	OGR_G_GetPoint(ur, 0, &(urp.x), &(urp.y), &z);
-	OGR_L_SetSpatialFilterRect(layer->layer, min(llp.x,ulp.x), min(llp.y,lrp.y), max(lrp.x,urp.x), max(ulp.y,urp.y));
-	t = OGR_G_GetGeometryType(ll);
-	OGR_G_DestroyGeometry(ll);
-	OGR_G_DestroyGeometry(ul);
-	OGR_G_DestroyGeometry(lr);
-	OGR_G_DestroyGeometry(ur);
-	fprintf(stderr,"filter: %f %f %f %f %i\n", min(llp.x,ulp.x), min(llp.y,lrp.y), max(lrp.x,urp.x), max(ulp.y,urp.y), t);
-    } else
-	OGR_L_SetSpatialFilterRect(layer->layer, pb->world.min.x, pb->world.min.y, pb->world.max.x, pb->world.max.y);
-
+    OGR_L_SetSpatialFilterRect(layer->layer, pb->world.min.x, pb->world.min.y, pb->world.max.x, pb->world.max.y);
     
     OGR_L_ResetReading(layer->layer);
 
@@ -1526,12 +1627,6 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 
 	    feature.geometry_type = wkbFlatten(OGR_G_GetGeometryType(feature.geometry));
 	    
-	    if (transformation) {
-		RAL_CHECK(feature.geometry = OGR_G_Clone(feature.geometry));
-		feature.destroy_geometry = 1;
-		RAL_CHECK(OGR_G_Transform(feature.geometry, transformation) == OGRERR_NONE);
-	    }
-	
 	    if (layer->visualization.render_as)
 
 		feature.render_as = layer->visualization.render_as;
@@ -1643,10 +1738,10 @@ int ral_render_visual_feature_table(ral_pixbuf *pb, ral_visual_feature_table *t)
 	y.max = t->features[i].visualization.symbol_pixel_size+1;
 	switch (feature.symbol_size_field_type) {
 	case OFTInteger:
-	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_int, y);
+	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_scale_int, y);
 	    break;
 	case OFTReal:
-	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_double, y);
+	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_scale_double, y);
 	    break;
 	default:
 	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", feature.symbol_size_field_type));

@@ -28,11 +28,11 @@ use Gtk2::Ex::Geo::Dialogs::Symbols;
 use Gtk2::Ex::Geo::Dialogs::Colors;
 use Gtk2::Ex::Geo::Dialogs::Labeling;
 
-use vars qw/%PALETTE_TYPE %SYMBOL_TYPE %LABEL_PLACEMENT $SINGLE_COLOR/;
+use vars qw/%PALETTE_TYPE %GRAYSCALE_SUBTYPE %SYMBOL_TYPE %LABEL_PLACEMENT $SINGLE_COLOR/;
 
 BEGIN {
     use Exporter 'import';
-    our %EXPORT_TAGS = ( 'all' => [ qw(%PALETTE_TYPE %SYMBOL_TYPE %LABEL_PLACEMENT) ] );
+    our %EXPORT_TAGS = ( 'all' => [ qw(%PALETTE_TYPE %GRAYSCALE_SUBTYPE %SYMBOL_TYPE %LABEL_PLACEMENT) ] );
     our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 }
 
@@ -50,7 +50,14 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 		  'Red channel' => 5, 
 		  'Green channel' => 6, 
 		  'Blue channel' => 7,
-		  );
+    );
+
+%GRAYSCALE_SUBTYPE = ( Gray => 0,
+		       Hue => 1,
+		       Saturation => 2,
+		       Value => 3,
+		       Opacity => 4,
+    );
 
 %SYMBOL_TYPE = ( 'No symbol' => 0, 
 		 'Flow_direction' => 1, 
@@ -58,7 +65,7 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 		 Dot => 3, 
 		 Cross => 4, 
 		 'Wind rose' => 6,
-		 );
+    );
 
 %LABEL_PLACEMENT = ( 'Center' => 0, 
 		     'Center left' => 1, 
@@ -69,7 +76,7 @@ $SINGLE_COLOR = [0, 0, 0, 255];
 		     'Bottom left' => 6, 
 		     'Bottom center' => 7, 
 		     'Bottom right' => 8,
-		     );
+    );
 
 ## @cmethod registration()
 # @brief Returns the dialogs and commands implemented by this layer
@@ -165,8 +172,10 @@ sub defaults {
 
     $self->{HUE_AT_MIN} = 235 unless exists $self->{HUE_AT_MIN}; # as in libral visual.h
     $self->{HUE_AT_MAX} = 0 unless exists $self->{HUE_AT_MAX}; # as in libral visual.h
-    $self->{HUE_DIR} = 1 unless exists $self->{HUE_DIR}; # RGB (1) or RBG (-1)
-    $self->{HUE} = -1 unless exists $self->{HUE}; # grayscale is gray scale
+    $self->{INVERT} = 0 unless exists $self->{HUE_DIR}; # inverted scale or not; RGB is not inverted
+    $self->{GRAYSCALE_SUBTYPE} = 'Gray' unless exists $self->{GRAYSCALE_SUBTYPE}; # grayscale is gray scale
+
+    @{$self->{GRAYSCALE_COLOR}} = @$SINGLE_COLOR unless exists $self->{GRAYSCALE_COLOR};
 
     @{$self->{SINGLE_COLOR}} = @$SINGLE_COLOR unless exists $self->{SINGLE_COLOR};
 
@@ -210,8 +219,9 @@ sub defaults {
     $self->{SYMBOL_SCALE_MAX} = $params{scale_max} if exists $params{scale_max};
     $self->{HUE_AT_MIN} = $params{hue_at_min} if exists $params{hue_at_min};
     $self->{HUE_AT_MAX} = $params{hue_at_max} if exists $params{hue_at_max};
-    $self->{HUE_DIR} = $params{hue_dir} if exists $params{hue_dir};
-    $self->{HUE} = $params{hue} if exists $params{hue};
+    $self->{INVERT} = $params{invert} if exists $params{invert};
+    $self->{SCALE} = $params{scale} if exists $params{scale};
+    @{$self->{GRAYSCALE_COLOR}} = @{$params{grayscale_color}} if exists $params{grayscale_color};
     @{$self->{SINGLE_COLOR}} = @{$params{single_color}} if exists $params{single_color};
     $self->{COLOR_TABLE} = $params{color_table} if exists $params{color_table};
     $self->{COLOR_BINS} = $params{color_bins} if exists $params{color_bins};
@@ -514,22 +524,51 @@ sub hue_range {
     if (defined $min) {
 		$self->{HUE_AT_MIN} = $min+0;
 		$self->{HUE_AT_MAX} = $max+0;
-		$self->{HUE_DIR} = (!(defined $dir) or $dir == 1) ? 1 : -1;
+		$self->{INVERT} = (!(defined $dir) or $dir == 1) ? 0 : 1;
     }
-    return ($self->{HUE_AT_MIN}, $self->{HUE_AT_MAX}, $self->{HUE_DIR});
+    return ($self->{HUE_AT_MIN}, $self->{HUE_AT_MAX}, $self->{INVERT} ? -1 : 1);
 }
 
-## @method $hue($hue)
+## @method $grayscale_subtype($subtype)
 #
-# @brief Get or set the layers hue.
-# @param hue (optional) Hue to set to the layer.
-# @return Returns the layers hue value.
-# @todo Add a check that the given hue value is between the minimum and maximum?
-sub hue {
-    my($self, $hue) = @_;
-    defined $hue ?
-	$self->{HUE} = $hue+0 :
-	$self->{HUE};
+# @brief Get or set the subtype of grayscale palette.
+# @param subtype (optional) The subtype (one of %GRAYSCALE_SUBTYPE).
+# @return Returns the subtype.
+sub grayscale_subtype {
+    my($self, $scale) = @_;
+    if (defined $scale) {
+	croak "unknown grayscale subtype: $scale" unless exists $GRAYSCALE_SUBTYPE{$scale};
+	$self->{GRAYSCALE_SUBTYPE} = $scale;
+    } else {
+	$self->{GRAYSCALE_SUBTYPE};
+    }
+}
+
+## @method $invert_scale($invert)
+#
+# @brief Get or set the invertedness attribute of grayscale palette.
+# @param invert (optional) True or false.
+# @return Returns the invertedness.
+sub invert_scale {
+    my($self, $invert) = @_;
+    if (defined $invert) {
+	$self->{INVERT} = $invert and 1;
+    } else {
+	$self->{INVERT};
+    }
+}
+
+## @method @grayscale_color(@rgba)
+#
+# @brief Get or set the color, which is used as the base color for grayscale palette.
+# @param[in] rgba (optional) A list of channels defining the RGBA color.
+# @return The current color.
+# @exception Croaks unless exactly all four channels are specified.
+sub grayscale_color {
+    my $self = shift;
+    croak "@_ is not a RGBA color" if @_ and @_ != 4;
+    $self->{GRAYSCALE_COLOR} = [@_] if @_;
+    return @{$self->{GRAYSCALE_COLOR}};
 }
 
 ## @method $symbol_field($field_name)
@@ -557,7 +596,7 @@ sub symbol_field {
 # @brief Get or set the color, which is used if palette is 'single color'
 # @param[in] rgba (optional) A list of channels defining the RGBA color.
 # @return The current color.
-# @exception Some color channels are given, but not exactly all four channels.
+# @exception Croaks unless exactly all four channels are specified.
 sub single_color {
     my $self = shift;
     croak "@_ is not a RGBA color" if @_ and @_ != 4;
@@ -867,6 +906,10 @@ sub selected_features {
 # @param params As in select.
 # @return A reference to an array of matching features.
 sub features {
+}
+
+sub has_features_with_borders {
+    return 0;
 }
 
 ## @method schema()

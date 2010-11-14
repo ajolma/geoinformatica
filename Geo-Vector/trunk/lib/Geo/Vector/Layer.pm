@@ -305,6 +305,14 @@ sub ohoh {
     }
 }
 
+## @ignore
+sub has_features_with_borders {
+    my($self) = @_;
+    my $gt = $self->geometry_type;
+    return 1 unless $gt =~ /Point/ or $gt =~ /LineString/;
+    return 0;
+}
+
 ## @method void render($pb)
 #
 # @brief Renders the vector layer onto a memory image.

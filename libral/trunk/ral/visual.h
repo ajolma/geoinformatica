@@ -5,13 +5,13 @@
    \brief A definition of a visual geospatial feature and layer.
 */
 
-/**\brief a range of integers */
+/**\brief a range defined by two integers */
 typedef struct {
     int min;
     int max;
 } ral_int_range;
 
-/**\brief a range defined by two doubles */
+/**\brief a range defined by two real numbers */
 typedef struct {
     double min;
     double max;
@@ -25,6 +25,20 @@ typedef struct {
 #define RAL_PALETTE_RED_CHANNEL 5
 #define RAL_PALETTE_GREEN_CHANNEL 6
 #define RAL_PALETTE_BLUE_CHANNEL 7
+
+#define RAL_SCALE_GRAY 0
+#define RAL_SCALE_HUE 1
+#define RAL_SCALE_SATURATION 2
+#define RAL_SCALE_VALUE 3
+#define RAL_SCALE_OPACITY 4
+
+#define RAL_SCALE_NORMAL 0
+#define RAL_SCALE_INVERTED 1
+
+/* red->green->blue rainbow */
+#define RAL_RGB_HUE 0
+/* red->blue->green rainbow */
+#define RAL_RBG_HUE 1
 
 #define RAL_SYMBOL_FLOW_DIRECTION 1
 #define RAL_SYMBOL_SQUARE 2
@@ -98,41 +112,6 @@ typedef ral_integer_color_bins *ral_integer_color_bins_handle;
 ral_integer_color_bins_handle RAL_CALL ral_integer_color_bins_create(int n);
 void RAL_CALL ral_integer_color_bins_destroy(ral_integer_color_bins **bins);
 
-/** This can be used for all bin types. */
-#define RAL_COLOR_BINS_GET(color_bins, value, color)			\
-    {									\
-	int i = 0;							\
-	if (color_bins) {						\
-            while ( (value) > (color_bins)->bins[i] AND i < (color_bins)->n - 1 ) \
-	        i++;							\
-	    (color) = (color_bins)->colors[i];}				\
-    }
-
-/**\brief a RAL_INTEGER grid and visualization information */
-typedef struct {
-    short alpha;
-    ral_grid *alpha_grid;
-    ral_grid *gd;
-    int palette_type;
-    GDALColorEntry single_color;
-    int symbol;
-    int symbol_pixel_size;
-    RAL_INTEGER symbol_size_min;
-    RAL_INTEGER symbol_size_max;
-    ral_color_table *color_table;
-    ral_string_color_table *string_color_table;
-    ral_integer_color_bins *color_bins;
-    ral_integer_range range; /* if valid, this is not computed */
-    int hue; /* -1, 0...360, if -1 grayscale is grayscale, otherwise it is transparent hue */
-    ral_int_range hue_at; /* for rainbow */
-    int hue_dir; /* 0 means rainbow is red->green->blue, 1 means red->blue->green */
-} ral_integer_grid_layer;
-
-typedef ral_integer_grid_layer *ral_integer_grid_layer_handle;
-
-ral_integer_grid_layer_handle RAL_CALL ral_integer_grid_layer_create();
-void RAL_CALL ral_integer_grid_layer_destroy(ral_integer_grid_layer **l);
-
 /**\brief a hash, where the keys are bins defined with RAL_REALs and values are colors */
 typedef struct {
     int n;
@@ -144,36 +123,6 @@ typedef ral_real_color_bins *ral_real_color_bins_handle;
 
 ral_real_color_bins_handle RAL_CALL ral_real_color_bins_create(int n);
 void RAL_CALL ral_real_color_bins_destroy(ral_real_color_bins **bins);
-
-/**\brief a RAL_REAL grid and visualization information */
-typedef struct {
-    short alpha;
-    ral_grid *alpha_grid;
-    ral_grid *gd;
-    int palette_type; /* valid are grayscale, rainbow, bins */
-    GDALColorEntry single_color;
-    int symbol;
-    int symbol_pixel_size;
-    RAL_REAL symbol_size_min;
-    RAL_REAL symbol_size_max;
-    ral_color_table *color_table; /* never used, only because of macros */
-    ral_string_color_table *string_color_table; /* never used, only because of macros */
-    ral_real_color_bins *color_bins;
-    ral_real_range range; /* if valid, this is not computed */
-    int hue;
-    ral_int_range hue_at;
-    int hue_dir; /* 0 means rainbow is red->green->blue, 1 means red->blue->green */
-} ral_real_grid_layer;
-
-typedef ral_real_grid_layer *ral_real_grid_layer_handle;
-
-ral_real_grid_layer_handle RAL_CALL ral_real_grid_layer_create();
-void RAL_CALL ral_real_grid_layer_destroy(ral_real_grid_layer **l);
-
-#define RAL_RENDER_AS_NATIVE 0
-#define RAL_RENDER_AS_POINTS 1
-#define RAL_RENDER_AS_LINES 2
-#define RAL_RENDER_AS_POLYGONS 4
 
 /**\brief a hash, where the keys are bins defined with ints and values are colors */
 typedef struct {
@@ -199,16 +148,88 @@ typedef ral_double_color_bins *ral_double_color_bins_handle;
 ral_double_color_bins_handle RAL_CALL ral_double_color_bins_create(int n);
 void RAL_CALL ral_double_color_bins_destroy(ral_double_color_bins **bins);
 
+/** This can be used for all bin types. */
+#define RAL_COLOR_BINS_GET(color_bins, value, color)			\
+    {									\
+	int i = 0;							\
+	if (color_bins) {						\
+            while ( (value) > (color_bins)->bins[i] AND i < (color_bins)->n - 1 ) \
+	        i++;							\
+	    (color) = (color_bins)->colors[i];}				\
+    }
+
+/**\brief a RAL_INTEGER grid and visualization information */
+typedef struct {
+    short alpha;
+    ral_grid *alpha_grid;
+    ral_grid *gd;
+    int palette_type;
+    GDALColorEntry single_color;
+    int symbol;
+    int symbol_pixel_size;
+    ral_int_range symbol_size_scale;
+    ral_color_table *color_table;
+    ral_string_color_table *string_color_table;
+    ral_int_color_bins *color_bins;
+    ral_int_range color_scale; /* if valid, this is not computed */
+    GDALColorEntry grayscale_base_color;
+    int scale; /* 0 = Grayscale (0-255)
+		  1 = Hue scale (0-360)
+		  2 = Saturation scale (0-100)
+		  3 = Value scale (0-100)
+		  4 = Opacity scale (0-255) */
+    ral_int_range hue_at; /* for rainbow */
+    int invert; /* & 1: 0 = do not invert, 1 invert
+		   do not invert means rainbow is red->green->blue, invert means red->blue->green 
+		   do not invert means scale is 0-100/255/360, invert means scale is 100/255/360-0 */
+} ral_integer_grid_layer;
+
+typedef ral_integer_grid_layer *ral_integer_grid_layer_handle;
+
+ral_integer_grid_layer_handle RAL_CALL ral_integer_grid_layer_create();
+void RAL_CALL ral_integer_grid_layer_destroy(ral_integer_grid_layer **l);
+
+/**\brief a RAL_REAL grid and visualization information */
+typedef struct {
+    short alpha;
+    ral_grid *alpha_grid;
+    ral_grid *gd;
+    int palette_type; /* valid are grayscale, rainbow, bins */
+    GDALColorEntry single_color;
+    int symbol;
+    int symbol_pixel_size;
+    ral_double_range symbol_size_scale;
+    ral_color_table *color_table; /* never used, only because of macros */
+    ral_string_color_table *string_color_table; /* never used, only because of macros */
+    ral_double_color_bins *color_bins;
+    ral_double_range color_scale; /* if valid, this is not computed */
+    GDALColorEntry grayscale_base_color; 
+    int scale; /* 0 = Grayscale (0-255)
+		  1 = Hue scale (0-360)
+		  2 = Saturation scale (0-100)
+		  3 = Value scale (0-100)
+		  4 = Opacity scale (0-255) */
+    ral_int_range hue_at; /* for rainbow */
+    int invert; /* & 1: 0 = do not invert, 1 invert
+		   do not invert means rainbow is red->green->blue, invert means red->blue->green 
+		   do not invert means scale is 0-100/255/360, invert means scale is 100/255/360-0 */
+} ral_real_grid_layer;
+
+typedef ral_real_grid_layer *ral_real_grid_layer_handle;
+
+ral_real_grid_layer_handle RAL_CALL ral_real_grid_layer_create();
+void RAL_CALL ral_real_grid_layer_destroy(ral_real_grid_layer **l);
+
+#define RAL_RENDER_AS_NATIVE 0
+#define RAL_RENDER_AS_POINTS 1
+#define RAL_RENDER_AS_LINES 2
+#define RAL_RENDER_AS_POLYGONS 4
+
 #define RAL_FIELD_UNDEFINED -10
 #define RAL_FIELD_FIXED_SIZE -3
 #define RAL_FIELD_Z -2
 #define RAL_FIELD_FID -1
 /* field index value >=0 is feature attribute table index */
-
-/* red->green->blue rainbow */
-#define RAL_RGB_HUE 1 
-/* red->blue->green rainbow */
-#define RAL_RBG_HUE -1
 
 /**\brief visualization information */
 typedef struct {
@@ -216,31 +237,40 @@ typedef struct {
     int render_as;
     int palette_type;
     int symbol;
-    int symbol_field; /* RAL_FIELD_FIXED_SIZE, RAL_FIELD_Z, RAL_FIELD_FID or index to attribute table */
+    int symbol_field; /* one of RAL_FIELD values or an index to attribute table */
+    OGRFieldType symbol_field_type;
     int symbol_pixel_size;
-    ral_int_range symbol_size_int;
-    ral_double_range symbol_size_double;
+    ral_int_range symbol_size_scale_int; /* range in attribute scale */
+    ral_double_range symbol_size_scale_double; /* range in attribute scale */
     GDALColorEntry single_color;
-    ral_int_range color_int;
-    ral_double_range color_double;
-    int hue;
-    ral_int_range hue_at;
-    int hue_dir; /* RAL_RGB_HUE or RAL_RBG_HUE */
-    int color_field; /* RAL_FIELD_Z, RAL_FIELD_FID or index to attribute table */
+    ral_int_range color_scale_int; /* range in attribute scale */
+    ral_double_range color_scale_double; /* range in attribute scale */
+    GDALColorEntry grayscale_base_color; 
+    int scale; /* 0 = Grayscale (0-255)
+		  1 = Hue scale (0-360)
+		  2 = Saturation scale (0-100)
+		  3 = Value scale (0-100)
+		  4 = Opacity scale (0-255) */
+    ral_int_range hue_at; /* for rainbow */
+    int invert; /* & 1: 0 = do not invert, 1 invert
+		   do not invert means rainbow is red->green->blue, invert means red->blue->green 
+		   do not invert means scale is 0-100/255/360, invert means scale is 100/255/360-0 */
+    int color_field; /* one of RAL_FIELD values or an index to attribute table */
+    OGRFieldType color_field_type;
     ral_color_table *color_table;
     ral_string_color_table *string_color_table;
     ral_int_color_bins *int_bins;
     ral_double_color_bins *double_bins;
 } ral_visual;
 
+void ral_visual_initialize(ral_visual *v);
+void ral_visual_finalize(ral_visual v);
+
 #ifdef RAL_HAVE_GDAL
 /**\brief an OGRLayerH and visualization information */
 typedef struct {
     ral_visual visualization;
     OGRLayerH layer;
-    /* for on-the-fly transformations (these do not work yet) */
-    int EPSG_from;
-    int EPSG_to;
 } ral_visual_layer;
 
 typedef ral_visual_layer *ral_visual_layer_handle;
@@ -258,9 +288,6 @@ typedef struct {
 typedef struct {
     int size;
     ral_visual_feature *features;
-    /* for on-the-fly transformations (these do not work yet) */
-    int EPSG_from;
-    int EPSG_to;
 } ral_visual_feature_table;
 
 typedef ral_visual_feature_table *ral_visual_feature_table_handle;

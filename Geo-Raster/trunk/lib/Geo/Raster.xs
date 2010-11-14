@@ -3108,69 +3108,39 @@ ral_integer_grid_layer *
 ral_make_integer_grid_layer(perl_layer)
 	HV *perl_layer
 	CODE:
-		ral_integer_grid_layer *layer = ral_integer_grid_layer_create();
+		ral_visual visual;
+		ral_visual_initialize(&visual);
+		visual.symbol_field_type = visual.color_field_type = OFTInteger;
+		ral_integer_grid_layer *layer = NULL;
+		RAL_CHECK(fetch2visual(perl_layer, &visual, NULL));
+		RAL_CHECK(layer = ral_integer_grid_layer_create());
+
 		SV **s = hv_fetch(perl_layer, "ALPHA", strlen("ALPHA"), 0);
-		if (s) {
-			if (SvIOK(*s))
-				layer->alpha = SvIV(*s);
-			else if (sv_isobject(*s)) {
-				RAL_CHECK(layer->alpha_grid = (ral_grid*)SV2Object(*s, RAL_GRIDPTR));
-			}
-		}
-		RAL_FETCH(perl_layer, "PALETTE_VALUE", layer->palette_type, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_VALUE", layer->symbol, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_SIZE", layer->symbol_pixel_size, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_SCALE_MIN", layer->symbol_size_min, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_SCALE_MAX", layer->symbol_size_max, SvIV);
-		s = hv_fetch(perl_layer, "SINGLE_COLOR", strlen("SINGLE_COLOR"), 0);
-		if (s AND SvROK(*s)) {
-			AV *a = (AV*)SvRV(*s);
-			layer->single_color = fetch_color((AV *)SvRV(*s), 0);
-		}
-		RAL_FETCH(perl_layer, "HUE_AT_MIN", layer->hue_at.min, SvIV);
-		RAL_FETCH(perl_layer, "HUE_AT_MAX", layer->hue_at.max, SvIV);
-		RAL_FETCH(perl_layer, "HUE_DIR", layer->hue_dir, SvIV);
-		RAL_FETCH(perl_layer, "HUE", layer->hue, SvIV);
-		RAL_FETCH(perl_layer, "COLOR_SCALE_MIN", layer->range.min, SvIV);
-		RAL_FETCH(perl_layer, "COLOR_SCALE_MAX", layer->range.max, SvIV);
-		s = hv_fetch(perl_layer, "COLOR_TABLE", strlen("COLOR_TABLE"), 0);
-		if (s AND SvROK(*s)) {
-			AV *a = (AV*)SvRV(*s);
-			int i, n = a ? av_len(a)+1 : 0;
-			if (n > 0) {
-				RAL_CHECK(layer->color_table = ral_color_table_create(n));
-				for (i = 0; i < n; i++) {
-					SV **s = av_fetch(a, i, 0);
-					AV *c;
-					RAL_CHECKM(s AND SvROK(*s) AND (c = (AV*)SvRV(*s)), "Bad color table data");
-					s = av_fetch(c, 0, 0);
-					layer->color_table->keys[i] = s ? SvIV(*s) : 0;
-					layer->color_table->colors[i] = fetch_color(c, 1);
-				}
-			}
-		}
-		s = hv_fetch(perl_layer, "COLOR_BINS", strlen("COLOR_BINS"), 0);
-		if (s AND SvROK(*s)) {
-			AV *a = (AV*)SvRV(*s);
-			int i, n = a ? av_len(a)+1 : 0;
-			if (n > 0) {
-				RAL_CHECK(layer->color_bins = ral_integer_color_bins_create(n));
-				for (i = 0; i < n; i++) {
-					SV **s = av_fetch(a, i, 0);
-					AV *c;
-					RAL_CHECKM(s AND SvROK(*s) AND (c = (AV*)SvRV(*s)), "Bad color bins data");
-					s = av_fetch(c, 0, 0);
-					if (i < n-1)
-						layer->color_bins->bins[i] = s ? SvIV(*s) : 0;
-					layer->color_bins->colors[i] = fetch_color(c, 1);
-				}
-			}
-		}
+		if (s && sv_isobject(*s))
+		   RAL_CHECK(layer->alpha_grid = (ral_grid*)SV2Object(*s, RAL_GRIDPTR));
+
+		layer->alpha = visual.alpha;
+		layer->palette_type = visual.palette_type;
+		layer->symbol = visual.symbol;
+		layer->symbol_pixel_size = visual.symbol_pixel_size;
+		layer->symbol_size_scale = visual.symbol_size_scale_int;
+		layer->single_color = visual.single_color;		
+		layer->hue_at = visual.hue_at;
+		layer->invert = visual.invert;
+		layer->scale = visual.scale;
+		layer->grayscale_base_color = visual.grayscale_base_color;
+		layer->color_scale = visual.color_scale_int;
+		layer->color_table = visual.color_table;
+		visual.color_table = NULL;
+		layer->color_bins = visual.int_bins;
+		visual.int_bins = NULL;
+
 		goto ok;
 		fail:
 		ral_integer_grid_layer_destroy(&layer);
 		layer = NULL;
 		ok:
+		ral_visual_finalize(visual);
 		RETVAL = layer;
   OUTPUT:
     RETVAL
@@ -3190,53 +3160,37 @@ ral_real_grid_layer *
 ral_make_real_grid_layer(perl_layer)
 	HV *perl_layer
 	CODE:
-		ral_real_grid_layer *layer = ral_real_grid_layer_create();
+		ral_visual visual;
+		ral_visual_initialize(&visual);
+		visual.symbol_field_type = visual.color_field_type = OFTReal;
+		ral_real_grid_layer *layer = NULL;
+		RAL_CHECK(fetch2visual(perl_layer, &visual, NULL));
+		RAL_CHECK(layer = ral_real_grid_layer_create());
+
 		SV **s = hv_fetch(perl_layer, "ALPHA", strlen("ALPHA"), 0);
-		if (s) {
-			if (SvIOK(*s))
-				layer->alpha = SvIV(*s);
-			else if (sv_isobject(*s)) {
-				RAL_CHECK(layer->alpha_grid = (ral_grid*)SV2Object(*s, RAL_GRIDPTR));
-			}
-		}
-		RAL_FETCH(perl_layer, "PALETTE_VALUE", layer->palette_type, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_VALUE", layer->symbol, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_SIZE", layer->symbol_pixel_size, SvIV);
-		RAL_FETCH(perl_layer, "SYMBOL_SCALE_MIN", layer->symbol_size_min, SvNV);
-		RAL_FETCH(perl_layer, "SYMBOL_SCALE_MAX", layer->symbol_size_max, SvNV);
-		s = hv_fetch(perl_layer, "SINGLE_COLOR", strlen("SINGLE_COLOR"), 0);
-		if (s AND SvROK(*s)) {
-			AV *a = (AV*)SvRV(*s);
-			layer->single_color = fetch_color((AV *)SvRV(*s), 0);
-		}
-		RAL_FETCH(perl_layer, "HUE_AT_MIN", layer->hue_at.min, SvIV);
-		RAL_FETCH(perl_layer, "HUE_AT_MAX", layer->hue_at.max, SvIV);
-		RAL_FETCH(perl_layer, "HUE_DIR", layer->hue_dir, SvIV);
-		RAL_FETCH(perl_layer, "HUE", layer->hue, SvIV);
-		RAL_FETCH(perl_layer, "COLOR_SCALE_MIN", layer->range.min, SvNV);
-		RAL_FETCH(perl_layer, "COLOR_SCALE_MAX", layer->range.max, SvNV);
-		s = hv_fetch(perl_layer, "COLOR_BINS", strlen("COLOR_BINS"), 0);
-		if (s AND SvROK(*s)) {
-			AV *a = (AV*)SvRV(*s);
-			int i, n = a ? av_len(a)+1 : 0;
-			if (n > 0) {
-				RAL_CHECK(layer->color_bins = ral_real_color_bins_create(n));
-				for (i = 0; i < n; i++) {
-					SV **s = av_fetch(a, i, 0);
-					AV *c;
-					RAL_CHECKM(s AND SvROK(*s) AND (c = (AV*)SvRV(*s)), "Bad color bins data");
-					s = av_fetch(c, 0, 0);
-					if (i < n-1)
-						layer->color_bins->bins[i] = s ? SvNV(*s) : 0;
-					layer->color_bins->colors[i] = fetch_color(c, 1);
-				}
-			}
-		}
+		if (s && sv_isobject(*s))
+		   RAL_CHECK(layer->alpha_grid = (ral_grid*)SV2Object(*s, RAL_GRIDPTR));
+
+		layer->alpha = visual.alpha;
+		layer->palette_type = visual.palette_type;
+		layer->symbol = visual.symbol;
+		layer->symbol_pixel_size = visual.symbol_pixel_size;
+		layer->symbol_size_scale = visual.symbol_size_scale_double;
+		layer->single_color = visual.single_color;
+		layer->hue_at = visual.hue_at;
+		layer->invert = visual.invert;
+		layer->scale = visual.scale;
+		layer->grayscale_base_color = visual.grayscale_base_color;
+		layer->color_scale = visual.color_scale_double;
+		layer->color_bins = visual.double_bins;
+		visual.double_bins = NULL;
+
 		goto ok;
 		fail:
 		ral_real_grid_layer_destroy(&layer);
 		layer = NULL;
 		ok:
+		ral_visual_finalize(visual);
 		RETVAL = layer;
   OUTPUT:
     RETVAL

@@ -130,10 +130,13 @@ sub file_chooser {
 ##@ignore
 sub get_number_from_entry {
     my($entry) = @_;
+    #print STDERR "get_number_from_entry $entry\n";
     my $text = $entry->get_text;
+    #print STDERR "got $text\n";
     $text =~ s/\s//g;
     $text =~ s/,/./;
     ($text) =~ /(\d+)/;
+    #print STDERR "return $text\n";
     $text;
 }
 

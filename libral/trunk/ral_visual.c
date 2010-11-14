@@ -1,6 +1,7 @@
 #include "config.h"
 #include "msg.h"
 #include "ral.h"
+#include <string.h>
 
 #ifndef HAVE_STRDUP
 char *strdup(char *str)
@@ -192,17 +193,19 @@ ral_integer_grid_layer *ral_integer_grid_layer_create()
     l->palette_type = RAL_PALETTE_GRAYSCALE;
     l->single_color.c4 = l->single_color.c3 = l->single_color.c2 = l->single_color.c1 = 255;
     l->symbol = 0;
-    l->symbol_size_min = 0;
-    l->symbol_size_max = -1;
+    l->symbol_size_scale.min = 0;
+    l->symbol_size_scale.max = -1;
     l->color_table = NULL;
     l->string_color_table = NULL;
     l->color_bins = NULL;
-    l->range.min = 0;
-    l->range.max = -1;
-    l->hue = 0; /* red */
+    l->color_scale.min = 0;
+    l->color_scale.max = -1;
+    l->grayscale_base_color.c3 = l->grayscale_base_color.c2 = l->grayscale_base_color.c1 = 0;
+    l->grayscale_base_color.c4 = 255;    
+    l->scale = RAL_SCALE_GRAY;
     l->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     l->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
-    l->hue_dir = RAL_RGB_HUE;
+    l->invert = RAL_RGB_HUE;
     return l;
 fail:
     return NULL;
@@ -213,7 +216,7 @@ void ral_integer_grid_layer_destroy(ral_integer_grid_layer **l)
     if (*l) {
 	ral_color_table_destroy(&(*l)->color_table);
 	ral_string_color_table_destroy(&(*l)->string_color_table);
-	ral_integer_color_bins_destroy(&(*l)->color_bins);
+	ral_int_color_bins_destroy(&(*l)->color_bins);
 	free(*l);
 	*l = NULL;
     }
@@ -229,17 +232,19 @@ ral_real_grid_layer *ral_real_grid_layer_create()
     l->palette_type = RAL_PALETTE_GRAYSCALE;
     l->single_color.c4 = l->single_color.c3 = l->single_color.c2 = l->single_color.c1 = 255;
     l->symbol = 0;
-    l->symbol_size_min = 0;
-    l->symbol_size_max = -1;
+    l->symbol_size_scale.min = 0;
+    l->symbol_size_scale.max = -1;
     l->color_table = NULL;
     l->string_color_table = NULL;
     l->color_bins = NULL;
-    l->range.min = 0;
-    l->range.max = -1;
-    l->hue = 0;
+    l->color_scale.min = 0;
+    l->color_scale.max = -1;
+    l->grayscale_base_color.c3 = l->grayscale_base_color.c2 = l->grayscale_base_color.c1 = 0;
+    l->grayscale_base_color.c4 = 255;    
+    l->scale = RAL_SCALE_GRAY;
     l->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     l->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
-    l->hue_dir = RAL_RGB_HUE;
+    l->invert = RAL_RGB_HUE;
     return l;
 fail:
     return NULL;
@@ -250,7 +255,7 @@ void ral_real_grid_layer_destroy(ral_real_grid_layer **l)
     if (*l) {
 	ral_color_table_destroy(&(*l)->color_table);
 	ral_string_color_table_destroy(&(*l)->string_color_table);
-	ral_real_color_bins_destroy(&(*l)->color_bins);
+	ral_double_color_bins_destroy(&(*l)->color_bins);
 	free(*l);
 	*l = NULL;
     }
@@ -264,19 +269,21 @@ void ral_visual_initialize(ral_visual *v)
     v->symbol = RAL_SYMBOL_CROSS;
     v->symbol_field = RAL_FIELD_FIXED_SIZE;
     v->symbol_pixel_size = RAL_DEFAULT_SYMBOL_PIXEL_SIZE;
-    v->symbol_size_int.min = 0;
-    v->symbol_size_int.max = -1;
-    v->symbol_size_double.min = 0;
-    v->symbol_size_double.max = -1;
+    v->symbol_size_scale_int.min = 0;
+    v->symbol_size_scale_int.max = -1;
+    v->symbol_size_scale_double.min = 0;
+    v->symbol_size_scale_double.max = -1;
     v->single_color.c4 = v->single_color.c3 = v->single_color.c2 = v->single_color.c1 = 255;
-    v->color_int.min = 0;
-    v->color_int.max = -1;
-    v->color_double.min = 0;
-    v->color_double.max = -1;
-    v->hue = 0;
+    v->color_scale_int.min = 0;
+    v->color_scale_int.max = -1;
+    v->color_scale_double.min = 0;
+    v->color_scale_double.max = -1;
+    v->grayscale_base_color.c3 = v->grayscale_base_color.c2 = v->grayscale_base_color.c1 = 0;
+    v->grayscale_base_color.c4 = 255;    
+    v->scale = RAL_SCALE_GRAY;
     v->hue_at.min = RAL_RAINBOW_HUE_AT_MIN;
     v->hue_at.max = RAL_RAINBOW_HUE_AT_MAX;
-    v->hue_dir = RAL_RGB_HUE;
+    v->invert = RAL_RGB_HUE;
     v->color_field = RAL_FIELD_FID;
     v->color_table = NULL;
     v->string_color_table = NULL;
@@ -299,8 +306,6 @@ ral_visual_layer *ral_visual_layer_create()
     RAL_CHECKM(l = RAL_MALLOC(ral_visual_layer), RAL_ERRSTR_OOM);
     ral_visual_initialize(&(l->visualization));
     l->layer = NULL;
-    l->EPSG_from = 0;
-    l->EPSG_to = 0;
     return l;
 fail:
     return NULL;
@@ -326,8 +331,6 @@ ral_visual_feature_table *ral_visual_feature_table_create(int size)
 	t->features[i].feature = NULL;
 	ral_visual_initialize(&(t->features[i].visualization));
     }
-    t->EPSG_from = 0;
-    t->EPSG_to = 0;
     return t;
 fail:
     ral_visual_feature_table_destroy(&t);

@@ -358,6 +358,8 @@ sub render {
 	return unless $self->{GRID} and Geo::Raster::ral_grid_get_height($self->{GRID});
     }
 
+    $self->{GRAYSCALE_SUBTYPE_VALUE} = $GRAYSCALE_SUBTYPE{$self->{GRAYSCALE_SUBTYPE}};
+
     if ($self->datatype eq 'Integer') {	    
 
 	my $layer = Geo::Raster::ral_make_integer_grid_layer($self);

@@ -586,21 +586,21 @@
     <child internal-child="vbox">
       <widget class="GtkVBox" id="dialog-vbox5">
         <property name="visible">True</property>
-        <property name="orientation">vertical</property>
         <property name="spacing">2</property>
         <child>
           <widget class="GtkVBox" id="vbox1">
             <property name="visible">True</property>
-            <property name="orientation">vertical</property>
             <child>
               <widget class="GtkHBox" id="hbox1">
                 <property name="visible">True</property>
                 <child>
                   <widget class="GtkLabel" id="label1">
                     <property name="visible">True</property>
-                    <property name="label" translatable="yes">Palette type:</property>
+                    <property name="label" translatable="yes">Palette type: </property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
@@ -609,6 +609,8 @@
                     <property name="visible">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
@@ -618,6 +620,9 @@
                     <property name="label" translatable="yes">Color is based on field:</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="padding">4</property>
                     <property name="position">2</property>
                   </packing>
                 </child>
@@ -626,8 +631,13 @@
                     <property name="visible">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">3</property>
                   </packing>
+                </child>
+                <child>
+                  <placeholder/>
                 </child>
               </widget>
               <packing>
@@ -639,16 +649,16 @@
               <widget class="GtkHBox" id="hbox2">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkLabel" id="label2">
+                  <widget class="GtkLabel" id="scale_label2">
                     <property name="visible">True</property>
-                    <property name="label" translatable="yes">Scale min:</property>
+                    <property name="label" translatable="yes">Scale min: </property>
                   </widget>
                   <packing>
                     <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkEntry" id="color_scale_min_entry">
+                  <widget class="GtkEntry" id="scale_min_entry">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="invisible_char">&#x25CF;</property>
@@ -658,7 +668,7 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="label3">
+                  <widget class="GtkLabel" id="scale_label3">
                     <property name="visible">True</property>
                     <property name="label" translatable="yes">Scale max:</property>
                   </widget>
@@ -667,7 +677,7 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkEntry" id="color_scale_max_entry">
+                  <widget class="GtkEntry" id="scale_max_entry">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="invisible_char">&#x25CF;</property>
@@ -678,7 +688,7 @@
                 </child>
                 <child>
                   <widget class="GtkButton" id="color_scale_button">
-                    <property name="label" translatable="yes">Range</property>
+                    <property name="label" translatable="yes">Get scale</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -691,7 +701,7 @@ selected field from layer.</property>
                 </child>
                 <child>
                   <widget class="GtkButton" id="color_legend_button">
-                    <property name="label" translatable="yes">Build</property>
+                    <property name="label" translatable="yes">Legend</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -716,6 +726,8 @@ selected field from layer.</property>
                     <property name="label" translatable="yes">Set rainbow hue from</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
@@ -725,6 +737,9 @@ selected field from layer.</property>
                     <property name="label" translatable="yes">label</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="padding">4</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
@@ -737,6 +752,8 @@ selected field from layer.</property>
                     <property name="use_stock">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">2</property>
                   </packing>
                 </child>
@@ -745,16 +762,9 @@ selected field from layer.</property>
                     <property name="visible">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">3</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkLabel" id="rainbow_2_label">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">hue</property>
-                  </widget>
-                  <packing>
-                    <property name="position">4</property>
                   </packing>
                 </child>
                 <child>
@@ -763,7 +773,10 @@ selected field from layer.</property>
                     <property name="label" translatable="yes">label</property>
                   </widget>
                   <packing>
-                    <property name="position">5</property>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="padding">4</property>
+                    <property name="position">4</property>
                   </packing>
                 </child>
                 <child>
@@ -775,12 +788,15 @@ selected field from layer.</property>
                     <property name="use_stock">True</property>
                   </widget>
                   <packing>
-                    <property name="position">6</property>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
               </widget>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">False</property>
                 <property name="position">2</property>
               </packing>
             </child>
@@ -788,28 +804,28 @@ selected field from layer.</property>
               <widget class="GtkHBox" id="hbox6">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkCheckButton" id="hue_checkbutton">
-                    <property name="label" translatable="yes">Set grayscale hue to</property>
+                  <widget class="GtkLabel" id="grayscale_label4">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">False</property>
-                    <property name="draw_indicator">True</property>
+                    <property name="label" translatable="yes">Grayscale base color: </property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="hue_label">
+                  <widget class="GtkLabel" id="grayscale_color_label">
                     <property name="visible">True</property>
                     <property name="label" translatable="yes">label</property>
                   </widget>
                   <packing>
+                    <property name="padding">4</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="hue_button">
+                  <widget class="GtkButton" id="grayscale_color_button">
                     <property name="label">gtk-select-color</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
@@ -817,7 +833,41 @@ selected field from layer.</property>
                     <property name="use_stock">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="grayscale_label5">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes"> Grayscale adjust: </property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkComboBox" id="grayscale_adjust_combobox">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkCheckButton" id="grayscale_invert_checkbutton">
+                    <property name="label" translatable="yes">invert adjust</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="draw_indicator">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">5</property>
                   </packing>
                 </child>
               </widget>
@@ -839,6 +889,8 @@ selected field from layer.</property>
                     <property name="draw_indicator">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
@@ -848,6 +900,9 @@ selected field from layer.</property>
                     <property name="label" translatable="yes">label</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="padding">4</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
@@ -860,8 +915,13 @@ selected field from layer.</property>
                     <property name="use_stock">True</property>
                   </widget>
                   <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
                     <property name="position">2</property>
                   </packing>
+                </child>
+                <child>
+                  <placeholder/>
                 </child>
               </widget>
               <packing>
@@ -890,7 +950,7 @@ selected field from layer.</property>
               <widget class="GtkHBox" id="hbox4">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkLabel" id="label10">
+                  <widget class="GtkLabel" id="edit_label">
                     <property name="visible">True</property>
                     <property name="label" translatable="yes">Edit palette and its colors:</property>
                   </widget>
@@ -944,7 +1004,7 @@ selected field from layer.</property>
               <widget class="GtkHBox" id="hbox5">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkLabel" id="label11">
+                  <widget class="GtkLabel" id="manage_label">
                     <property name="visible">True</property>
                     <property name="label" translatable="yes">Manage palette:</property>
                   </widget>
