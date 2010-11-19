@@ -1384,16 +1384,16 @@ sub function {
     my($self, $fct) = @_;
     my(undef, $M, $N, $cell_size, $minX, $minY, $maxX, $maxY) = $self->_attributes();
     $self = Geo::Raster->new($self) if defined wantarray;
-    my $y = $minY+$cell_size/2;
+    my $y = $maxY-$cell_size/2;
     for my $i (0..$M-1) {
 	my $x = $minX+$cell_size/2;
-	$y += $cell_size;
-	for my $j (0..$N-1) {
-	    $x += $cell_size;
+	for my $j (0..$N-1) {	    
 	    my $z = $self->get($i, $j);
 	    my $a = eval $fct;
 	    $self->set($i, $j, $a);
+	    $x += $cell_size;
 	}
+	$y -= $cell_size;
     }
     return $self if defined wantarray;
 }
