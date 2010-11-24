@@ -3269,8 +3269,6 @@ ral_visual_layer_create(perl_layer, ogr_layer)
 		ral_visual_layer *layer = ral_visual_layer_create();
 		layer->layer = ogr_layer;
 		RAL_CHECK(fetch2visual(perl_layer, &layer->visualization, OGR_L_GetLayerDefn(layer->layer)));
-		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV);
-		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV);
 		goto ok;
 		fail:
 		ral_visual_layer_destroy(&layer);
@@ -3347,8 +3345,6 @@ ral_visual_feature_table_create(perl_layer, features)
 			
 		}
 
-		RAL_FETCH(perl_layer, "EPSG_FROM", layer->EPSG_from, SvIV);
-		RAL_FETCH(perl_layer, "EPSG_TO", layer->EPSG_to, SvIV);
 		goto ok;
 		fail:
 		ral_visual_feature_table_destroy(&layer);
