@@ -7,7 +7,7 @@ use Carp;
 use Graphics::ColorUtils qw /:all/;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw /:all/;
-use Gtk2::Ex::Geo::Layer qw /:all/;
+use Gtk2::Ex::Geo::Layer;
 
 use vars qw/$MAX_INT $MAX_REAL $COLOR_CELL_SIZE/;
 
