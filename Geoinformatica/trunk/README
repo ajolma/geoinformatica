@@ -8,7 +8,7 @@ also be used for running command line geospatial Perl programs.
 
 MANIFEST
 
-The Perl layer is r410 
+The Perl layer is r428
 
 Geoinformatica Perl modules are
 
@@ -30,7 +30,7 @@ GTK+ is 2.16.6 from http://www.gtk.org/download-windows.html
 Curl is 7.19.7 from sources
 Perl is 5.10.1 from sources
 Gnuplot is 4.4rc1 from http://sourceforge.net/projects/gnuplot/files/
-GDAL is trunk (r20829) from sources
+GDAL is trunk r21960 from sources (past 1.8.0)
 GEOS is 3.2.0 from sources
 Proj4 is 4.6.1 from sources
 libral is r410
