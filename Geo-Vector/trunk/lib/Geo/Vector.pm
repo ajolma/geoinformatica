@@ -335,19 +335,21 @@ sub open_data_source {
 		$@ = "no reason given" unless $@;
 		croak "Can't open data source '$data_source': $@"
 	    }
-	    return;
+	    
+	} else {
+
+	    croak "$self->{OGR}->{Driver}->{name}: ".
+		"Driver does not have the capability to create data sources"
+		unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
+	    
+	    eval {
+		$self->{OGR}->{DataSource} = 
+		    $self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
+	    };
+	    $@ = "no reason given" unless $@;
+	    croak "Can't open nor create data source '$data_source': $@" unless $self->{OGR}->{DataSource};
+
 	}
-
-	croak "$self->{OGR}->{Driver}->{name}: ".
-	    "Driver does not have the capability to create data sources"
-	    unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
-
-	eval {
-	    $self->{OGR}->{DataSource} = 
-		$self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
-	};
-	$@ = "no reason given" unless $@;
-	croak "Can't open nor create data source '$data_source': $@" unless $self->{OGR}->{DataSource};
 
     } else {
 	eval {
@@ -357,6 +359,7 @@ sub open_data_source {
 	croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     }
+    $self->{encoding} = "utf8" if $self->{OGR}->{Driver}->GetName eq 'PostgreSQL';
 }
 
 ## @ignore
