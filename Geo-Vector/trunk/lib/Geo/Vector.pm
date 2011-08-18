@@ -29,6 +29,7 @@ use 5.008;
 use strict;
 use warnings;
 use Carp;
+use Encode;
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
 use Scalar::Util qw(blessed);
@@ -419,8 +420,9 @@ sub dump {
 	$i++;
 	for my $name ($s->field_names) {
 	    next if $name =~ /^\./;
-	    my $value = $feature->GetField($name);
-	    print $fh "$name: $value\n";
+	    my $v = $feature->GetField($name);
+	    $v = decode($self->{encoding}, $v) if $v and $self->{encoding};
+	    print $fh "$name: $v\n";
 	}
 	my $geom = $feature->GetGeometryRef();
 	dump_geom($geom, $fh, $params{suppress_points});
@@ -639,8 +641,9 @@ sub copy {
 	$feature->SetGeometry($geometry); # makes a copy
 	
 	for my $i (0..$fd->GetFieldCount-1) {
-	    my $value = $f->GetField($i);
-	    $feature->SetField($i, $value) if defined $value;
+	    my $v = $f->GetField($i);
+	    $v = decode($self->{encoding}, $v) if $v and $self->{encoding};
+	    $feature->SetField($i, $v) if defined $v;
 	}
 
 	$copy->feature($feature);
@@ -754,7 +757,7 @@ sub schema {
 
 ## @ignore
 sub feature_attribute {
-    my($f, $a) = @_;
+    my($self, $f, $a) = @_;
     if ($a =~ /^\./) { # pseudo fields
 	if ($a eq '.FID') {
 	    return $f->GetFID;
@@ -766,7 +769,9 @@ sub feature_attribute {
 	    return $g->GeometryType if $g;
 	}
     } else {
-	return $f->GetField($a);
+	my $v = $f->GetField($a);
+	$v = decode($self->{encoding}, $v) if $v and $self->{encoding};
+	return $v;
     }
 }
 

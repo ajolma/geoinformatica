@@ -449,9 +449,8 @@ sub render_labels {
 		$cr->stroke();
 	    }
 	    
-	    my $str = Geo::Vector::feature_attribute($f, $labeling->{field});
+	    my $str = Geo::Vector::feature_attribute($self, $f, $labeling->{field});
 	    next unless defined $str or $str eq '';
-	    $str = decode($self->{encoding}, $str) if $self->{encoding};
 	    
 	    my $layout = Gtk2::Pango::Cairo::create_layout($cr);
 	    $layout->set_font_description($font_desc);    

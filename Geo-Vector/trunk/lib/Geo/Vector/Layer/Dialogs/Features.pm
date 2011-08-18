@@ -224,8 +224,7 @@ sub add_features {
 	    my $name = $field->{Name};
 	    if ($name =~ /^\./ or $f->IsFieldSet($name)) {
 		push @rec, $rec++;
-		my $v = Geo::Vector::feature_attribute($f, $name);
-		$v = decode($self->{encoding}, $v) if $self->{encoding};
+		my $v = Geo::Vector::feature_attribute($self, $f, $name);
 		push @rec, $v;
 	    } else {
 		push @rec, $rec++;
