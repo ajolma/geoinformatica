@@ -361,7 +361,11 @@ sub fill_directory_treeview {
     my @fs;
     for (sort {$b cmp $a} @files) {
 	my $test = File::Spec->catfile($self->{path}, $_);
-	my($m) = Geo::GDAL::Stat($test);
+	my $m;
+	eval {
+	    ($m) = Geo::GDAL::Stat($test);
+	};
+	next if $@;
 	my $is_dir = $m eq 'd';
 	next if (/^\./ and not $_ eq File::Spec->updir);
 	next if $_ eq File::Spec->curdir;
