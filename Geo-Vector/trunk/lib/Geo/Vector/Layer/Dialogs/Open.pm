@@ -26,6 +26,7 @@ sub open {
 	     open_vector_schema_button => [clicked => \&show_schema, $self],
 	     open_vector_cancel_button => [clicked => \&cancel_open_vector, $self],
 	     open_vector_ok_button => [clicked => \&open_vector, $self],
+	     open_vector_auto_update_schema_checkbutton => [toggled => \&show_schema, $self],
 	 },
 	 [
 	  'open_vector_driver_combobox',
@@ -88,7 +89,7 @@ sub open {
 	$treeview->get_selection->set_mode('multiple');
 	my $i = 0;
 	for my $column ('layer', 'geometry') {
-	    my $cell = Gtk2::CellRendererText->new;
+	    my $cell = Gtk2::CellRendererText->new;	    
 	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	    $treeview->append_column($col);
 	}
@@ -99,6 +100,10 @@ sub open {
 	$i = 0;
 	foreach my $column ('property', 'value') {
 	    my $cell = Gtk2::CellRendererText->new;
+	    if ($column eq 'value') {
+		$cell->set(wrap_width => 400);
+		$cell->set(wrap_mode => 'word');
+	    }
 	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	    $treeview->append_column($col);
 	}
@@ -478,6 +483,13 @@ sub on_layer_treeview_cursor_changed {
 	my $layer_name = $model->get($iter, 0);
 	$self->{open_dialog}->get_widget('open_vector_layer_name_entry')->set_text($layer_name);
     }
+    if ($self->{open_dialog}->get_widget('open_vector_auto_update_schema_checkbutton')->get_active()) {
+	show_schema(undef, $self);
+    } else {
+	$self->{open_dialog}->get_widget('open_vector_property_treeview')->get_model->clear;
+	$self->{open_dialog}->get_widget('open_vector_schema_treeview')->get_model->clear;
+	$self->{open_dialog}->get_widget('open_vector_schema_label')->set_label('');
+    }
     $self->{gui}{history}->editing('');
     $self->{open_dialog}->get_widget('open_vector_SQL_entry')->set_text('');
 }
@@ -688,8 +700,8 @@ sub select_directory {
 
 ## @ignore
 sub show_schema {
-    my($button, $self) = @_;
-
+    my($button, $self) = @_ == 2 ? @_ : (undef, $_[0]);
+    
     my $property_model = $self->{open_dialog}->get_widget('open_vector_property_treeview')->get_model;
     $property_model->clear;
     my $schema_model = $self->{open_dialog}->get_widget('open_vector_schema_treeview')->get_model;
@@ -711,6 +723,7 @@ sub show_schema {
 
 	my $treeview = $self->{open_dialog}->get_widget('open_vector_layer_treeview');
 	my($path, $focus_column) = $treeview->get_cursor;
+	return unless $path;
 	my $model = $treeview->get_model;
 	my $iter = $model->get_iter($path);
 	my $name = $model->get($iter, 0);
