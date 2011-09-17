@@ -4,6 +4,7 @@ use ExtUtils::MakeMaker;
 
 my %missing_modules;
 
+$missing_modules{chk_module('Gtk2::Ex::Geo', 0.62)} = 1;
 $missing_modules{chk_module('Graph')} = 1;
 
 delete $missing_modules{''};
@@ -36,19 +37,24 @@ WriteMakefile(
 	      );
 
 sub chk_module {
-    my $pkg = shift;
-    print "Checking for $pkg:";
+    my($pkg, $version) = @_;
+    print "Checking for $pkg ($version):";
     eval { 
 	my $p; 
 	($p = $pkg . ".pm") =~ s#::#/#g; 
-	require $p; 
+	require $p;
     };
     if ($@) {
-	print " failed\n";
+	print " failed)\n";
 	return $pkg;
     } else {
+	my $v = '$v=$'.$pkg.'::VERSION';
+	eval($v);
+	if ($v < $version) {
+	    print " failed\n";
+	    return "$pkg is old version $v";
+	}
 	print " ok\n";
 	return '';
     }
 }
-

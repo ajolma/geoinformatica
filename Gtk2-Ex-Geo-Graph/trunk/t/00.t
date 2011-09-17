@@ -16,6 +16,8 @@ $gis->{overlay}->signal_connect(update_layers =>
 	#print STDERR "in callback: @_\n";
 	});
 
+exit unless $ENV{GUI};
+
 Gtk2->main;
 
 sub setup{

@@ -53,7 +53,7 @@ use Geo::Raster::Layer; # requires Gtk2 and Gtk2::Ex::Geo
 
 use vars qw($BYTE_ORDER $INTEGER_GRID $REAL_GRID);
 
-our $VERSION = '0.62';
+our $VERSION = '0.63';
 
 # TODO: make these constants derived from libral:
 $INTEGER_GRID = 1;

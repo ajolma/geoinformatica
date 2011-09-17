@@ -51,7 +51,7 @@ BEGIN {
     our %EXPORT_TAGS = ( 'all' => [ qw( &ccw &intersect &distance_point_line_sqr 
 					$SNAP_DISTANCE_SQR ) ] );
     our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-    our $VERSION = '0.04';
+    our $VERSION = '0.05';
     $SNAP_DISTANCE_SQR = 1E-6;
 }
 

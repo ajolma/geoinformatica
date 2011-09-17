@@ -15,8 +15,8 @@ require ExtUtils::Depends;
 require ExtUtils::PkgConfig;
 
 $missing_modules{chk_module('Statistics::Descriptive')} = 1;
-$missing_modules{chk_module('Geo::GDAL')} = 1; # should this be optional?
-$missing_modules{chk_module('Gtk2::Ex::Geo')} = 1;
+$missing_modules{chk_module('Geo::GDAL', 1.81)} = 1; # should this be optional?
+$missing_modules{chk_module('Gtk2::Ex::Geo', 0.62)} = 1;
 delete $missing_modules{''};
 my @missing_modules = keys %missing_modules;
 warn "Following required modules are missing: @missing_modules\n" if @missing_modules;
@@ -101,17 +101,23 @@ WriteMakefile(NAME                        => 'Geo::Raster',
 	      );
 
 sub chk_module {
-    my $pkg = shift;
-    print "Checking for $pkg:";
+    my($pkg, $version) = @_;
+    print "Checking for $pkg ($version):";
     eval { 
 	my $p; 
 	($p = $pkg . ".pm") =~ s#::#/#g; 
-	require $p; 
+	require $p;
     };
     if ($@) {
-	print " failed\n";
+	print " failed)\n";
 	return $pkg;
     } else {
+	my $v = '$v=$'.$pkg.'::VERSION';
+	eval($v);
+	if ($v < $version) {
+	    print " failed\n";
+	    return "$pkg is old version $v";
+	}
 	print " ok\n";
 	return '';
     }

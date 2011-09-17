@@ -1,7 +1,8 @@
-The changes are logged onto the SVN, which is at https://svn.osgeo.org/geoinformatica/libral/
+The changes are logged onto the SVN, which is at
+http://trac.osgeo.org/geoinformatica/log/Gtk2-Ex-Geo
 
 Moved to svn.osgeo.org
-	
+
 Date: 23:45:18, 21. elokuuta 2008
 overlay's parameters can be set at glue's constructor
 

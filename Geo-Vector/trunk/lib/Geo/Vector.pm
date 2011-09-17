@@ -44,7 +44,7 @@ use Gtk2;
 
 use vars qw( @ISA %RENDER_AS );
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 require Exporter;
 

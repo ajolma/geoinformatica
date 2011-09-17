@@ -20,7 +20,7 @@ use Gtk2::Ex::Geo::Dialogs qw/:all/;
 
 our @ISA = qw(Gtk2::Ex::Geo::Layer);
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 use vars qw/$NODE_RAY/;
 
