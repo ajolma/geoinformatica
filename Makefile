@@ -1,14 +1,15 @@
 MAKE = make
+PREFIX=/usr/local
 
 PERL_MODULES = Graphics-ColorUtils-0.17 Geo-OGC-Geometry-0.04 Gtk2-Ex-Geo-0.62 Gtk2-Ex-Geo-Graph-0.01 Geo-Raster-0.62 Geo-Vector-0.52
 LIBRAL = libral-0.63
 MODULES = ${LIBRAL} ${PERL_MODULES}
 
 all:
-	cd ${LIBRAL}; ./configure; make; cd ..
+	cd ${LIBRAL}; ./configure --prefix=${PREFIX}; make; cd ..
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
-		perl Makefile.PL; \
+		perl Makefile.PL INSTALL_BASE=${PREFIX}; \
 		make; \
 		cd ..; \
 	done;
@@ -35,9 +36,10 @@ clean:
 	done;
 
 distclean:
-	cd ${LIBRAL}; make distclean; cd ..
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
+		$(MAKE) clean; \
 		rm -f Makefile.old Files.pm const-c.inc const-xs.inc; \
 		cd ..; \
 	done;
+	cd ${LIBRAL}; $(MAKE) distclean; cd ..
