@@ -19,7 +19,7 @@ $missing_modules{chk_module('Geo::GDAL', 1.81)} = 1; # should this be optional?
 $missing_modules{chk_module('Gtk2::Ex::Geo', 0.62)} = 1;
 delete $missing_modules{''};
 my @missing_modules = keys %missing_modules;
-warn "Following required modules are missing: @missing_modules\n" if @missing_modules;
+warn "Problems with required modules: @missing_modules\n" if @missing_modules;
 
 my($inc,$libs,$cflags) = ('','','');
 

@@ -7,6 +7,8 @@ BEGIN {
     use_ok('Gtk2::Ex::Geo::Graph');
 };
 
+exit unless $ENV{GUI};
+
 Gtk2->init;
 
 my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer Gtk2::Ex::Geo::Graph/]);
@@ -15,8 +17,6 @@ $gis->{overlay}->signal_connect(update_layers =>
 	sub {
 	#print STDERR "in callback: @_\n";
 	});
-
-exit unless $ENV{GUI};
 
 Gtk2->main;
 

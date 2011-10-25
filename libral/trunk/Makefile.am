@@ -2,7 +2,7 @@ AM_CFLAGS = -fno-builtin -Wall -std=c99 -pedantic
 
 test: all test.c
 	$(COMPILE) -o test test.c -L.libs -lm -lral ${LIBS}
-	./test
+	export LD_LIBRARY_PATH='.libs'; ./test
 
 lib_LTLIBRARIES = libral.la
 
@@ -18,3 +18,6 @@ nobase_include_HEADERS = ${libral_la_HEADERFILES}
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libral.pc
+
+clean-local:
+	rm -f test

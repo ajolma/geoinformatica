@@ -34,12 +34,11 @@ use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
 use Scalar::Util qw(blessed);
 use XSLoader;
-use File::Basename;
 use Geo::GDAL;
 use Geo::OGC::Geometry;
 use Geo::Vector::Feature;
 use Geo::Vector::Layer;
-use JSON::XS;
+use JSON;
 use Gtk2;
 
 use vars qw( @ISA %RENDER_AS );
@@ -216,7 +215,7 @@ sub new {
 	    open my $fh, "<$params{features}";
 	    my @a = <$fh>;
 	    close $fh;
-	    my $coder = JSON::XS->new->ascii->pretty->allow_nonref;
+	    my $coder = JSON->new->ascii->pretty->allow_nonref;
 	    my $object = $coder->decode("@a");
 	    if ($object->{type} eq 'FeatureCollection') {
 		for my $o (@{$object->{features}}) {
@@ -305,7 +304,7 @@ sub save {
     for my $f (values %{$self->{features}}) {
 	push @{$object->{features}}, $f->GeoJSON;
     }
-    my $coder = JSON::XS->new->ascii->pretty->allow_nonref;
+    my $coder = JSON->new->ascii->pretty->allow_nonref;
     my $data = $coder->encode($object);
     open my $fh, ">$filename";
     print $fh $data;

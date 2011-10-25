@@ -1,4 +1,3 @@
-use File::Basename;
 use Geo::Vector;
 use Gtk2::Ex::Geo;
 use Gtk2::TestHelper tests => 13;

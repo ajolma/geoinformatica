@@ -6,8 +6,7 @@ my %missing_modules;
 
 $missing_modules{chk_module('ExtUtils::Depends')} = 1;
 $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
-$missing_modules{chk_module('File::Basename')} = 1;
-$missing_modules{chk_module('JSON::XS')} = 1;
+$missing_modules{chk_module('JSON')} = 1;
 $missing_modules{chk_module('Geo::GDAL', 1.81)} = 1;
 $missing_modules{chk_module('Geo::Raster', 0.62)} = 1;
 $missing_modules{chk_module('Geo::OGC::Geometry', 0.04)} = 1;
@@ -19,7 +18,7 @@ $missing_modules{chk_module('Win32::OLE')} = 1 if $^O eq 'MSWin32';
 delete $missing_modules{''};
 
 my @missing_modules = keys %missing_modules;
-warn "Following required modules are missing: @missing_modules\n" if @missing_modules;
+warn "Problems with required modules: @missing_modules\n" if @missing_modules;
 
 require ExtUtils::Depends; 
 require ExtUtils::PkgConfig;

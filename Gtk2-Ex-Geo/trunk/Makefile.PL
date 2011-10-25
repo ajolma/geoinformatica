@@ -6,6 +6,8 @@ my %missing_modules;
 
 $missing_modules{chk_module('ExtUtils::Depends')} = 1;
 $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
+$missing_modules{chk_module('Geo::OGC::Geometry')} = 1;
+$missing_modules{chk_module('Graphics::ColorUtils')} = 1;
 
 delete $missing_modules{''};
 

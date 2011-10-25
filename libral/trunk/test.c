@@ -41,7 +41,7 @@ int main() {
 
     if (nodata_value1 == nodata_value2) printf("ok 1\n"); else printf("not ok 1\n");
 
-
+    /*
     OGRSpatialReferenceH sr_from = OSRNewSpatialReference(NULL);
     OGRSpatialReferenceH sr_to = OSRNewSpatialReference(NULL);
     RAL_CHECK(OSRImportFromEPSG(sr_from, 4030) == OGRERR_NONE);
@@ -56,11 +56,12 @@ int main() {
     OGR_G_SetPoint(ll, 0,  3020012.500000, 6599987.500000, 1.000000);
     OGR_G_GetPoint(ll, 0, &x, &y, &z);
     fprintf(stderr,"dim %f %f %f\n", x,y,z);
-    
+
     RAL_CHECK(OGR_G_Transform(ll, transformation) == OGRERR_NONE);
 
     OGR_G_GetPoint(ll, 0, &x, &y, &z);
     fprintf(stderr,"dim %f %f %f %i\n", x,y,z);
+    */
 
 fail:
  
