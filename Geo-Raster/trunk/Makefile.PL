@@ -109,7 +109,7 @@ sub chk_module {
 	require $p;
     };
     if ($@) {
-	print " failed)\n";
+	print " failed\n";
 	return $pkg;
     } else {
 	my $v = '$v=$'.$pkg.'::VERSION';
