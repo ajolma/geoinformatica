@@ -5,7 +5,7 @@ use Carp;
 use Encode;
 use DBI;
 use CGI;
-use Geo::Proj4;
+#use Geo::Proj4;
 use Gtk2::Ex::Geo;
 use Geo::Raster;
 use Geo::Vector;
@@ -13,7 +13,7 @@ use JSON;
 
 my $config;
 {
-    open(my $fh, '<', "wfs.conf") or die $!;
+    open(my $fh, '<', "/var/www/etc/wfs.conf") or die $!;
     my @json = <$fh>;
     close $fh;
     $config = decode_json "@json";
@@ -52,6 +52,8 @@ sub page {
 	GetCapabilities($version);
     } elsif ($request eq 'DescribeFeatureType') {
 	DescribeFeatureType($version, $q->param($names{TYPENAME}));
+    } elsif ($request eq 'GetFeature') {
+	GetFeature($version, $q->param($names{TYPENAME}));
     } else {
 	print 
 	    $q->header(), 
@@ -59,6 +61,54 @@ sub page {
 	    $q->a({-href=>$q->{resource}.'REQUEST=GetCapabilities'}, "GetCapabilities"), 
 	    $q->end_html;
     }
+}
+
+sub GetFeature {
+    my($version, $typename) = @_;
+    my $datasource;
+    for my $type (@{$config->{FeatureTypeList}}) {
+	$datasource = $type->{datasource}, last if $type->{Name} eq $typename;
+    }
+    croak "No such feature type: $typename" unless $datasource;
+    $datasource = Geo::OGR::Open($datasource);
+    my $fn = '/var/www/tmp/'.$typename.'.gml';
+    Geo::OGR::Driver('GML')->Copy($datasource, $fn); #'/dev/stdout');
+    serve_document($fn, 'text/xml');
+}
+
+sub DescribeFeatureType {
+    my($version, $typename) = @_;
+    my $name;
+    for my $type (@{$config->{FeatureTypeList}}) {
+	$name = $type->{Name}, last if $type->{Name} eq $typename;
+    }
+    croak "No such feature type: $typename" unless $name;
+    print($q->header( -type => $config->{MIME} ));
+    print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
+    xml_element('schema', 
+		{ version => '0.1',
+		  targetNamespace => "http://mapserver.gis.umn.edu/mapserver",
+		  xmlns => "http://www.w3.org/2001/XMLSchema",
+		  'xmlns:ogr' => "http://ogr.maptools.org/",
+		  'xmlns:ogc' => "http://www.opengis.net/ogc",
+		  'xmlns:xsd' => "http://www.w3.org/2001/XMLSchema",
+		  'xmlns:gml' => "http://www.opengis.net/gml",
+		  elementFormDefault => "qualified" }, 
+		'>');
+    xml_element('import', { namespace => "http://www.opengis.net/gml",
+			    schemaLocation => "http://schemas.opengis.net/gml/2.1.2/feature.xsd" } );
+    xml_element('element', { name => $name, 
+			     type => 'ogr:'.$typename.'Type',
+			     substitutionGroup => 'gml:_Feature' } );
+    xml_element('complexType', 
+		['complexContent', 
+		 ['extension', { base => 'gml:AbstractFeatureType' }, 
+		  ['sequence', 
+		   ['element', { name => "ogrGeometry",
+				 type => "gml:GeometryPropertyType",
+				 minOccurs => "0",
+				 maxOccurs => "1" } ]]]]);
+    xml_element('/schema', '>');
 }
 
 sub GetCapabilities {
@@ -159,18 +209,18 @@ sub Filter_Capabilities  {
     my($version) = @_;
     xml_element('ogc:Filter_Capabilities', '<>');
     my @operands = ();
-    for my $o ('Point','LineString','Polygon','Envelope') {
+    for my $o (qw/Point LineString Polygon Envelope/) {
 	push @operands, ['ogc:GeometryOperand', 'gml:'.$o];
     }
     my @operators = ();
-    for my $o ('Equals','Disjoint','Touches','Within','Overlaps','Crosses','Intersects','Contains','DWithin','Beyond','BBOX') {
-	push @operators, ['ogc:SpatialOperator', {name=>$o}];
+    for my $o (qw/Equals Disjoint Touches Within Overlaps Crosses Intersects Contains DWithin Beyond BBOX/) {
+	push @operators, ['ogc:SpatialOperator', { name => $o }];
     }
     xml_element('ogc:Spatial_Capabilities', 
 		[['ogc:GeometryOperands', \@operands],
 		 ['ogc:SpatialOperators', \@operators]]);
     @operators = ();
-    for my $o ('LessThan','GreaterThan','LessThanEqualTo','GreaterThanEqualTo','EqualTo','NotEqualTo','Like','Between') {
+    for my $o (qw/LessThan GreaterThan LessThanEqualTo GreaterThanEqualTo EqualTo NotEqualTo Like Between/) {
 	push @operators, ['ogc:ComparisonOperator', $o];
     }
     xml_element('ogc:Scalar_Capabilities', 
@@ -178,6 +228,19 @@ sub Filter_Capabilities  {
 		 ['ogc:ComparisonOperators', \@operators]]);
     xml_element('ogc:Id_Capabilities', ['ogc:FID']);
     xml_element('/ogc:Filter_Capabilities', '<>');
+}
+
+sub serve_document {
+    my($doc, $mime_type) = @_;
+    my $length = (stat($doc))[10];
+    print "Content-type: $mime_type\n";
+    print "Content-length: $length\n\n";
+    open(DOC, '<', $doc) or croak "Couldn't open $doc: $!";
+    my $data;
+    while( sysread(DOC, $data, 10240) ) {
+	print $data;
+    }
+    close DOC;
 }
 
 sub xml_elements {
@@ -217,7 +280,7 @@ sub xml_element {
 		xml_element(@$content);
 	    }
 	    print("</$element>\n");
-	} elsif ($content eq '<>') {
+	} elsif ($content =~ /\>$/) {
 	    print(">\n");
 	} elsif ($content) {
 	    print(">$content</$element>\n");	
