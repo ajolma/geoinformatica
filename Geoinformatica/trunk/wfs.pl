@@ -1,14 +1,16 @@
 #!/usr/bin/perl
 
 use strict;
+use IO::Handle;
 use Carp;
 use Encode;
 use DBI;
 use CGI;
+use Geo::GDAL;
 #use Geo::Proj4;
-use Gtk2::Ex::Geo;
-use Geo::Raster;
-use Geo::Vector;
+#use Gtk2::Ex::Geo;
+#use Geo::Raster;
+#use Geo::Vector;
 use JSON;
 
 my $config;
@@ -19,14 +21,15 @@ my $config;
     $config = decode_json "@json";
 }
 my $q = CGI->new;
+my $header = 0;
 my %names = ();
 
 eval {
     page();
 };
 if ($@) {
-    #print STDERR "WFS error: $@\n";
-    print $q->header($config->{MIME});
+    select(STDOUT);
+    header() unless $header;
     print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
     my($error) = ($@ =~ /(.*?)\.\#/);
     $error =~ s/ $//;
@@ -65,25 +68,49 @@ sub page {
 
 sub GetFeature {
     my($version, $typename) = @_;
-    my $datasource;
-    for my $type (@{$config->{FeatureTypeList}}) {
-	$datasource = $type->{datasource}, last if $type->{Name} eq $typename;
+    my $type = feature($typename);
+    croak "No such feature type: $typename" unless $type;
+
+    my $vsi = '/vsimem/wfs.gml';
+    my $fp = Geo::GDAL::VSIFOpenL($vsi, 'w');
+    my $gml = Geo::OGR::Driver('GML')->Create($vsi);
+
+    my $datasource = Geo::OGR::Open($type->{Datasource});
+    my $layer;
+    if ($type->{Layer}) {
+	$layer = $datasource->Layer($type->{Layer});
+    } elsif ($type->{Table}) {	    
+	# need to use specified GeometryColumn and only it
+	my $sql = "select * from \"$type->{Table}\"";
+	$layer = $datasource->ExecuteSQL($sql);
+    } else {
+	croak "missing information";
     }
-    croak "No such feature type: $typename" unless $datasource;
-    $datasource = Geo::OGR::Open($datasource);
-    my $fn = '/var/www/tmp/'.$typename.'.gml';
-    Geo::OGR::Driver('GML')->Copy($datasource, $fn); #'/dev/stdout');
-    serve_document($fn, 'text/xml');
+
+    my $bbox = $q->param($names{BBOX});
+    if ($bbox) {
+	my @bbox = split /,/, $bbox;
+	$layer->SetSpatialFilterRect(@bbox);
+    }
+    $gml->CopyLayer($layer, $type->{Title});
+
+    my $length = (Geo::GDAL::Stat($vsi))[1];
+    $fp = Geo::GDAL::VSIFOpenL($vsi, 'r');
+    header(length => $length);
+    while (my $data = Geo::GDAL::VSIFReadL(1024,$fp)) {
+	print $data;
+    }
+    Geo::GDAL::VSIFCloseL($fp);
+    Geo::GDAL::Unlink($vsi);
 }
 
 sub DescribeFeatureType {
     my($version, $typename) = @_;
-    my $name;
-    for my $type (@{$config->{FeatureTypeList}}) {
-	$name = $type->{Name}, last if $type->{Name} eq $typename;
-    }
-    croak "No such feature type: $typename" unless $name;
-    print($q->header( -type => $config->{MIME} ));
+    my $type = feature($typename);
+    croak "No such feature type: $typename" unless $type;
+    my($out, $var);
+    open($out,'>', \$var);
+    select $out;
     print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
     xml_element('schema', 
 		{ version => '0.1',
@@ -94,26 +121,50 @@ sub DescribeFeatureType {
 		  'xmlns:xsd' => "http://www.w3.org/2001/XMLSchema",
 		  'xmlns:gml' => "http://www.opengis.net/gml",
 		  elementFormDefault => "qualified" }, 
-		'>');
+		'<');
     xml_element('import', { namespace => "http://www.opengis.net/gml",
 			    schemaLocation => "http://schemas.opengis.net/gml/2.1.2/feature.xsd" } );
-    xml_element('element', { name => $name, 
+    xml_element('element', { name => $type->{Name}, 
 			     type => 'ogr:'.$typename.'Type',
 			     substitutionGroup => 'gml:_Feature' } );
-    xml_element('complexType', 
+
+    my @elements;
+    if ($type->{Schema}) {
+	for my $col (keys %{$type->{Schema}}) {
+	    if ($type->{Schema}{$col} eq 'geometry' and not($typename =~ /$col$/)) {
+		next;
+	    }
+	    my $t = $type->{Schema}{$col};
+	    $t = "gml:GeometryPropertyType" if $t eq 'geometry';
+	    push @elements, ['element', { name => $col,
+					  type => $t,
+					  minOccurs => "0",
+					  maxOccurs => "1" } ];
+	}
+    } else {
+	@elements = (['element', { name => "ogrGeometry",
+				   type => "gml:GeometryPropertyType",
+				   minOccurs => "0",
+				   maxOccurs => "1" } ]);
+    }
+    
+    xml_element('complexType', {name => $typename.'Type'},
 		['complexContent', 
 		 ['extension', { base => 'gml:AbstractFeatureType' }, 
-		  ['sequence', 
-		   ['element', { name => "ogrGeometry",
-				 type => "gml:GeometryPropertyType",
-				 minOccurs => "0",
-				 maxOccurs => "1" } ]]]]);
+		  ['sequence', \@elements
+		  ]]]);
     xml_element('/schema', '>');
+    select(STDOUT);
+    close $out;    
+    header(length=>length($var));
+    print $var;
 }
 
 sub GetCapabilities {
     my($version) = @_;
-    print($q->header( -type => $config->{MIME} ));
+    my($out, $var);
+    open($out,'>', \$var);
+    select $out;
     print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
     xml_element('wfs:WFS_Capabilities', 
 		{ version => $version,
@@ -132,6 +183,10 @@ sub GetCapabilities {
     FeatureTypeList($version);
     Filter_Capabilities($version);
     xml_element('/wfs:WFS_Capabilities', '<>');
+    select(STDOUT);
+    close $out;    
+    header(length=>length($var));
+    print $var;
 }
 
 sub ServiceIdentification {
@@ -192,17 +247,94 @@ sub FeatureTypeList  {
     xml_element('FeatureTypeList', '<>');
     xml_element('Operations', ['Operation', 'Query']);
     for my $type (@{$config->{FeatureTypeList}}) {
-	xml_element('FeatureType', [
-			['Name', $type->{Name}],
-			['Title', $type->{Title}],
-			['DefaultSRS', $type->{DefaultSRS}],
-			['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']],
-			['ows:WGS84BoundingBox', {dimensions=>2}, 
-			 [['ows:LowerCorner',$type->{LowerCorner}],
-			  ['ows:UpperCorner',$type->{UpperCorner}]]]
-		    ]);
+	if ($type->{Layer}) {
+	    xml_element('FeatureType', [
+			    ['Name', $type->{Name}],
+			    ['Title', $type->{Title}],
+			    ['DefaultSRS', $type->{DefaultSRS}],
+			    ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']],
+			    ['ows:WGS84BoundingBox', {dimensions=>2}, 
+			     [['ows:LowerCorner',$type->{LowerCorner}],
+			      ['ows:UpperCorner',$type->{UpperCorner}]]]
+			]);
+	} else {
+	    # restrict now to postgis databases
+	    my @layers = layers($type->{dbi}, $type->{prefix});
+	    for my $l (@layers) {
+		xml_element('FeatureType', [
+				['Name', $l->{Name}],
+				['Title', $l->{Title}],
+				['DefaultSRS', $l->{DefaultSRS}],
+				['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
+			    ]);
+	    }
+	}
     }
     xml_element('/FeatureTypeList', '<>');
+}
+
+sub feature {
+    my($typename) = @_;
+    my $type;;
+    for my $t (@{$config->{FeatureTypeList}}) {
+	if ($t->{Layer}) {
+	    $type = $t, last if $t->{Name} eq $typename;
+	} else {
+	    next unless $typename =~ /^$t->{prefix}/;
+	    # restrict now to postgis databases
+	    my @layers = layers($t->{dbi}, $t->{prefix});
+	    for my $l (@layers) {
+		if ($l->{Name} eq $typename) {
+		    $type = $t;
+		    for (keys %$l) {
+			$type->{$_} = $l->{$_};
+		    }
+		}
+	    }
+	    last if $type;
+	}
+    }
+    return $type;
+}
+
+sub layers {
+    my($dbi, $prefix) = @_;
+    my($connect, $user, $pass) = split / /, $dbi;
+    my $dbh = DBI->connect($connect, $user, $pass) or croak('no db');
+    $dbh->{pg_enable_utf8} = 1;
+    my $sth = $dbh->table_info( '', 'public', undef, 'TABLE' );
+    my @tables;
+    while (my $data = $sth->fetchrow_hashref) {
+	my $n = encode(utf8 => $data->{TABLE_NAME});
+	$n =~ s/"//g;
+	push @tables, $n;
+    }
+    my @layers;
+    for my $table (@tables) {
+	my $sth = $dbh->column_info( '', 'public', $table, '' );
+	my %schema;
+	my @l;
+	while (my $data = $sth->fetchrow_hashref) {
+	    my $n = encode(utf8 => $data->{COLUMN_NAME});
+	    $n =~ s/"//g;
+	    $schema{$n} = $data->{TYPE_NAME};
+	    push @l, $n if $data->{TYPE_NAME} eq 'geometry';	    
+	}
+	for my $geom (@l) {
+	    my $sql = "select auth_name,auth_srid ".
+		"from \"$table\" join spatial_ref_sys on srid=srid(\"$geom\") limit 1";
+	    my $sth = $dbh->prepare($sql) or croak($dbh->errstr);
+	    my $rv = $sth->execute or croak($dbh->errstr);
+	    my($name,$srid)  = $sth->fetchrow_array;
+	    push @layers, { Title => "$prefix.$table.$geom", 
+			    Name => "$prefix.$table.$geom", 
+			    DefaultSRS => "$name:$srid",
+			    Table => $table,
+			    GeometryColumn => $geom,
+			    Schema => \%schema };
+	}
+    }
+    return @layers;
 }
 
 sub Filter_Capabilities  {
@@ -230,12 +362,25 @@ sub Filter_Capabilities  {
     xml_element('/ogc:Filter_Capabilities', '<>');
 }
 
+sub header {
+    my %arg = @_;
+    my $type = exists $arg{type} ? $arg{type} : $config->{MIME};
+    if ($arg{length}) {
+	print "Content-type: $type\n";
+	print "Content-length: $arg{length}\n\n";
+    } else {
+	print($q->header( -type => $type, -charset=>'utf-8' ));
+    }
+    STDOUT->flush;
+    $header = 1;
+}
+
 sub serve_document {
-    my($doc, $mime_type) = @_;
+    my($doc, $type) = @_;
     my $length = (stat($doc))[10];
-    print "Content-type: $mime_type\n";
-    print "Content-length: $length\n\n";
+    croak "Can't stat file to serve" unless $length;    
     open(DOC, '<', $doc) or croak "Couldn't open $doc: $!";
+    header(type => $type, length => $length);
     my $data;
     while( sysread(DOC, $data, 10240) ) {
 	print $data;
@@ -268,7 +413,7 @@ sub xml_element {
 	}
     }
     unless ($content) {
-	print("/>\n");
+	print("/>");
     } else {
 	if (ref $content) {
 	    print(">");
@@ -279,11 +424,11 @@ sub xml_element {
 	    } else {
 		xml_element(@$content);
 	    }
-	    print("</$element>\n");
-	} elsif ($content =~ /\>$/) {
-	    print(">\n");
+	    print("</$element>");
+	} elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
+	    print(">");
 	} elsif ($content) {
-	    print(">$content</$element>\n");	
+	    print(">$content</$element>");
 	}
     }
 }
