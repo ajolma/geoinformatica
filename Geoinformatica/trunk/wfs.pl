@@ -93,9 +93,11 @@ sub GetFeature {
 	$layer->SetSpatialFilterRect(@bbox);
     }
     $gml->CopyLayer($layer, $type->{Title});
+    undef $gml;
+    Geo::GDAL::VSIFCloseL($fp);
 
-    my $length = (Geo::GDAL::Stat($vsi))[1];
     $fp = Geo::GDAL::VSIFOpenL($vsi, 'r');
+    my $length = (Geo::GDAL::Stat($vsi))[1];
     header(length => $length);
     while (my $data = Geo::GDAL::VSIFReadL(1024,$fp)) {
 	print $data;
