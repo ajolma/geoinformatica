@@ -13,9 +13,11 @@ use Geo::GDAL;
 #use Geo::Vector;
 use JSON;
 
+binmode STDERR, ":utf8";
 my $config;
 {
     open(my $fh, '<', "/var/www/etc/wfs.conf") or die $!;
+    binmode $fh, ":utf8";
     my @json = <$fh>;
     close $fh;
     $config = decode_json "@json";
@@ -54,9 +56,9 @@ sub page {
     if ($request eq 'GetCapabilities' or $request eq 'capabilities') {
 	GetCapabilities($version);
     } elsif ($request eq 'DescribeFeatureType') {
-	DescribeFeatureType($version, $q->param($names{TYPENAME}));
+	DescribeFeatureType($version, decode utf8=>$q->param($names{TYPENAME}));
     } elsif ($request eq 'GetFeature') {
-	GetFeature($version, $q->param($names{TYPENAME}));
+	GetFeature($version, decode utf8=>$q->param($names{TYPENAME}));
     } else {
 	print 
 	    $q->header(), 
@@ -92,7 +94,20 @@ sub GetFeature {
 	my @bbox = split /,/, $bbox;
 	$layer->SetSpatialFilterRect(@bbox);
     }
-    $gml->CopyLayer($layer, $type->{Title});
+
+    #$gml->CopyLayer($layer, $type->{Title});
+    {
+	my $l = $gml->CreateLayer($type->{Title});
+	my $d = $layer->GetLayerDefn;
+	for (0..$d->GetFieldCount-1) {
+	    my $f = $d->GetFieldDefn($_);
+	    $l->CreateField($f);
+	}
+	$layer->ResetReading;
+	while (my $f = $layer->GetNextFeature) {
+	    $l->CreateFeature($f);
+	}
+    }
     undef $gml;
     Geo::GDAL::VSIFCloseL($fp);
 
@@ -138,7 +153,9 @@ sub DescribeFeatureType {
 	    }
 	    my $t = $type->{Schema}{$col};
 	    $t = "gml:GeometryPropertyType" if $t eq 'geometry';
-	    push @elements, ['element', { name => $col,
+	    my $c = $col;
+	    $c =~ s/ /_/g; # field name adjustments as GDAL does them
+	    push @elements, ['element', { name => $c,
 					  type => $t,
 					  minOccurs => "0",
 					  maxOccurs => "1" } ];
@@ -277,7 +294,7 @@ sub FeatureTypeList  {
 
 sub feature {
     my($typename) = @_;
-    my $type;;
+    my $type;
     for my $t (@{$config->{FeatureTypeList}}) {
 	if ($t->{Layer}) {
 	    $type = $t, last if $t->{Name} eq $typename;
@@ -307,7 +324,7 @@ sub layers {
     my $sth = $dbh->table_info( '', 'public', undef, 'TABLE' );
     my @tables;
     while (my $data = $sth->fetchrow_hashref) {
-	my $n = encode(utf8 => $data->{TABLE_NAME});
+	my $n = $data->{TABLE_NAME};
 	$n =~ s/"//g;
 	push @tables, $n;
     }
@@ -317,7 +334,7 @@ sub layers {
 	my %schema;
 	my @l;
 	while (my $data = $sth->fetchrow_hashref) {
-	    my $n = encode(utf8 => $data->{COLUMN_NAME});
+	    my $n = $data->{COLUMN_NAME};
 	    $n =~ s/"//g;
 	    $schema{$n} = $data->{TYPE_NAME};
 	    push @l, $n if $data->{TYPE_NAME} eq 'geometry';	    
@@ -408,10 +425,10 @@ sub xml_element {
 	$attributes = $x, next if ref($x) eq 'HASH';
 	$content = $x;
     }
-    print("<$element");
+    print(encode utf8=>"<$element");
     if ($attributes) {
 	for my $a (keys %$attributes) {
-	    print(" $a=\"$attributes->{$a}\"");
+	    print(encode utf8=>" $a=\"$attributes->{$a}\"");
 	}
     }
     unless ($content) {
@@ -426,11 +443,11 @@ sub xml_element {
 	    } else {
 		xml_element(@$content);
 	    }
-	    print("</$element>");
+	    print(encode utf8=>"</$element>");
 	} elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
 	    print(">");
 	} elsif ($content) {
-	    print(">$content</$element>");
+	    print(encode utf8=>">$content</$element>");
 	}
     }
 }
