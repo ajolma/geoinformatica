@@ -15,7 +15,6 @@ use Scalar::Util qw(blessed);
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
 use Carp;
-use Encode;
 use File::Spec;
 use Glib qw/TRUE FALSE/;
 use Gtk2;

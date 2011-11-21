@@ -4,7 +4,6 @@ package Geo::Vector::Feature;
 use strict;
 use warnings;
 use Carp;
-use Encode;
 use Geo::GDAL;
 use Geo::OGC::Geometry;
 

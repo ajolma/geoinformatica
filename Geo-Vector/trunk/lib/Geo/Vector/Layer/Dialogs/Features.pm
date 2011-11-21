@@ -4,7 +4,6 @@ package Geo::Vector::Layer::Dialogs::Features;
 use strict;
 use warnings;
 use Carp;
-use Encode;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs::Copy;

@@ -210,7 +210,6 @@ sub ok_new_vector {
     $data_source = $d->get_widget('new_vector_folder_entry')->get_text unless $data_source;
     my $layer_options = $d->get_widget('new_vector_layer_options_entry')->get_text;
     my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
-    my $encoding = $d->get_widget('new_vector_encoding_entry')->get_text;
     my $srs = $d->get_widget('new_vector_srs_entry')->get_text;
     my %schema = ( Fields => [] );
     $self->{schema}->foreach(sub {
@@ -233,7 +232,6 @@ sub ok_new_vector {
 	      create => $name,
 	      layer_options => $layer_options,
 	      geometry_type => $geometry_type,
-	      encoding => $encoding,
 	      srs => $srs,
 	      schema => \%schema
 	    );

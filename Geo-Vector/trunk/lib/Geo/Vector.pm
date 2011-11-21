@@ -29,7 +29,6 @@ use 5.008;
 use strict;
 use warnings;
 use Carp;
-use Encode;
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
 use Scalar::Util qw(blessed);
@@ -164,8 +163,6 @@ sub delete_layer {
 # - \a geometry_type => string The geometry type for the
 # new layer. Default is 'Unknown'.
 # - \a schema, as in method Geo::Vector::schema.
-# - \a encoding => string, the encoding of the attribute values of the
-# features.
 # - \a srs => either a string which defines a spatial reference system
 # (e.g. 'EPSG:XXXX') or a Geo::OSR::SpatialReference object. The srs
 # for the new layer. Default is 'EPSG:4326'.
@@ -235,7 +232,6 @@ sub new {
     $params{update} = 0 unless defined $params{update};
     $params{update} = 1 if $params{create};
     $self->{update} = $params{update};
-    $self->{encoding} = $params{encoding};
     $params{create_options} = [] if (!$params{create_options} and $params{create});
 
     $self->open_data_source($params{driver}, $params{data_source}, $params{update}, $params{create_options});
@@ -359,7 +355,6 @@ sub open_data_source {
 	croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     }
-    $self->{encoding} = "utf8" if $self->{OGR}->{Driver}->GetName eq 'PostgreSQL';
 }
 
 ## @ignore
@@ -397,7 +392,7 @@ sub data_source {
 
 ## @method dump(%parameters)
 #
-# @brief Print the contents of the layer.
+# @brief Print the contents of the layer (consider setting binmode to utf8).
 sub dump {
     my $self = shift;
     my %params = ( filehandle => \*STDOUT );
@@ -420,7 +415,6 @@ sub dump {
 	for my $name ($s->field_names) {
 	    next if $name =~ /^\./;
 	    my $v = $feature->GetField($name);
-	    $v = decode($self->{encoding}, $v) if $v and $self->{encoding};
 	    print $fh "$name: $v\n";
 	}
 	my $geom = $feature->GetGeometryRef();
@@ -641,7 +635,6 @@ sub copy {
 	
 	for my $i (0..$fd->GetFieldCount-1) {
 	    my $v = $f->GetField($i);
-	    $v = decode($self->{encoding}, $v) if $v and $self->{encoding};
 	    $feature->SetField($i, $v) if defined $v;
 	}
 
@@ -769,7 +762,6 @@ sub feature_attribute {
 	}
     } else {
 	my $v = $f->GetField($a);
-	$v = decode($self->{encoding}, $v) if $v and $self->{encoding};
 	return $v;
     }
 }

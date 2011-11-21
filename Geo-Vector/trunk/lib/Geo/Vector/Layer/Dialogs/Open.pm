@@ -4,7 +4,6 @@ package Geo::Vector::Layer::Dialogs::Open;
 use strict;
 use warnings;
 use Carp;
-use Encode;
 use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs qw/:all/;
 use Geo::Vector::Layer::Dialogs qw/:all/;
@@ -192,59 +191,75 @@ sub open_vector {
 
     my($driver, $data_source) = get_data_source($self);
 
+    $driver = get_value_from_combo($dialog, 'filesystem_driver_combobox') unless $driver;    
     my $sql = $dialog->get_widget('open_vector_SQL_entry')->get_text;
-    $sql =~ s/^\s+//;
-    $sql =~ s/\s+$//;
-    $self->{gui}{history}->editing($sql);
-
-    unless ($driver) {
-	my $d = get_value_from_combo($dialog, 'filesystem_driver_combobox');
-	$driver = $d unless $d eq 'auto';
-    }
-    my $layers = get_selected_from_selection($dialog->get_widget('open_vector_layer_treeview')->get_selection);
-
-    if ($sql) {
-	$self->{gui}{history}->enter();
-	$dialog->get_widget('open_vector_SQL_entry')->set_text('');
-    }
-	
     my $wish = $dialog->get_widget('open_vector_layer_name_entry')->get_text;
     my $update = $dialog->get_widget('open_vector_update_checkbutton')->get_active;
     my $hidden = $dialog->get_widget('open_vector_open_hidden_button')->get_active;
+
+    my $layers = get_selected_from_selection($dialog->get_widget('open_vector_layer_treeview')->get_selection);
 	
-    for my $name (keys %$layers) {
-	my $layer;
-	my $encoding = 'utf8' if $data_source =~ /^Pg:/; # not really the case always but...
-	eval {
-	    my %params = ( data_source => $data_source,
-			   open        => $name,
-			   sql         => $sql,
-			   update      => $update,
-			   encoding    => $encoding );
-	    $params{driver} = $driver unless $driver eq 'auto';
-	    $layer = Geo::Vector::Layer->new(%params);
-	};
-	if ($@) {
-	    my $err = $@;
-	    if ($err) {
-		$err =~ s/\n/ /g;
-		$err =~ s/\s+$//;
-		$err =~ s/\s+/ /g;
-		$err =~ s/^\s+$//;
-	    } else {
-		$err = "data_source=$data_source, layer=$name, sql=$sql, update=$update";
-	    }
-	    $self->{gui}->message("Could not open layer: $err");
-	    return;
+    my $ok = 1;
+    my @o = keys %$layers;
+    if ($sql) {
+	$sql =~ s/^\s+//;
+	$sql =~ s/\s+$//;
+	$self->{gui}{history}->editing($sql);
+	$self->{gui}{history}->enter();
+	$dialog->get_widget('open_vector_SQL_entry')->set_text('');
+	$ok = add_layer($self, 
+			data_source => $data_source,
+			sql         => $sql,
+			layer_name  => $wish );
+    } elsif (@o == 1) {
+	$ok = add_layer($self,
+			driver      => $driver,
+			data_source => $data_source,
+			open        => $o[0],
+			update      => $update,
+			layer_name  => $wish );
+    } else {
+	for my $name (@o) {
+	    my $k = add_layer($self, 
+			      driver      => $driver,
+			      data_source => $data_source,
+			      open        => $name,
+			      update      => $update );
+	    $ok = $k if !$k;
 	}
-	$name = $wish if (keys %$layers) == 1;
-	$layer->visible(0) if $hidden;
-	$self->{gui}->add_layer($layer, $name, 1);
     }
+
     $self->{gui}{tree_view}->set_cursor(Gtk2::TreePath->new(0));
     $self->{gui}{overlay}->render;
+    return unless $ok;
     delete $self->{directory_toolbar};
     $dialog->get_widget('open_dialog')->destroy;
+}
+
+##@ignore
+sub add_layer {
+    my($self, %arg) = @_;
+    my $layer_name = delete $arg{layer_name};
+    delete $arg{driver} if exists $arg{driver} and $arg{driver} eq 'auto';
+    my $layer;
+    eval {
+	$layer = Geo::Vector::Layer->new(%arg);
+    };
+    if ($@) {
+	my $err = $@;
+	if ($err) {
+	    $err =~ s/\n/ /g;
+	    $err =~ s/\s+$//;
+	    $err =~ s/\s+/ /g;
+	    $err =~ s/\^ at .*$//;
+	}
+	utf8::decode($err);
+	$self->{gui}->message("Could not open layer: ".$err);
+	return 0;
+    }
+    $layer->visible(0) if $arg{hidden};
+    $self->{gui}->add_layer($layer, $layer_name, 1);
+    return 1;
 }
 
 ##@ignore
