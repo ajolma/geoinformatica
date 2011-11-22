@@ -1,6 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 use strict;
+use IO::Handle;
 use Carp;
 use Encode;
 use DBI;
@@ -10,30 +11,21 @@ use Gtk2::Ex::Geo;
 use Geo::Raster;
 use Geo::Vector;
 use JSON;
+use lib '.';
+require WXS;
+WXS->import(qw/config header error serve_document xml_elements xml_element/);
 
-my $config;
-{
-    open(my $fh, '<', "wms.conf") or die $!;
-    my @json = <$fh>;
-    close $fh;
-    $config = decode_json "@json";
-}
+binmode STDERR, ":utf8";
+binmode STDOUT, ":utf8";
+my $config = config("/var/www/etc/wms.conf");
 my $q = CGI->new;
 my %names = ();
+my $header = 0;
 
 eval {
     page($q);
 };
-if ($@) {
-    #print STDERR "WMS error: $@\n";
-    print $q->header($config->{MIME});
-    print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
-    my($error) = ($@ =~ /(.*?)\.\#/);
-    $error =~ s/ $//;
-    $error = { code => $error } if $error eq 'LayerNotDefined';
-    $error = 'Unspecified error' unless $error;
-    xml_element('ServiceExceptionReport',['ServiceException', $error]);
-}
+error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
 
 sub page {
     my($q) = @_;
@@ -42,7 +34,7 @@ sub page {
 	$names{uc($_)} = $_;
     }
     $q->{resource} = $config->{resource};
-    my $request = $q->param($names{REQUEST});
+    my $request = $q->param($names{REQUEST}) || 'GetCapabilities';
     my $version = $q->param($names{WMTVER});
     $version = $q->param($names{VERSION}) if $q->param($names{VERSION});
     $version = '1.1.1' unless $version;
@@ -50,37 +42,39 @@ sub page {
     my $service = $q->param($names{SERVICE});
     $service = 'WMS'unless $service;
     if ($request eq 'GetCapabilities' or $request eq 'capabilities') {
-	GetCapabilities($q, $version);
+	GetCapabilities($version);
     } elsif ($request eq 'GetMap') {
-	GetMap($q, $version);
+	GetMap($version);
     } elsif ($request eq 'GetFeatureInfo') {
-	GetFeatureInfo($q, $version);
+	GetFeatureInfo($version);
     } else {
-	print 
-	    $q->header(), 
-	    $q->start_html, 
-	    $q->a({-href=>$q->{resource}.'REQUEST=GetCapabilities'}, "GetCapabilities"), 
-	    $q->end_html;
+	croak('Unrecognized request: '.$request);
     }
 }
 
 sub GetCapabilities {
-    my($q, $version) = @_;
-    print($q->header( -type => $config->{MIME} ));
-    print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
-    print("<!DOCTYPE WMT_MS_Capabilities SYSTEM \"http://schemas.opengeospatial.net/wms/1.1.1/capabilities_1_1_1.dtd\"\n");
-    print(" [\n");
-    print(" <!ELEMENT VendorSpecificCapabilities EMPTY>\n");
-    print(" ]>\n\n");
-
-    xml_element('WMT_MS_Capabilities', { version=>$version }, '<>');
-    Service($q, $version);
-    Capability($q, $version);
-    xml_element('/WMT_MS_Capabilities', '<>');
+    my($version) = @_;
+    my($out, $var);
+    open($out,'>', \$var);
+    select $out;
+    print('<?xml version="1.0" encoding="UTF-8"?>',"\n",
+	  '<!DOCTYPE WMT_MS_Capabilities SYSTEM ',
+	  '"http://schemas.opengeospatial.net/wms/1.1.1/capabilities_1_1_1.dtd"',"\n",
+	  " [\n",
+	  " <!ELEMENT VendorSpecificCapabilities EMPTY>\n",
+	  " ]>\n\n");
+    xml_element('WMT_MS_Capabilities', { version=>$version }, '<');
+    Service($version);
+    Capability($version);
+    xml_element('/WMT_MS_Capabilities', '>');
+    select(STDOUT);
+    close $out;
+    $header = header(cgi => $q, length => length($var), type => $config->{MIME});
+    print $var;
 }
 
 sub GetMap {
-    my($q, $version) = @_;
+    my($version) = @_;
 
     my @layers = split(/,/, $q->param($names{LAYERS}));
     my $epsg = $1 if $q->param($names{SRS}) =~ /EPSG:(\d+)/;
@@ -120,14 +114,12 @@ sub GetMap {
     #print STDERR "no pixbuf from @stack\n", return unless $pixbuf;
 
     my $buffer = $pixbuf->save_to_buffer($format eq 'image/png' ? 'png' : 'jpeg');
-    print "Content-type: $format\n";
-    print "Content-length: ",length($buffer),"\n\n";
+    $header = header(cgi => $q, length => length($buffer), type => $format);
     print $buffer;
-
 }
 
 sub GetFeatureInfo {
-    my($q, $version) = @_;
+    my($version) = @_;
     my @layers = split(/,/, $q->param($names{LAYERS}));
     my $epsg = $1 if $q->param($names{SRS}) =~ /EPSG:(\d+)/;
     my @bbox = split(/,/, $q->param($names{BBOX}));
@@ -212,7 +204,7 @@ sub layer {
 }
 
 sub Service {
-    my($q, $version) = @_;
+    my($version) = @_;
     xml_element('Service', '<>');
     xml_element('Name', 'OGC:WMS');
     xml_element('Title', $config->{Title});
@@ -224,17 +216,17 @@ sub Service {
 }
 
 sub Capability {
-    my($q, $version) = @_;
+    my($version) = @_;
     xml_element('Capability', '<>');
-    Request($q, $version);
-    Exception($q, $version);
+    Request($version);
+    Exception($version);
     xml_element('VendorSpecificCapabilities');
-    Layers($q, $version);
+    Layers($version);
     xml_element('/Capability', '<>');
 }
 
 sub Request {
-    my($q, $version) = @_;
+    my($version) = @_;
     xml_element('Request', '<>');
     my %request = ( GetCapabilities => 'application/vnd.ogc.wms_xml',
 		    GetMap => ['image/png', 'image/jpeg'],
@@ -250,22 +242,24 @@ sub Request {
 	}	
 	xml_element( $key, [
 			    @format,
-			    [ 'DCPType', [ [ 'HTTP', [ [ 'Get', [ [ 'OnlineResource',
-								    { 'xmlns:xlink' => 'http://www.w3.org/1999/xlink',
-								      'xlink:type' => 'simple',
-								      'xlink:href' => $q->{resource} } ]]]]]]]] );
+			    [ 'DCPType', 
+			      [ [ 'HTTP', 
+				  [ [ 'Get', 
+				      [ [ 'OnlineResource',
+					  { 'xmlns:xlink' => 'http://www.w3.org/1999/xlink',
+					    'xlink:type' => 'simple',
+					    'xlink:href' => $q->{resource} } ]]]]]]]] );
     }
     xml_element('/Request', '<>');
 }
 
 sub Exception {
-    my($q, $version) = @_;
+    my($version) = @_;
     xml_element('Exception', [ 'Format', 'application/vnd.ogc.se_xml' ] );
 }
 
 sub Layers {
-    my($q, $version) = @_;
-    
+    my($version) = @_;    
     my ($minX, $minY, $maxX, $maxY) = ($config->{minX}, $config->{minY}, $config->{maxX}, $config->{maxY});
     my $epsg = $config->{Layer}->{EPSG};
     my @epsg = split /,/, $epsg;
@@ -276,7 +270,7 @@ sub Layers {
     my ($min_lat,$min_lon) = $proj->inverse($minX, $minY);
     my ($max_lat,$max_lon) = $proj->inverse($maxX, $maxY);
     
-    Layer($q, $version, 
+    Layer($version, 
 	  Name => $config->{Layer}->{Name},
 	  Title => $config->{Layer}->{Title},
 	  SRS => "EPSG:$epsg",
@@ -288,8 +282,8 @@ sub Layers {
 }
 
 sub Layer {
-    my($q, $version, %def) = @_;
-    xml_element('Layer', '<>');
+    my($version, %def) = @_;
+    xml_element('Layer', '<');
     xml_elements( ['Name', $def{Name}], 
 		  ['Title', $def{Title}],
 		  ['SRS', $def{SRS}],
@@ -304,63 +298,5 @@ sub Layer {
 			['Title', $simple->{Title}],
 			['Abstract', $simple->{Abstract}]]);
     }
-    xml_element('/Layer', '<>');
-}
-
-sub serve_document {
-    my($q, $doc, $mime_type) = @_;
-    my $length = (stat($doc))[10];
-    print "Content-type: $mime_type\n";
-    print "Content-length: $length\n\n";
-    open(DOC, '<', $doc) or croak "Couldn't open $doc: $!";
-    my $data;
-    while( sysread(DOC, $data, 10240) ) {
-	print $data;
-    }
-    close DOC;
-}
-
-sub xml_elements {
-    for my $e (@_) {
-	if (ref($e) eq 'ARRAY') {
-	    xml_element(@$e);
-	} else {
-	    xml_element($e->{element}, $e->{attributes}, $e->{content});
-	}
-    }
-}
-
-sub xml_element {
-    my $element = shift;
-    my $attributes;
-    my $content;
-    for my $x (@_) {
-	$attributes = $x, next if ref($x) eq 'HASH';
-	$content = $x;
-    }
-    print("<$element");
-    if ($attributes) {
-	for my $a (keys %$attributes) {
-	    print(" $a=\"$attributes->{$a}\"");
-	}
-    }
-    unless ($content) {
-	print("/>\n");
-    } else {
-	if (ref $content) {
-	    print(">");
-	    if (ref $content->[0]) {
-		for my $e (@$content) {
-		    xml_element(@$e);
-		}
-	    } else {
-		xml_element(@$content);
-	    }
-	    print("</$element>\n");
-	} elsif ($content eq '<>') {
-	    print(">\n");
-	} elsif ($content) {
-	    print(">$content</$element>\n");	
-	}
-    }
+    xml_element('/Layer', '>');
 }

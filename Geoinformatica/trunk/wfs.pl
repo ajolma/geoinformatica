@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 use strict;
 use IO::Handle;
@@ -12,16 +12,13 @@ use Geo::GDAL;
 #use Geo::Raster;
 #use Geo::Vector;
 use JSON;
+use lib '.';
+require WXS;
+WXS->import(qw/config header error serve_document xml_elements xml_element/);
 
 binmode STDERR, ":utf8";
-my $config;
-{
-    open(my $fh, '<', "/var/www/etc/wfs.conf") or die $!;
-    binmode $fh, ":utf8";
-    my @json = <$fh>;
-    close $fh;
-    $config = decode_json "@json";
-}
+binmode STDOUT, ":utf8";
+my $config = WXS::config("/var/www/etc/wfs.conf");
 my $q = CGI->new;
 my $header = 0;
 my %names = ();
@@ -29,16 +26,7 @@ my %names = ();
 eval {
     page();
 };
-if ($@) {
-    select(STDOUT);
-    header() unless $header;
-    print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
-    my($error) = ($@ =~ /(.*?)\.\#/);
-    $error =~ s/ $//;
-    $error = { code => $error } if $error eq 'LayerNotDefined';
-    $error = 'Unspecified error: '.$@ unless $error;
-    xml_element('ServiceExceptionReport',['ServiceException', $error]);
-}
+error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
 
 sub page {
     for ($q->param) {
@@ -46,7 +34,7 @@ sub page {
 	$names{uc($_)} = $_;
     }
     $q->{resource} = $config->{resource};
-    my $request = $q->param($names{REQUEST});
+    my $request = $q->param($names{REQUEST}) || 'capabilities';
     my $version = $q->param($names{WMTVER});
     $version = $q->param($names{VERSION}) if $q->param($names{VERSION});
     $version = '1.1.0' unless $version;
@@ -60,11 +48,7 @@ sub page {
     } elsif ($request eq 'GetFeature') {
 	GetFeature($version, decode utf8=>$q->param($names{TYPENAME}));
     } else {
-	print 
-	    $q->header(), 
-	    $q->start_html, 
-	    $q->a({-href=>$q->{resource}.'REQUEST=GetCapabilities'}, "GetCapabilities"), 
-	    $q->end_html;
+	croak('Unrecognized request: '.$request);
     }
 }
 
@@ -83,10 +67,23 @@ sub GetFeature {
 	$layer = $datasource->Layer($type->{Layer});
     } elsif ($type->{Table}) {	    
 	# need to use specified GeometryColumn and only it
-	my $sql = "select * from \"$type->{Table}\"";
+	my @cols;
+	print STDERR "schema = $type->{Schema}\n";
+	for my $key (keys %{$type->{Schema}}) {
+	    print STDERR "schema = $key, $type->{Schema}{$key}\n";
+	}
+	print STDERR "$type->{Schema}\n";
+	for my $f (keys %{$type->{Schema}}) {
+	    next if $f eq 'ID';
+	    my $n = $f;
+	    $n =~ s/ /_/g;
+	    push @cols, "\"$f\" as \"$n\"";
+	}
+	my $sql = "select ".join(',',@cols)." from \"$type->{Table}\"";
+	print STDERR "$sql\n";
 	$layer = $datasource->ExecuteSQL($sql);
     } else {
-	croak "missing information";
+	croak "missing information in configuration file";
     }
 
     my $bbox = $q->param($names{BBOX});
@@ -95,25 +92,13 @@ sub GetFeature {
 	$layer->SetSpatialFilterRect(@bbox);
     }
 
-    #$gml->CopyLayer($layer, $type->{Title});
-    {
-	my $l = $gml->CreateLayer($type->{Title});
-	my $d = $layer->GetLayerDefn;
-	for (0..$d->GetFieldCount-1) {
-	    my $f = $d->GetFieldDefn($_);
-	    $l->CreateField($f);
-	}
-	$layer->ResetReading;
-	while (my $f = $layer->GetNextFeature) {
-	    $l->CreateFeature($f);
-	}
-    }
+    $gml->CopyLayer($layer, $type->{Title});
     undef $gml;
     Geo::GDAL::VSIFCloseL($fp);
 
     $fp = Geo::GDAL::VSIFOpenL($vsi, 'r');
     my $length = (Geo::GDAL::Stat($vsi))[1];
-    header(length => $length);
+    $header = WXS::header(cgi => $q, length => $length, type => $config->{MIME});
     while (my $data = Geo::GDAL::VSIFReadL(1024,$fp)) {
 	print $data;
     }
@@ -175,7 +160,7 @@ sub DescribeFeatureType {
     xml_element('/schema', '>');
     select(STDOUT);
     close $out;    
-    header(length=>length($var));
+    $header = WXS::header(cgi => $q, length => length($var), type => $config->{MIME});
     print $var;
 }
 
@@ -195,50 +180,50 @@ sub GetCapabilities {
 		  'xmlns:ogc' => "http://www.opengis.net/ogc",
 		  'xmlns' => "http://www.opengis.net/wfs",
 		  'xsi:schemaLocation' => "http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd" }, 
-		'<>');
+		'<');
     ServiceIdentification($version);
     ServiceProvider($version);
     OperationsMetadata($version);
     FeatureTypeList($version);
     Filter_Capabilities($version);
-    xml_element('/wfs:WFS_Capabilities', '<>');
+    xml_element('/wfs:WFS_Capabilities', '>');
     select(STDOUT);
     close $out;    
-    header(length=>length($var));
+    $header = WXS::header(cgi => $q, length => length($var), type => $config->{MIME});
     print $var;
 }
 
 sub ServiceIdentification {
     my($version) = @_;
-    xml_element('ows:ServiceIdentification', '<>');
+    xml_element('ows:ServiceIdentification', '<');
     xml_element('ows:Title', 'WFS Server');
     xml_element('ows:Abstract');
     xml_element('ows:ServiceType', {codeSpace=>"OGC"}, 'OGC WFS');
     xml_element('ows:ServiceTypeVersion', $version);
     xml_element('ows:Fees');
     xml_element('ows:AccessConstraints');
-    xml_element('/ows:ServiceIdentification', '<>');
+    xml_element('/ows:ServiceIdentification', '>');
 }
 
 sub ServiceProvider {
     my($version) = @_;
-    xml_element('ows:ServiceProvider', '<>');
+    xml_element('ows:ServiceProvider', '<');
     xml_element('ows:ProviderName');
     xml_element('ows:ProviderSite', {'xlink:type'=>"simple", 'xlink:href'=>""});
     xml_element('ows:ServiceContact');
-    xml_element('/ows:ServiceProvider', '<>');
+    xml_element('/ows:ServiceProvider', '>');
 }
 
 sub OperationsMetadata  {
     my($version) = @_;
-    xml_element('ows:OperationsMetadata', '<>');
+    xml_element('ows:OperationsMetadata', '<');
     Operation($version, 'GetCapabilities', 
 	      [{service => ['WFS']}, {AcceptVersions => ['1.1.0','1.0.0']}, {AcceptFormats => ['text/xml']}]);
     Operation($version, 'DescribeFeatureType', 
 	      [{outputFormat => ['XMLSCHEMA','text/xml; subtype=gml/2.1.2','text/xml; subtype=gml/3.1.1']}]);
     Operation($version, 'GetFeature',
 	      [{resultType => ['results']}, {outputFormat => ['text/xml; subtype=gml/3.1.1']}]);
-    xml_element('/ows:OperationsMetadata', '<>');
+    xml_element('/ows:OperationsMetadata', '>');
 }
 
 sub Operation {
@@ -263,7 +248,7 @@ sub Operation {
 
 sub FeatureTypeList  {
     my($version) = @_;
-    xml_element('FeatureTypeList', '<>');
+    xml_element('FeatureTypeList', '<');
     xml_element('Operations', ['Operation', 'Query']);
     for my $type (@{$config->{FeatureTypeList}}) {
 	if ($type->{Layer}) {
@@ -289,7 +274,7 @@ sub FeatureTypeList  {
 	    }
 	}
     }
-    xml_element('/FeatureTypeList', '<>');
+    xml_element('/FeatureTypeList', '>');
 }
 
 sub feature {
@@ -358,7 +343,7 @@ sub layers {
 
 sub Filter_Capabilities  {
     my($version) = @_;
-    xml_element('ogc:Filter_Capabilities', '<>');
+    xml_element('ogc:Filter_Capabilities', '<');
     my @operands = ();
     for my $o (qw/Point LineString Polygon Envelope/) {
 	push @operands, ['ogc:GeometryOperand', 'gml:'.$o];
@@ -378,76 +363,5 @@ sub Filter_Capabilities  {
 		[['ogc:LogicalOperators'],
 		 ['ogc:ComparisonOperators', \@operators]]);
     xml_element('ogc:Id_Capabilities', ['ogc:FID']);
-    xml_element('/ogc:Filter_Capabilities', '<>');
-}
-
-sub header {
-    my %arg = @_;
-    my $type = exists $arg{type} ? $arg{type} : $config->{MIME};
-    if ($arg{length}) {
-	print "Content-type: $type\n";
-	print "Content-length: $arg{length}\n\n";
-    } else {
-	print($q->header( -type => $type, -charset=>'utf-8' ));
-    }
-    STDOUT->flush;
-    $header = 1;
-}
-
-sub serve_document {
-    my($doc, $type) = @_;
-    my $length = (stat($doc))[10];
-    croak "Can't stat file to serve" unless $length;    
-    open(DOC, '<', $doc) or croak "Couldn't open $doc: $!";
-    header(type => $type, length => $length);
-    my $data;
-    while( sysread(DOC, $data, 10240) ) {
-	print $data;
-    }
-    close DOC;
-}
-
-sub xml_elements {
-    for my $e (@_) {
-	if (ref($e) eq 'ARRAY') {
-	    xml_element(@$e);
-	} else {
-	    xml_element($e->{element}, $e->{attributes}, $e->{content});
-	}
-    }
-}
-
-sub xml_element {
-    my $element = shift;
-    my $attributes;
-    my $content;
-    for my $x (@_) {
-	$attributes = $x, next if ref($x) eq 'HASH';
-	$content = $x;
-    }
-    print(encode utf8=>"<$element");
-    if ($attributes) {
-	for my $a (keys %$attributes) {
-	    print(encode utf8=>" $a=\"$attributes->{$a}\"");
-	}
-    }
-    unless ($content) {
-	print("/>");
-    } else {
-	if (ref $content) {
-	    print(">");
-	    if (ref $content->[0]) {
-		for my $e (@$content) {
-		    xml_element(@$e);
-		}
-	    } else {
-		xml_element(@$content);
-	    }
-	    print(encode utf8=>"</$element>");
-	} elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
-	    print(">");
-	} elsif ($content) {
-	    print(encode utf8=>">$content</$element>");
-	}
-    }
+    xml_element('/ogc:Filter_Capabilities', '>');
 }
