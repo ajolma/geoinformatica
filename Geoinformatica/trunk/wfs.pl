@@ -14,7 +14,7 @@ use Geo::GDAL;
 use JSON;
 use lib '.';
 require WXS;
-WXS->import(qw/config header error serve_document serve_vsi xml_elements xml_element/);
+WXS->import(':all');
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
@@ -205,33 +205,13 @@ sub ServiceProvider {
 sub OperationsMetadata  {
     my($version) = @_;
     xml_element('ows:OperationsMetadata', '<');
-    Operation($version, 'GetCapabilities', 
+    Operation($config, 'GetCapabilities', 
 	      [{service => ['WFS']}, {AcceptVersions => ['1.1.0','1.0.0']}, {AcceptFormats => ['text/xml']}]);
-    Operation($version, 'DescribeFeatureType', 
+    Operation($config, 'DescribeFeatureType', 
 	      [{outputFormat => ['XMLSCHEMA','text/xml; subtype=gml/2.1.2','text/xml; subtype=gml/3.1.1']}]);
-    Operation($version, 'GetFeature',
+    Operation($config, 'GetFeature',
 	      [{resultType => ['results']}, {outputFormat => ['text/xml; subtype=gml/3.1.1']}]);
     xml_element('/ows:OperationsMetadata', '>');
-}
-
-sub Operation {
-    my($version, $name, $parameters) = @_;
-    my @parameters;
-    for my $p (@$parameters) {
-	for my $n (keys %$p) {
-	    my @values;
-	    for my $v (@{$p->{$n}}) {
-		push @values, ['ows:Value', $v];
-	    }
-	    push @parameters, ['ows:Parameter', {name=>$n}, \@values];
-	}
-    }
-    xml_element('ows:Operation', 
-		{name => $name}, 
-		[['ows:DCP', 
-		  ['ows:HTTP', [['ows:Get', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}],
-				['ows:Post', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}]]
-		  ]],@parameters]);
 }
 
 sub FeatureTypeList  {

@@ -2,11 +2,32 @@ package WXS;
 
 use Carp;
 require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw/config header error serve_document serve_vsi xml_elements xml_element/;
+our @ISA = qw(Exporter);
+our %EXPORT_TAGS = (all  => [ qw/Operation config header error serve_document serve_vsi xml_elements xml_element/ ]);
+our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 
 use Encode;
 use JSON;
+
+sub Operation {
+    my($config, $name, $parameters) = @_;
+    my @parameters;
+    for my $p (@$parameters) {
+	for my $n (keys %$p) {
+	    my @values;
+	    for my $v (@{$p->{$n}}) {
+		push @values, ['ows:Value', $v];
+	    }
+	    push @parameters, ['ows:Parameter', {name=>$n}, \@values];
+	}
+    }
+    xml_element('ows:Operation', 
+		{name => $name}, 
+		[['ows:DCP', 
+		  ['ows:HTTP', [['ows:Get', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}],
+				['ows:Post', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}]]
+		  ]],@parameters]);
+}
 
 sub config {
     my $conf = shift;
