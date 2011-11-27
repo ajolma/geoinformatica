@@ -105,7 +105,7 @@ sub DescribeProcess {
 				       ['Encoding','base64'],
 				       ['Schema','http://foo.bar/gml/3.1.0/polygon.xsd']]]);
     xml_element('Supported', ['Format', [['MimeType','text/xml'],
-					 ['Encoding','base64'],
+					 ['Encoding','UTF-8'],
 					 ['Schema','http://foo.bar/gml/3.1.0/polygon.xsd']]]);
     xml_element('/ComplexData', '>');
     xml_element('/Input', '>');
