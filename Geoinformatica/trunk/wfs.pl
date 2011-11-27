@@ -14,7 +14,7 @@ use Geo::GDAL;
 use JSON;
 use lib '.';
 require WXS;
-WXS->import(qw/config header error serve_document xml_elements xml_element/);
+WXS->import(qw/config header error serve_document serve_vsi xml_elements xml_element/);
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
@@ -57,6 +57,8 @@ sub GetFeature {
     my $type = feature($typename);
     croak "No such feature type: $typename" unless $type;
 
+    my $bbox = $q->param($names{BBOX});
+    
     my $vsi = '/vsimem/wfs.gml';
     my $fp = Geo::GDAL::VSIFOpenL($vsi, 'w');
     my $gml = Geo::OGR::Driver('GML')->Create($vsi);
@@ -66,27 +68,21 @@ sub GetFeature {
     if ($type->{Layer}) {
 	$layer = $datasource->Layer($type->{Layer});
     } elsif ($type->{Table}) {	    
-	# need to use specified GeometryColumn and only it
 	my @cols;
-	print STDERR "schema = $type->{Schema}\n";
-	for my $key (keys %{$type->{Schema}}) {
-	    print STDERR "schema = $key, $type->{Schema}{$key}\n";
-	}
-	print STDERR "$type->{Schema}\n";
 	for my $f (keys %{$type->{Schema}}) {
 	    next if $f eq 'ID';
 	    my $n = $f;
 	    $n =~ s/ /_/g;
+	    # need to use specified GeometryColumn and only it
+	    next if $type->{Schema}{$f} eq 'geometry' and not ($f eq $type->{GeometryColumn});
 	    push @cols, "\"$f\" as \"$n\"";
 	}
 	my $sql = "select ".join(',',@cols)." from \"$type->{Table}\"";
-	print STDERR "$sql\n";
 	$layer = $datasource->ExecuteSQL($sql);
     } else {
 	croak "missing information in configuration file";
     }
 
-    my $bbox = $q->param($names{BBOX});
     if ($bbox) {
 	my @bbox = split /,/, $bbox;
 	$layer->SetSpatialFilterRect(@bbox);
@@ -95,15 +91,7 @@ sub GetFeature {
     $gml->CopyLayer($layer, $type->{Title});
     undef $gml;
     Geo::GDAL::VSIFCloseL($fp);
-
-    $fp = Geo::GDAL::VSIFOpenL($vsi, 'r');
-    my $length = (Geo::GDAL::Stat($vsi))[1];
-    $header = WXS::header(cgi => $q, length => $length, type => $config->{MIME});
-    while (my $data = Geo::GDAL::VSIFReadL(1024,$fp)) {
-	print $data;
-    }
-    Geo::GDAL::VSIFCloseL($fp);
-    Geo::GDAL::Unlink($vsi);
+    serve_vsi(vsi => $vsi, cgi => $q, type => $config->{MIME}, utf8 => 1);
 }
 
 sub DescribeFeatureType {

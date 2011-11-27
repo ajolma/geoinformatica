@@ -3,7 +3,7 @@ package WXS;
 use Carp;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw/config header error serve_document xml_elements xml_element/;
+@EXPORT_OK = qw/config header error serve_document serve_vsi xml_elements xml_element/;
 
 use Encode;
 use JSON;
@@ -55,6 +55,19 @@ sub serve_document {
 	print $data;
     }
     close DOC;
+}
+
+sub serve_vsi {
+    my %arg = @_;
+    my $fp = Geo::GDAL::VSIFOpenL($arg{vsi}, 'r');
+    my $length = (Geo::GDAL::Stat($arg{vsi}))[1];
+    header(length => $length, %arg);
+    while (my $data = Geo::GDAL::VSIFReadL(1024,$fp)) {
+	utf8::decode($data) if $arg{utf8};
+	print $data;
+    }
+    Geo::GDAL::VSIFCloseL($fp);
+    Geo::GDAL::Unlink($arg{vsi});
 }
 
 sub xml_elements {
