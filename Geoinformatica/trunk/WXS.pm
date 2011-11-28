@@ -83,11 +83,13 @@ sub serve_vsi {
     my $fp = Geo::GDAL::VSIFOpenL($arg{vsi}, 'r');
     my $length = (Geo::GDAL::Stat($arg{vsi}))[1];
     header(length => $length, %arg);
-    while (my $data = Geo::GDAL::VSIFReadL(1024,$fp)) {
-	utf8::decode($data) if $arg{utf8};
-	print $data;
+    my $data;
+    while (my $chunk = Geo::GDAL::VSIFReadL(1024,$fp)) {
+	$data .= $chunk;
     }
     Geo::GDAL::VSIFCloseL($fp);
+    utf8::decode($data);
+    print $data;
     Geo::GDAL::Unlink($arg{vsi});
 }
 

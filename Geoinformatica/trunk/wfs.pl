@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 
+use utf8;
 use strict;
 use IO::Handle;
 use Carp;
@@ -86,11 +87,12 @@ sub GetFeature {
     if ($bbox) {
 	my @bbox = split /,/, $bbox;
 	$layer->SetSpatialFilterRect(@bbox);
-    }
+    }    
 
     $gml->CopyLayer($layer, $type->{Title});
     undef $gml;
     Geo::GDAL::VSIFCloseL($fp);
+
     serve_vsi(vsi => $vsi, cgi => $q, type => $config->{MIME}, utf8 => 1);
 }
 
