@@ -119,7 +119,7 @@ sub xml_element {
 	    print(" $a=\"$attributes->{$a}\"");
 	}
     }
-    unless ($content) {
+    unless (defined $content) {
 	print("/>");
     } else {
 	if (ref $content) {
@@ -135,7 +135,7 @@ sub xml_element {
 	    print("</$element>");
 	} elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
 	    print(">");
-	} elsif ($content) {
+	} else {
 	    #print(encode utf8=>">$content</$element>");
 	    print(">$content</$element>");
 	}

@@ -21,6 +21,7 @@ my $config = config("/var/www/etc/wms.conf");
 my $q = CGI->new;
 my %names = ();
 my $header = 0;
+my $debug = 0;
 
 eval {
     page($q);
@@ -83,7 +84,8 @@ sub GetMap {
     my($h) = $q->param($names{HEIGHT}) =~ /(\d+)/;
     my $format = $q->param($names{FORMAT});
     my $transparent = $q->param($names{TRANSPARENT}) eq 'TRUE';
-    my @bgcolor = $q->param($names{BGCOLOR}) =~ /^0x(\w\w)(\w\w)(\w\w)/;
+    my $bgcolor = $q->param($names{BGCOLOR}) || '0xffffff';
+    my @bgcolor = $bgcolor =~ /^0x(\w\w)(\w\w)(\w\w)/;
     $_ = hex($_) for (@bgcolor);
     push @bgcolor, $transparent ? 0 : 255;
     my $time = $q->param($names{TIME});
@@ -114,8 +116,11 @@ sub GetMap {
     #print STDERR "no pixbuf from @stack\n", return unless $pixbuf;
 
     my $buffer = $pixbuf->save_to_buffer($format eq 'image/png' ? 'png' : 'jpeg');
+    print STDERR "length => ",length($buffer),", type => $format\n" if $debug;
     $header = header(cgi => $q, length => length($buffer), type => $format);
+    binmode STDOUT, ":raw";
     print $buffer;
+    STDOUT->flush;
 }
 
 sub GetFeatureInfo {
@@ -165,23 +170,31 @@ sub layer {
     my @layers = @{$config->{Layer}->{Layers}};
     for my $l (@layers) {
 	next unless $layer eq $l->{Name};
-	#print STDERR "creating layer $l->{Name}\n";
+	print STDERR "creating layer $l->{Name}\n" if $debug;
 	if ($l->{Filename}) {
 	    my $r = Geo::Raster::Layer->new(filename => $l->{Filename});
 	    $r->band()->SetNoDataValue($l->{NoDataValue}) if exists $l->{NoDataValue};
-	    #print STDERR "created layer $r\n";
+	    print STDERR "created layer $r\n" if $debug;
 	    return $r;
 	}
 	if ($l->{Datasource}) {
 	    my %param = (datasource => $l->{Datasource});
 	    if (exists $l->{SQL}) {
-		$l->{SQL} =~ s/\$time/$time/;
-		$l->{SQL} =~ s/\$pixel_scale/$pixel_scale/g;
+
+		# a hack to allow a direct SQL injection
+		my $SQL = decode utf8=>$q->param('SQL');
+		if ($SQL) {
+		    print STDERR "wms: $SQL\n" if $debug;
+		    $l->{SQL} = $SQL;
+		} else {
+		    $l->{SQL} =~ s/\$time/$time/;
+		    $l->{SQL} =~ s/\$pixel_scale/$pixel_scale/g;
+		}
 		if ($epsg != $l->{EPSG}) {
 		    $l->{SQL} =~ s/the_geom/st_transform(the_geom,$epsg)/;
 		}
 		$param{SQL} = $l->{SQL};
-		#print STDERR "SQL: $param{SQL}\n";
+		print STDERR "SQL: $param{SQL}\n" if $debug;
 	    }
 	    $param{single_color} = 
 		[$l->{single_color}->{R},$l->{single_color}->{G},$l->{single_color}->{B},$l->{single_color}->{A}]
@@ -190,11 +203,11 @@ sub layer {
 		$param{$_} = $l->{$_} if exists $l->{$_};
 	    }
 	    my $v = Geo::Vector::Layer->new(%param);
-	    #print STDERR "created layer $v ".$v->feature_count()."\n";
+	    print STDERR "created layer $v ".$v->feature_count()."\n" if $debug;
 	    for (sort keys %$v) {
 		#print STDERR "$_ -> $v->{$_}\n";
 	    }
-	    for (qw/SYMBOL_SIZE LABEL_FIELD INCREMENTAL_LABELS/) {
+	    for (qw/SYMBOL_SIZE LABEL_FIELD LABEL_PLACEMENT INCREMENTAL_LABELS/) {
 		$v->{$_} = $l->{$_} if exists $l->{$_};
 	    }
 	    return $v;
