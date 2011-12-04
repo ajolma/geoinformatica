@@ -83,7 +83,7 @@ sub GetMap {
     my($w) = $q->param($names{WIDTH}) =~ /(\d+)/;
     my($h) = $q->param($names{HEIGHT}) =~ /(\d+)/;
     my $format = $q->param($names{FORMAT});
-    my $transparent = $q->param($names{TRANSPARENT}) eq 'TRUE';
+    my $transparent = uc($q->param($names{TRANSPARENT})) eq 'TRUE';
     my $bgcolor = $q->param($names{BGCOLOR}) || '0xffffff';
     my @bgcolor = $bgcolor =~ /^0x(\w\w)(\w\w)(\w\w)/;
     $_ = hex($_) for (@bgcolor);
