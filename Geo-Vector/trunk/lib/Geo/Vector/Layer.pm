@@ -449,7 +449,7 @@ sub render_labels {
 	    }
 	    
 	    my $str = Geo::Vector::feature_attribute($self, $f, $labeling->{field});
-	    next unless defined $str or $str eq '';
+	    next unless $str;
 	    
 	    my $layout = Gtk2::Pango::Cairo::create_layout($cr);
 	    $layout->set_font_description($font_desc);    
