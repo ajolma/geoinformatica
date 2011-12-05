@@ -14,6 +14,7 @@ use JSON;
 use lib '.';
 require WXS;
 WXS->import(qw/config header error serve_document xml_elements xml_element/);
+#require Scale; will come later from Gtk2::Ex::Geo
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
@@ -199,9 +200,6 @@ sub layer {
 	    $param{single_color} = 
 		[$l->{single_color}->{R},$l->{single_color}->{G},$l->{single_color}->{B},$l->{single_color}->{A}]
 		if exists $l->{single_color};
-	    for (qw/encoding/) {
-		$param{$_} = $l->{$_} if exists $l->{$_};
-	    }
 	    my $v = Geo::Vector::Layer->new(%param);
 	    print STDERR "created layer $v ".$v->feature_count()."\n" if $debug;
 	    for (sort keys %$v) {
@@ -211,6 +209,9 @@ sub layer {
 		$v->{$_} = $l->{$_} if exists $l->{$_};
 	    }
 	    return $v;
+	}
+	if ($l->{Special}) {
+	    return Scale->new(dx => $l->{dx}, dy => $l->{dy}) if $l->{Special} eq 'Scale';
 	}
     }
     0;
