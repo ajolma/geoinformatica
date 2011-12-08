@@ -374,7 +374,7 @@ sub render {
 sub render_labels {
     my($self, $cr, $overlay, $viewport) = @_;
     my $labeling = $self->labeling;
-    return unless $labeling->{field} ne 'No Labels';
+    return if $labeling->{field} eq 'No Labels';
 
     my @label_color = @{$labeling->{color}};
     $label_color[3] = int($self->{ALPHA}*$label_color[3]/255);
@@ -405,12 +405,18 @@ sub render_labels {
     for (@color) {
 	$_ /= 255;
     }
+
+    my $viewport_geom = Geo::OGR::Geometry->create(
+	GeometryType => 'Polygon',
+	Points => [[[@$viewport[0..1]],[@$viewport[0,3]],[@$viewport[2..3]],[@$viewport[2,1]],[@$viewport[0..1]]]]);
     
     while ($f = $self->{OGR}->{Layer}->GetNextFeature()) {
 	
-	my $geometry = $f->GetGeometryRef();
+	my $str = Geo::Vector::feature_attribute($self, $f, $labeling->{field});
+	next unless defined $str;
+	my $geometry = $f->GetGeometryRef()->Intersection($viewport_geom);
 	
-	my @placements = label_placement($geometry, $overlay->{pixel_size}, @$viewport, $f->GetFID);
+	my @placements = label_placement($geometry, $overlay->{pixel_size}, @$viewport);
 	
 	for (@placements) {
 	    
@@ -447,10 +453,7 @@ sub render_labels {
 		$cr->set_source_rgba(@color);
 		$cr->stroke();
 	    }
-	    
-	    my $str = Geo::Vector::feature_attribute($self, $f, $labeling->{field});
-	    next unless $str;
-	    
+
 	    my $layout = Gtk2::Pango::Cairo::create_layout($cr);
 	    $layout->set_font_description($font_desc);    
 	    $layout->set_text($str);
@@ -605,13 +608,11 @@ sub piece_of_line_string {
 
 ##@ignore
 sub label_placement {
-    my($geom, $scale, $minx, $miny, $maxx, $maxy, $fid) = @_;
+    my($geom, $scale, $minx, $miny, $maxx, $maxy) = @_;
     my $type = $geom->GetGeometryType & ~0x80000000;
-    if ($type == $Geo::OGR::wkbPoint) {
-	return ([0, $geom->GetX(0), $geom->GetY(0)]);
-    } 
-    elsif ($type == $Geo::OGR::wkbLineString) {
-
+    return ([0, $geom->GetX(0), $geom->GetY(0)]) if $type == $Geo::OGR::wkbPoint;
+    if ($type == $Geo::OGR::wkbLineString) {
+	# geom is now clipped to the viewport, -> min/max is not needed
 	my $i0 = 0;
 	my $i1;
 	my $len;
@@ -649,8 +650,7 @@ sub label_placement {
 	    last if $i1 >= $geom->GetPointCount;
 	    $i0 = $i1;
 	}
-	return @placements;
-	
+	return @placements;	
     } 
     elsif ($type == $Geo::OGR::wkbPolygon) {
 	my $c = $geom->Centroid;
