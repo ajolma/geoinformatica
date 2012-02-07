@@ -149,7 +149,7 @@ sub DescribeFeatureType {
 		    ['complexContent', 
 		     ['extension', { base => 'gml:AbstractFeatureType' }, 
 		      ['sequence', \@elements
-		      ]]]);
+		       ]]]);
 	xml_element('element', { name => $type->{Name}, 
 				 type => 'ogr:'.$typename.'Type',
 				 substitutionGroup => 'gml:_Feature' } );
@@ -186,7 +186,7 @@ sub GetCapabilities {
     Filter_Capabilities($version);
     xml_element('/wfs:WFS_Capabilities', '>');
     select(STDOUT);
-    close $out;    
+    close $out;
     $header = WXS::header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
     print $var;
 }
@@ -231,26 +231,26 @@ sub FeatureTypeList  {
     for my $type (@{$config->{FeatureTypeList}}) {
 	if ($type->{Layer}) {
 	    xml_element('FeatureType', [
-			    ['Name', $type->{Name}],
-			    ['Title', $type->{Title}],
-			    ['Abstract', $type->{Title}],
-			    ['DefaultSRS', $type->{DefaultSRS}],
-			    ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']],
-			    ['ows:WGS84BoundingBox', {dimensions=>2}, 
-			     [['ows:LowerCorner',$type->{LowerCorner}],
-			      ['ows:UpperCorner',$type->{UpperCorner}]]]
-			]);
+					['Name', $type->{Name}],
+					['Title', $type->{Title}],
+					['Abstract', $type->{Abstract}],
+					['DefaultSRS', $type->{DefaultSRS}],
+					['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']],
+					['ows:WGS84BoundingBox', {dimensions=>2}, 
+					 [['ows:LowerCorner',$type->{LowerCorner}],
+					  ['ows:UpperCorner',$type->{UpperCorner}]]]
+					]);
 	} else {
 	    # restrict now to postgis databases
 	    my @layers = layers($type->{dbi}, $type->{prefix});
 	    for my $l (@layers) {
 		xml_element('FeatureType', [
-				['Name', $l->{Name}],
-				['Title', $l->{Title}],
-				['Abstract', $l->{Title}],
-				['DefaultSRS', $l->{DefaultSRS}],
-				['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
-			    ]);
+					    ['Name', $l->{Name}],
+					    ['Title', $l->{Title}],
+					    ['Abstract', $l->{Abstract}],
+					    ['DefaultSRS', $l->{DefaultSRS}],
+					    ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
+					    ]);
 	    }
 	}
     }
@@ -289,7 +289,7 @@ sub layers {
     my $sth = $dbh->table_info( '', 'public', undef, 'TABLE' );
     my @tables;
     while (my $data = $sth->fetchrow_hashref) {
-	my $n = $data->{TABLE_NAME};
+	my $n = decode("utf8", $data->{TABLE_NAME});
 	$n =~ s/"//g;
 	push @tables, $n;
     }
@@ -299,7 +299,7 @@ sub layers {
 	my %schema;
 	my @l;
 	while (my $data = $sth->fetchrow_hashref) {
-	    my $n = $data->{COLUMN_NAME};
+	    my $n = decode("utf8", $data->{COLUMN_NAME});
 	    $n =~ s/"//g;
 	    $schema{$n} = $data->{TYPE_NAME};
 	    push @l, $n if $data->{TYPE_NAME} eq 'geometry';	    
@@ -312,8 +312,9 @@ sub layers {
 	    my($name,$srid)  = $sth->fetchrow_array;
 	    $name = 'unknown' unless defined $name;
 	    $srid = -1 unless defined $srid;
-	    push @layers, { Title => "$prefix.$table.$geom", 
-			    Name => "$prefix.$table.$geom", 
+	    push @layers, { Title => "$table($geom)",
+			    Name => "$prefix.$table.$geom",
+			    Abstract => "Layer from $table in $prefix using column $geom",
 			    DefaultSRS => "$name:$srid",
 			    Table => $table,
 			    GeometryColumn => $geom,
