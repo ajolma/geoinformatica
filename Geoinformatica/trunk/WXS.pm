@@ -80,15 +80,15 @@ sub serve_document {
 
 sub serve_vsi {
     my %arg = @_;
-    my $fp = Geo::GDAL::VSIFOpenL($arg{vsi}, 'r');
-    my $length = (Geo::GDAL::Stat($arg{vsi}))[1];
-    header(length => $length, %arg);
+    my $fp = Geo::GDAL::VSIFOpenL($arg{vsi}, 'r');    
     my $data;
     while (my $chunk = Geo::GDAL::VSIFReadL(1024,$fp)) {
 	$data .= $chunk;
     }
     Geo::GDAL::VSIFCloseL($fp);
-    utf8::decode($data);
+    $data = decode('utf8', $data);
+    $length = length(Encode::encode_utf8($data));
+    header(length => $length, %arg);
     print $data;
     Geo::GDAL::Unlink($arg{vsi});
 }

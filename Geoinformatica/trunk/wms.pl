@@ -71,7 +71,7 @@ sub GetCapabilities {
     xml_element('/WMT_MS_Capabilities', '>');
     select(STDOUT);
     close $out;
-    $header = header(cgi => $q, length => length($var), type => $config->{MIME});
+    $header = header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
     print $var;
 }
 

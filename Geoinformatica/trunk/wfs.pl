@@ -98,8 +98,13 @@ sub GetFeature {
 
 sub DescribeFeatureType {
     my($version, $typename) = @_;
-    my $type = feature($typename);
-    croak "No such feature type: $typename" unless $type;
+
+    my @typenames = split(/\s*,\s*/, $typename);
+    for my $name (@typenames) {
+	my $type = feature($name);
+	croak "No such feature type: $typename" unless $type;
+    }
+
     my($out, $var);
     open($out,'>', \$var);
     select $out;
@@ -116,41 +121,44 @@ sub DescribeFeatureType {
 		'<');
     xml_element('import', { namespace => "http://www.opengis.net/gml",
 			    schemaLocation => "http://schemas.opengis.net/gml/2.1.2/feature.xsd" } );
-    xml_element('element', { name => $type->{Name}, 
-			     type => 'ogr:'.$typename.'Type',
-			     substitutionGroup => 'gml:_Feature' } );
 
-    my @elements;
-    if ($type->{Schema}) {
-	for my $col (keys %{$type->{Schema}}) {
-	    if ($type->{Schema}{$col} eq 'geometry' and not($typename =~ /$col$/)) {
-		next;
+    for my $name (@typenames) {
+	my $type = feature($name);
+	my @elements;
+	if ($type->{Schema}) {
+	    for my $col (keys %{$type->{Schema}}) {
+		if ($type->{Schema}{$col} eq 'geometry' and not($typename =~ /$col$/)) {
+		    next;
+		}
+		my $t = $type->{Schema}{$col};
+		$t = "gml:GeometryPropertyType" if $t eq 'geometry';
+		my $c = $col;
+		$c =~ s/ /_/g; # field name adjustments as GDAL does them
+		push @elements, ['element', { name => $c,
+					      type => $t,
+					      minOccurs => "0",
+					      maxOccurs => "1" } ];
 	    }
-	    my $t = $type->{Schema}{$col};
-	    $t = "gml:GeometryPropertyType" if $t eq 'geometry';
-	    my $c = $col;
-	    $c =~ s/ /_/g; # field name adjustments as GDAL does them
-	    push @elements, ['element', { name => $c,
-					  type => $t,
-					  minOccurs => "0",
-					  maxOccurs => "1" } ];
+	} else {
+	    @elements = (['element', { name => "ogrGeometry",
+				       type => "gml:GeometryPropertyType",
+				       minOccurs => "0",
+				       maxOccurs => "1" } ]);
 	}
-    } else {
-	@elements = (['element', { name => "ogrGeometry",
-				   type => "gml:GeometryPropertyType",
-				   minOccurs => "0",
-				   maxOccurs => "1" } ]);
+	xml_element('complexType', {name => $typename.'Type'},
+		    ['complexContent', 
+		     ['extension', { base => 'gml:AbstractFeatureType' }, 
+		      ['sequence', \@elements
+		      ]]]);
+	xml_element('element', { name => $type->{Name}, 
+				 type => 'ogr:'.$typename.'Type',
+				 substitutionGroup => 'gml:_Feature' } );
     }
-    
-    xml_element('complexType', {name => $typename.'Type'},
-		['complexContent', 
-		 ['extension', { base => 'gml:AbstractFeatureType' }, 
-		  ['sequence', \@elements
-		  ]]]);
+
     xml_element('/schema', '>');
     select(STDOUT);
     close $out;    
-    $header = WXS::header(cgi => $q, length => length($var), type => $config->{MIME});
+    $header = WXS::header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
     print $var;
 }
 
@@ -179,7 +187,7 @@ sub GetCapabilities {
     xml_element('/wfs:WFS_Capabilities', '>');
     select(STDOUT);
     close $out;    
-    $header = WXS::header(cgi => $q, length => length($var), type => $config->{MIME});
+    $header = WXS::header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
     print $var;
 }
 
@@ -225,6 +233,7 @@ sub FeatureTypeList  {
 	    xml_element('FeatureType', [
 			    ['Name', $type->{Name}],
 			    ['Title', $type->{Title}],
+			    ['Abstract', $type->{Title}],
 			    ['DefaultSRS', $type->{DefaultSRS}],
 			    ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']],
 			    ['ows:WGS84BoundingBox', {dimensions=>2}, 
@@ -238,6 +247,7 @@ sub FeatureTypeList  {
 		xml_element('FeatureType', [
 				['Name', $l->{Name}],
 				['Title', $l->{Title}],
+				['Abstract', $l->{Title}],
 				['DefaultSRS', $l->{DefaultSRS}],
 				['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
 			    ]);
@@ -300,6 +310,8 @@ sub layers {
 	    my $sth = $dbh->prepare($sql) or croak($dbh->errstr);
 	    my $rv = $sth->execute or croak($dbh->errstr);
 	    my($name,$srid)  = $sth->fetchrow_array;
+	    $name = 'unknown' unless defined $name;
+	    $srid = -1 unless defined $srid;
 	    push @layers, { Title => "$prefix.$table.$geom", 
 			    Name => "$prefix.$table.$geom", 
 			    DefaultSRS => "$name:$srid",
