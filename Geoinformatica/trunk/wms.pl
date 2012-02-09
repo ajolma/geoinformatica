@@ -18,13 +18,14 @@ WXS->import(qw/config header error serve_document xml_elements xml_element/);
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
-my $config = config("/var/www/etc/wms.conf");
+my $config;
 my $q = CGI->new;
 my %names = ();
 my $header = 0;
 my $debug = 0;
 
 eval {
+    $config = config();
     page($q);
 };
 error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
@@ -200,6 +201,9 @@ sub layer {
 	    $param{single_color} = 
 		[$l->{single_color}->{R},$l->{single_color}->{G},$l->{single_color}->{B},$l->{single_color}->{A}]
 		if exists $l->{single_color};
+	    $param{border_color} = 
+		[$l->{border_color}->{R},$l->{border_color}->{G},$l->{border_color}->{B}]
+		if exists $l->{border_color};
 	    my $v = Geo::Vector::Layer->new(%param);
 	    print STDERR "created layer $v ".$v->feature_count()."\n" if $debug;
 	    for (sort keys %$v) {

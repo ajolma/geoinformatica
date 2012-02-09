@@ -19,12 +19,13 @@ WXS->import(':all');
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
-my $config = WXS::config("/var/www/etc/wfs.conf");
+my $config;
 my $q = CGI->new;
 my $header = 0;
 my %names = ();
 
 eval {
+    $config = WXS::config();
     page();
 };
 error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;

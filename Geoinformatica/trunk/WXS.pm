@@ -31,7 +31,17 @@ sub Operation {
 
 sub config {
     my $conf = shift;
-    open(my $fh, '<', $conf) or die $!;
+    unless ($conf) {
+	if (open(my $fh, '<', '/var/www/etc/dispatch')) {
+	    while (<$fh>) {
+		chomp;
+		@l = split /\t/;
+		$conf = $l[1] if $l[0] and $l[0] eq $0;
+	    }
+	}
+    }
+    croak "no configuration file.#" unless $conf;
+    open(my $fh, '<', $conf) or croak "can't open configuration file.#";
     binmode $fh, ":utf8";
     my @json = <$fh>;
     close $fh;
