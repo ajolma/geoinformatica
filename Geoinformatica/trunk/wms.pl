@@ -14,7 +14,7 @@ use JSON;
 use lib '.';
 require WXS;
 WXS->import(qw/config header error serve_document xml_elements xml_element/);
-#require Scale; will come later from Gtk2::Ex::Geo
+require Scale;
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
