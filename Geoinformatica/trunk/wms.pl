@@ -21,6 +21,7 @@ binmode STDOUT, ":utf8";
 my $config;
 my $q = CGI->new;
 my %names = ();
+my %params;
 my $header = 0;
 my $debug = 0;
 
@@ -44,6 +45,29 @@ sub page {
     croak "Not a supported WMS version.#" unless $version eq $config->{version};
     my $service = $q->param($names{SERVICE});
     $service = 'WMS'unless $service;
+
+    $params{EPSG} = $1 if $q->param($names{SRS}) and $q->param($names{SRS}) =~ /EPSG:(\d+)/;
+    $params{LAYERS} = [split(/,/, $q->param($names{LAYERS}))] if $q->param($names{LAYERS});
+    $params{BBOX} = [split(/,/, $q->param($names{BBOX}))] if $q->param($names{BBOX});
+    ($params{WIDTH}) = $q->param($names{WIDTH}) =~ /(\d+)/ if $q->param($names{WIDTH});
+    ($params{HEIGHT}) = $q->param($names{HEIGHT}) =~ /(\d+)/ if $q->param($names{HEIGHT});
+    $params{WIDTH} = 512 unless $params{WIDTH};
+    $params{HEIGHT} = 512 unless $params{HEIGHT};
+    $params{WIDTH} = $config->{max_width} if $params{WIDTH} > $config->{max_width};
+    $params{HEIGHT} = $config->{max_height} if $params{HEIGHT} > $config->{max_height};
+    $params{pixel_size} = ($params{BBOX}[2] - $params{BBOX}[0])/$params{WIDTH} if $params{BBOX}; # assuming square pixels
+    $params{FORMAT} = $q->param($names{FORMAT});
+    $params{TRANSPARENT} = uc($q->param($names{TRANSPARENT})) eq 'TRUE';
+    $params{POLYGON} = $q->param($names{POLYGON});
+    ($params{X}) = $q->param($names{X}) =~ /(\d+)/ if $q->param($names{X});
+    ($params{Y}) = $q->param($names{Y}) =~ /(\d+)/ if $q->param($names{Y});
+    my $bgcolor = $q->param($names{BGCOLOR}) || '0xffffff';
+    $params{BGCOLOR} = [];
+    @{$params{BGCOLOR}} = $bgcolor =~ /^0x(\w\w)(\w\w)(\w\w)/;
+    $_ = hex($_) for (@{$params{BGCOLOR}});
+    push @{$params{BGCOLOR}}, $params{TRANSPARENT} ? 0 : 255;
+    $params{TIME} = $q->param($names{TIME});
+
     if ($request eq 'GetCapabilities' or $request eq 'capabilities') {
 	GetCapabilities($version);
     } elsif ($request eq 'GetMap') {
@@ -79,47 +103,26 @@ sub GetCapabilities {
 sub GetMap {
     my($version) = @_;
 
-    my @layers = split(/,/, $q->param($names{LAYERS}));
-    my $epsg = $1 if $q->param($names{SRS}) =~ /EPSG:(\d+)/;
-    my @bbox = split(/,/, $q->param($names{BBOX}));
-    my($w) = $q->param($names{WIDTH}) =~ /(\d+)/;
-    my($h) = $q->param($names{HEIGHT}) =~ /(\d+)/;
-    my $format = $q->param($names{FORMAT});
-    my $transparent = uc($q->param($names{TRANSPARENT})) eq 'TRUE';
-    my $bgcolor = $q->param($names{BGCOLOR}) || '0xffffff';
-    my @bgcolor = $bgcolor =~ /^0x(\w\w)(\w\w)(\w\w)/;
-    $_ = hex($_) for (@bgcolor);
-    push @bgcolor, $transparent ? 0 : 255;
-    my $time = $q->param($names{TIME});
-
-    $w = 512 unless $w;
-    $h = 512 unless $h;
-
-    # jotain rajaa:
-    $w = $config->{max_width} if $w > $config->{max_width};
-    $h = $config->{max_height} if $h > $config->{max_height};
-
-    my $pixel_size = ($bbox[2] - $bbox[0])/$w; # assuming square pixels
-    my ($minX, $minY, $maxX, $maxY) = @bbox;
-    @bbox = ($minX, $minY, $minX+$w*$pixel_size, $minY+$h*$pixel_size);
+    my($minX, $minY, $maxX, $maxY) = @{$params{BBOX}};
 
     my @stack = ();
-    for my $layer (@layers) {
-	my $l = layer($layer, $epsg, $time, $pixel_size);
+    for my $layer (@{$params{LAYERS}}) {
+	my $l = layer($layer);
 	push @stack, $l if $l;
     }
     croak "LayerNotDefined .#" unless @stack;
 
-    #print STDERR "create: @stack ".($minX)." ".($minY+$h*$pixel_size)." $w $h (@bgcolor)\n";
-
     my $pixbuf = Gtk2::Ex::Geo::Canvas->new(
-	[@stack], $minX, $minY+$h*$pixel_size, $pixel_size, 0, 0, $w, $h, @bgcolor );
+	[@stack], 
+	$minX, 
+	$minY+$params{HEIGHT}*$params{pixel_size},
+	$params{pixel_size}, 0, 0, $params{WIDTH}, $params{HEIGHT}, @{$params{BGCOLOR}} );
 
     #print STDERR "no pixbuf from @stack\n", return unless $pixbuf;
 
-    my $buffer = $pixbuf->save_to_buffer($format eq 'image/png' ? 'png' : 'jpeg');
-    print STDERR "length => ",length($buffer),", type => $format\n" if $debug;
-    $header = header(cgi => $q, length => length($buffer), type => $format);
+    my $buffer = $pixbuf->save_to_buffer($params{FORMAT} eq 'image/png' ? 'png' : 'jpeg');
+    print STDERR "length => ",length($buffer),", type => $params{FORMAT}\n" if $debug;
+    $header = header(cgi => $q, length => length($buffer), type => $params{FORMAT});
     binmode STDOUT, ":raw";
     print $buffer;
     STDOUT->flush;
@@ -127,25 +130,13 @@ sub GetMap {
 
 sub GetFeatureInfo {
     my($version) = @_;
-    my @layers = split(/,/, $q->param($names{LAYERS}));
-    my $epsg = $1 if $q->param($names{SRS}) =~ /EPSG:(\d+)/;
-    my @bbox = split(/,/, $q->param($names{BBOX}));
-    my($w) = $q->param($names{WIDTH}) =~ /(\d+)/;
-    my($h) = $q->param($names{HEIGHT}) =~ /(\d+)/;
-    my $format = $q->param($names{FORMAT});
-    my $transparent = $q->param($names{TRANSPARENT});
 
-    my $polygon = $q->param($names{POLYGON});
+    my($minX, $minY, $maxX, $maxY) = @{$params{BBOX}};
+    my $x = $minX + $params{pixel_size} * $params{X};
+    my $y = $maxY - $params{pixel_size} * $params{Y};
 
-    my($X) = $q->param($names{X}) =~ /(\d+)/;
-    my($Y) = $q->param($names{Y}) =~ /(\d+)/;
-    my ($minX, $minY, $maxX, $maxY) = @bbox;
-    my $pixel_size = ($maxX - $minX)/$w; # assuming square pixels
-    my $x = $minX + $pixel_size * $X;
-    my $y = $maxY - $pixel_size * $Y;
-
-    my $wkt = $polygon ? $polygon : "POINT($x $y)";
-    my $within = $polygon ? 
+    my $wkt = $params{POLYGON} ? $params{POLYGON} : "POINT($x $y)";
+    my $within = $params{POLYGON} ? 
 	"within(the_geom, st_transform(st_geomfromewkt('SRID=3035;$wkt'),2393))" :
 	"within(st_transform(st_geomfromewkt('SRID=3035;$wkt'),2393), the_geom)";
     my $sql = "select computed from \"1km\" where $within";
@@ -167,8 +158,8 @@ sub GetFeatureInfo {
 }
 
 sub layer {
-    my($layer, $epsg, $time, $pixel_scale) = @_;
-    #print STDERR "create layer $layer $epsg\n";
+    my($layer) = @_;
+    #print STDERR "create layer $layer\n";
     my @layers = @{$config->{Layer}->{Layers}};
     for my $l (@layers) {
 	next unless $layer eq $l->{Name};
@@ -189,12 +180,15 @@ sub layer {
 		    print STDERR "wms: $SQL\n" if $debug;
 		    $l->{SQL} = $SQL;
 		} else {
-		    $l->{SQL} =~ s/\$time/$time/;
-		    $l->{SQL} =~ s/\$pixel_scale/$pixel_scale/g;
+		    $l->{SQL} =~ s/\$time/$params{TIME}/;
+		    $l->{SQL} =~ s/\$pixel_scale/$params{pixel_size}/g;
 		}
-		if ($epsg != $l->{EPSG}) {
-		    $l->{SQL} =~ s/the_geom/st_transform(the_geom,$epsg)/;
+		# the_geom should be replaced with a column name coming from the config
+		if ($params{EPSG} != $l->{EPSG}) {
+		    $l->{SQL} =~ s/the_geom/st_transform(the_geom,$params{EPSG})/;
 		}
+		$l->{SQL} .= " where the_geom && SetSRID(".
+		    "'BOX3D($params{BBOX}[0] $params{BBOX}[1],$params{BBOX}[2] $params{BBOX}[3])'::box3d,$params{EPSG})";
 		$param{SQL} = $l->{SQL};
 		print STDERR "SQL: $param{SQL}\n" if $debug;
 	    }

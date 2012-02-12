@@ -246,11 +246,11 @@ sub FeatureTypeList  {
 	    my @layers = layers($type->{dbi}, $type->{prefix});
 	    for my $l (@layers) {
 		xml_element('FeatureType', [
-					    ['Name', $l->{Name}],
+				            ['Name', $l->{Name}],
 					    ['Title', $l->{Title}],
 					    ['Abstract', $l->{Abstract}],
 					    ['DefaultSRS', $l->{DefaultSRS}],
-					    ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
+				            ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
 					    ]);
 	    }
 	}
