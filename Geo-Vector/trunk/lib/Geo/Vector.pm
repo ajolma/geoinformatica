@@ -649,15 +649,15 @@ sub copy {
 sub transform_points {
     my($points, $ct) = @_;
     unless (ref($points->[0])) { # single point [x,y,z]
-	@$points = $ct->TransformPoint(@$points);
-	return;
-    }
-    $ct->TransformPoints($points), return 
-	unless ref($points->[0]->[0]); # list of points [[x,y,z],[x,y,z],...]
+	@$points = $ct->TransformPoint($#$points < 2 ? @$points[0..1] : @$points[0..2]);
+    } else {
+	$ct->TransformPoints($points), return 
+	    unless ref($points->[0]->[0]); # list of points [[x,y,z],[x,y,z],...]
 
-    # list of list of points [[[x,y,z],[x,y,z],...],...]
-    for my $p (@$points) {
-	transform_points($p, $ct);
+	# list of list of points [[[x,y,z],[x,y,z],...],...]
+	for my $p (@$points) {
+	    transform_points($p, $ct);
+	}
     }
 }
 
