@@ -1,12 +1,12 @@
 MAKE = make
 PREFIX=/usr/local
 
-PERL_MODULES = Graphics-ColorUtils-0.17 Geo-OGC-Geometry-0.04 Gtk2-Ex-Geo-0.62 Gtk2-Ex-Geo-Graph-0.01 Geo-Raster-0.62 Geo-Vector-0.52
-LIBRAL = libral-0.63
+PERL_MODULES = Geo-OGC-Geometry Gtk2-Ex-Geo Gtk2-Ex-Geo-Graph Geo-Raster Geo-Vector
+LIBRAL = libral
 MODULES = ${LIBRAL} ${PERL_MODULES}
 
 all:
-	cd ${LIBRAL}; ./configure --prefix=${PREFIX}; make; cd ..
+	cd ${LIBRAL}; sh autogen; ./configure --prefix=${PREFIX}; make; cd ..
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
 		perl Makefile.PL INSTALL_BASE=${PREFIX}; \
