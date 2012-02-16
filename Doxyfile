@@ -81,19 +81,18 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = . ../../Geo-Vector \
-			../../Gtk2-Ex-Geo \
-			../../IPC-Gnuplot \
-			../../Geo-OGC-Geometry
+INPUT                  = Geo-Raster \
+		       	 Geo-Vector \
+			 Gtk2-Ex-Geo-Graph \
+			 Gtk2-Ex-Geo \
+			 IPC-Gnuplot \
+			 Geo-OGC-Geometry
 FILE_PATTERNS          = *.pm \
 			*.dox
 RECURSIVE              = YES
 EXCLUDE                = 
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = */branches/* \
-		       */spike/* \
-		       */.svn* \
-		       *blib* \
+EXCLUDE_PATTERNS       = *blib* \
 		       *Files.pm \
 		       *tags* \
 		       */t/*
