@@ -62,7 +62,8 @@ Documentation can be built with command
 
 doxygen
 
-in subdirs libal and Geo-Raster.
+in the root directory (for Geoinformatica docs) and in the
+subdirectory libal (for libral docs).
 
 OPERATING
 
