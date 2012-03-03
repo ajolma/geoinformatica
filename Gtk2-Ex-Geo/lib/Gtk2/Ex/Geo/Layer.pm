@@ -1018,7 +1018,7 @@ sub render_selection {
 #
 # @brief A request to render the data of the layer onto a surface.
 #
-# @param[in,out] pb A (XS wrapped) pointer to agtk2_ex_geo_pixbuf.
+# @param[in,out] pb A (XS wrapped) pointer to a gtk2_ex_geo_pixbuf.
 # @param[in,out] cr A Cairo::Context object for the surface to draw on.
 # @param[in] overlay A Gtk2::Ex::Geo::Overlay object which manages the surface.
 # @param[in] viewport A reference to the bounding box [min_x, min_y,
@@ -1050,6 +1050,7 @@ sub render {
 # further boot up.
 sub bootstrap_dialog {
     my($self, $gui, $dialog, $title, $connects, $combos) = @_;
+    $self = {} unless $self;
     my $boot = 0;
     my $widget;
     unless ($self->{$dialog}) {

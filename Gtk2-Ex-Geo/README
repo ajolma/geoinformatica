@@ -6,8 +6,7 @@ geospatial applications. This package contains the modules:
 
 Gtk2::Ex::Geo
 
-The main module to 'use'. Contains also function 'simple', which
-constructs a simple geospatial desktop application.
+The main module to 'use'.
 
 Gtk2::Ex::Geo::Canvas
 
@@ -71,19 +70,75 @@ To install this module type the following:
 
 USAGE
 
-# these two geospatial layer classes are not included:
-use Geo::Raster;
-use Geo::Vector;
-
+use Glib qw/TRUE FALSE/;
 use Gtk2::Ex::Geo;
+# use any geospatial layer classes you wish
 use Gtk2 '-init';
 
-Glib->install_exception_handler(\&Gtk2::Ex::Geo::exception_handler);
+# it is a good thing to catch errors and show them to user
+# instead of dying
+Glib->install_exception_handler(\&my_exception_handler);
 
-my($window, $gis) = Gtk2::Ex::Geo::simple
-	(classes => [qw/Gtk2::Ex::Geo::Layer Geo::Vector::Layer Geo::Raster::Layer/]);
+# the main window for your application
+my $window = Gtk2::Window->new;
+
+# the geospatial application (layer container + controller)
+my $app = Gtk2::Ex::Geo::Glue->new(%params);  
+
+# extend the controller with the geospatial layer capabilities
+for (qw/your_geospatial_layer_classes/) {
+    $app->register_class($_);
+}
+
+# visible layer list
+my $list = Gtk2::ScrolledWindow->new();
+$list->set_policy("never", "automatic");
+$list->add($app->{tree_view});
+    
+# a panel with the layer list and the map
+my $hbox = Gtk2::HPaned->new();
+$hbox->add1($list);
+$hbox->add2($app->{overlay});
+    
+# stack all GUI elements vertically
+my $vbox = Gtk2::VBox->new(FALSE, 0);
+$vbox->pack_start($app->{toolbar}, FALSE, FALSE, 0);
+$vbox->pack_start($hbox, TRUE, TRUE, 0);
+$vbox->pack_start($app->{entry}, FALSE, FALSE, 0);
+$vbox->pack_start($app->{statusbar}, FALSE, FALSE, 0);
+
+$window->add($vbox);
+$window->signal_connect("destroy", \&my_destroy);
+$window->set_default_size(900,600);
+$window->set_position('center');
+$window->show_all;
 
 Gtk2->main;
+
+sub my_exception_handler {
+    my $msg = shift;
+    my $dialog = Gtk2::MessageDialog->new(undef,
+					  'destroy-with-parent',
+					  'info',
+					  'close',
+					  $msg);
+    $dialog->signal_connect(response => sub {
+    				     	my($dialog) = @_;
+    					$dialog->destroy;
+					});
+    $dialog->show_all;
+    return 1;
+}
+
+# break circular references before exiting
+sub my_destroy {
+    $app->close();
+    $window->destroy;
+    undef $app;
+    undef $window;
+    Gtk2->main_quit;
+    exit(0);
+}
 
 DEPENDENCIES
 
@@ -96,7 +151,7 @@ Geo::OGC::Geometry
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2008 Ari Jolma
+Copyright (C) 2008-2012 Ari Jolma
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of Artistic License 2.0 (included as LICENCE).

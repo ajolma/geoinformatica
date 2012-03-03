@@ -14,7 +14,7 @@ MinGW and msys).
 You should have development versions of GDAL (and Geo::GDAL, the GDAL
 Perl bindings), Perl and GTK+. In addition you will need pkg-config.
 
-In addition the following packages are required or good to have
+In addition the following packages are required or good to have:
 
 Curl
 Gnuplot
@@ -23,7 +23,7 @@ PostgreSQL+PostGIS
 Proj4
 Xerces
 
-From CPAN
+From CPAN:
 
 Bit-Vector
 Cairo
@@ -48,7 +48,7 @@ Configuration of libral is done with commands
 sh autogen.sh
 ./configure
 
-and Perl modules as usual
+and Perl modules as usual with
 
 perl Makefile.PL
 

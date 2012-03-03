@@ -76,7 +76,7 @@ Glib->install_exception_handler(\&exception_handler);
 
 Gtk2->main;
 
-sub setup{
+sub setup {
     my %params = @_;
 
     croak "usage: simple(classes => [qw/...layer classes.../])" unless $params{classes};
