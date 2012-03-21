@@ -757,14 +757,16 @@ sub show_schema {
 			  0, 'Features',
 			  1, $vector->feature_count()
 			  );
-    
-    my @world = $vector->world;
-    @world = ('undef','undef','undef','undef') unless @world;
-    $iter = $property_model->insert (undef, 0);
-    $property_model->set ($iter,
-			  0, 'Bounding box',
-			  1, "minX = $world[0], minY = $world[1], maxX = $world[2], maxY = $world[3]"
-			  );
+
+    eval {
+	my @world = $vector->world;
+	@world = ('undef','undef','undef','undef') unless @world;
+	$iter = $property_model->insert (undef, 0);
+	$property_model->set ($iter,
+			      0, 'Bounding box',
+			      1, "minX = $world[0], minY = $world[1], maxX = $world[2], maxY = $world[3]"
+	    );
+    };
     
     $iter = $property_model->insert (undef, 0);
     my $srs = $vector->srs(format=>'Wkt');

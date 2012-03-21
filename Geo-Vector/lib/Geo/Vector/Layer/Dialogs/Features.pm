@@ -224,6 +224,7 @@ sub add_features {
 	    if ($name =~ /^\./ or $f->IsFieldSet($name)) {
 		push @rec, $rec++;
 		my $v = Geo::Vector::feature_attribute($self, $f, $name);
+		$v = "@$v" if ref($v) eq 'ARRAY';
 		push @rec, $v;
 	    } else {
 		push @rec, $rec++;
