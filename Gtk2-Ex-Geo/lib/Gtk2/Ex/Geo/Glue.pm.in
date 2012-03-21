@@ -103,8 +103,10 @@ sub create_layer_tree_view {
 	$view->append_column($col);
 	$view->set_expander_column($col) if $i == 1;
     }
-    $view->set_show_expanders(FALSE);
+
     # could set to true and put all info to expanded view
+    # requires more recent GTK than what's in RHEL
+    #$view->set_show_expanders(FALSE);
 
     my $selection = $view->get_selection;
     $selection->set_mode('multiple');
