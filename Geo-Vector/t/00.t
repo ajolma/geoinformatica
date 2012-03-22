@@ -57,7 +57,7 @@ ok($range[1] == 13, 'value_range with filter_rect');
 undef $test;
 
 eval {
-    $test = new Geo::Vector(data_source=>'./t', open=>'test');
+    $test = new Geo::Vector(data_source=>'./t/data', open=>'test');
 };
 ok($@ eq '', "open a layer: $@");
 

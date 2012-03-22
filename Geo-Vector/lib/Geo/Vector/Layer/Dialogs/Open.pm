@@ -764,13 +764,30 @@ sub show_schema {
 	$iter = $property_model->insert (undef, 0);
 	$property_model->set ($iter,
 			      0, 'Bounding box',
-			      1, "minX = $world[0], minY = $world[1], maxX = $world[2], maxY = $world[3]"
+			      1, "minX = $world[0]\nminY = $world[1]\nmaxX = $world[2]\nmaxY = $world[3]"
 	    );
     };
     
     $iter = $property_model->insert (undef, 0);
     my $srs = $vector->srs(format=>'Wkt');
     $srs = 'undefined' unless $srs;
+    # pretty print $srs
+    {
+	my @a = split(/(\w+\[)/, $srs);
+	my @b;
+	for (my $i = 1; $i < @a; $i+=2) {
+	    push @b, $a[$i].$a[$i+1];
+	}
+	$srs = '';
+	my $in = 0;
+	for (@b) {
+	    $srs .= "   " for (1..$in);
+	    $srs .= "$_\n";
+	    $in++ while ($_ =~ m/\[/g);
+	    $in-- while ($_ =~ m/\]/g);
+	}
+	$srs =~ s/\n$//;
+    }
     $property_model->set ($iter,
 			  0, 'SpatialRef',
 			  1, $srs
