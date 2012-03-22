@@ -61,8 +61,10 @@ sub GetFeature {
 
     my $bbox = $q->param($names{BBOX});
     
-    my $vsi = '/vsimem/wfs.gml';
-    my $fp = Geo::GDAL::VSIFOpenL($vsi, 'w');
+    # feed the copy directly to stdout
+    print($q->header(-type => $config->{MIME}, -charset=>'utf-8'));
+    STDOUT->flush;
+    my $vsi = '/vsistdout/';
     my $gml = Geo::OGR::Driver('GML')->Create($vsi);
 
     my $datasource = Geo::OGR::Open($type->{Datasource});
@@ -91,10 +93,6 @@ sub GetFeature {
     }    
 
     $gml->CopyLayer($layer, $type->{Title});
-    undef $gml;
-    Geo::GDAL::VSIFCloseL($fp);
-
-    serve_vsi(vsi => $vsi, cgi => $q, type => $config->{MIME}, utf8 => 1);
 }
 
 sub DescribeFeatureType {
