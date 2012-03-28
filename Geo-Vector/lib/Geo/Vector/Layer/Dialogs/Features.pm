@@ -25,6 +25,7 @@ sub open {
 	     features_limit_checkbutton => [toggled => \&fill_features_table, [$self, $gui]],	     
 	     features_vertices_button => [clicked => \&vertices_of_selected_features, [$self, $gui]],
 	     make_selection_button => [clicked => \&make_selection, [$self, $gui]],
+	     print_features_button => [clicked => \&print_features, [$self, $gui]],
 	     copy_selected_button => [clicked => \&copy_selected_features, [$self, $gui]],
 	     zoom_to_button => [clicked => \&zoom_to_selected_features, [$self, $gui]],
 	     close_features_button => [clicked => \&close_features_dialog, [$self, $gui]],	    
@@ -384,6 +385,34 @@ sub make_selection {
 	}
     }
     $gui->{overlay}->update_image;
+}
+
+##@ignore
+sub print_features {
+    my($self, $gui) = @{$_[1]};
+    my $dialog = $self->{features_dialog};
+    my $treeview = $dialog->get_widget('feature_treeview');
+    my $features = get_selected_from_selection($treeview->get_selection);
+    $features = $self->features(with_id=>[sort {$a<=>$b} keys %$features]);
+    my $schema = $self->schema;
+    my @fnames = map($_->{Name}, $schema->fields);
+    my @tmp = @fnames;
+    s/^\.// for @tmp;
+    print join("\t", @tmp),"\n";
+    for my $f (@$features) {
+	my @rec;
+	for my $name (@fnames) {
+	    if ($name =~ /^\./ or $f->IsFieldSet($name)) {
+		my $v = Geo::Vector::feature_attribute($self, $f, $name);
+		$v = "@$v" if ref($v) eq 'ARRAY';
+		$v = 'NULL' unless defined $v;
+		push @rec, $v;
+	    } else {
+		push @rec, 'NULL';
+	    }
+	}
+	print join("\t", @rec),"\n";
+    }
 }
 
 ##@ignore
