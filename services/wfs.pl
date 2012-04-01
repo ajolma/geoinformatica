@@ -60,6 +60,8 @@ sub GetFeature {
     croak "No such feature type: $typename" unless $type;
 
     my $bbox = $q->param($names{BBOX});
+    my $maxfeatures = $q->param($names{MAXFEATURES});
+    ($maxfeatures) = $maxfeatures =~ /(\d+)/ if defined $maxfeatures;
     
     # feed the copy directly to stdout
     print($q->header(-type => $config->{MIME}, -charset=>'utf-8'));
@@ -92,7 +94,22 @@ sub GetFeature {
 	$layer->SetSpatialFilterRect(@bbox);
     }    
 
-    $gml->CopyLayer($layer, $type->{Title});
+    #$gml->CopyLayer($layer, $type->{Title});
+
+    my $l2 = $gml->CreateLayer($type->{Title});
+    my $d = $layer->GetLayerDefn;
+    for (0..$d->GetFieldCount-1) {
+	my $f = $d->GetFieldDefn($_);
+	$l2->CreateField($f);
+    }
+    my $i = 0;
+    $layer->ResetReading;
+    while (my $f = $layer->GetNextFeature) {
+	$l2->CreateFeature($f);
+	$i++;
+	last if defined $maxfeatures and $i >= $maxfeatures;
+    }
+
 }
 
 sub DescribeFeatureType {
@@ -288,7 +305,8 @@ sub layers {
     my $sth = $dbh->table_info( '', 'public', undef, 'TABLE' );
     my @tables;
     while (my $data = $sth->fetchrow_hashref) {
-	my $n = decode("utf8", $data->{TABLE_NAME});
+	#my $n = decode("utf8", $data->{TABLE_NAME});
+	my $n = $data->{TABLE_NAME};
 	$n =~ s/"//g;
 	push @tables, $n;
     }
@@ -298,7 +316,8 @@ sub layers {
 	my %schema;
 	my @l;
 	while (my $data = $sth->fetchrow_hashref) {
-	    my $n = decode("utf8", $data->{COLUMN_NAME});
+	    #my $n = decode("utf8", $data->{COLUMN_NAME});
+	    my $n = $data->{COLUMN_NAME};
 	    $n =~ s/"//g;
 	    $schema{$n} = $data->{TYPE_NAME};
 	    push @l, $n if $data->{TYPE_NAME} eq 'geometry';	    
