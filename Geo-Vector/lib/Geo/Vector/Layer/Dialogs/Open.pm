@@ -41,16 +41,16 @@ sub open {
 	    my @t = $driver->DataSourceTemplate;
 	    next if $t[0] eq '<filename>';
 	    my $n = $driver->FormatName;
-	    $model->set ($model->append, 0, $n);
+	    $model->set($model->append, 0, $n);
 	}
 	$combo->set_active(0);
 	
 	$combo = $dialog->get_widget('filesystem_driver_combobox');
 	$model = $combo->get_model();
-	$model->set ($model->append, 0, 'auto');
+	$model->set($model->append, 0, 'auto');
 	for my $driver (Geo::OGR::Drivers()) {
 	    my $n = $driver->GetName;
-	    $model->set ($model->append, 0, $n);
+	    $model->set($model->append, 0, $n);
 	}
 	$combo->set_active(0);
 	
@@ -152,7 +152,7 @@ sub fill_named_data_sources_combobox {
     my $i = 1;
     my $active = 0;
     for my $data_source (sort keys %{$self->{gui}{resources}{datasources}}) {
-	$model->set ($model->append, 0, $data_source);
+	$model->set($model->append, 0, $data_source);
 	$active = $i if $data_source eq $default;
 	$i++;
     }
@@ -317,7 +317,7 @@ sub fill_directory_treeview {
 	@{$self->{dir_list}} = reverse @{$self->{dir_list}} if $self->{dir_list};
 	for my $i (0..$#{$self->{dir_list}}) {
 	    my $iter = $model->insert (undef, 0);
-	    $model->set ($iter, 0, $self->{dir_list}->[$i] );
+	    $model->set($iter, 0, $self->{dir_list}->[$i] );
 	}
 	$self->{open_dialog}->get_widget('open_vector_directory_treeview')->set_cursor(Gtk2::TreePath->new(0));
 	@{$self->{dir_list}} = reverse @{$self->{dir_list}} if $self->{dir_list};
@@ -449,7 +449,6 @@ sub fill_layer_treeview {
     my $layers;
     eval {
 	$driver = '' unless $driver;
-	#print STDERR "layers: $driver, $data_source\n";
         $layers = Geo::Vector::layers($driver, $data_source);
     };
     my @layers = sort {$b cmp $a} keys %$layers;
@@ -461,18 +460,17 @@ sub fill_layer_treeview {
 		$u = Glib->filename_to_unicode($name);
 	    };
 	    next if $@;
-            $model->set ($iter, 0, $u, 1, $layers->{$name});
+            $model->set($iter, 0, $u, 1, $layers->{$name});
         }
         $treeview->set_cursor(Gtk2::TreePath->new(0));
-    } 
-    else {
+    } else {
         my $iter = $model->insert (undef, 0);
-        $model->set ($iter, 0, "no layers found", 1, "");
+        $model->set($iter, 0, "no layers found", 1, "");
         unless ($@ =~ /no reason given/) {
             $@ =~ s/RuntimeError\s+//;
             $@ =~ s/FATAL:\s+(\w)/uc($1)/e;
             $@ =~ s/\s+at\s+\w+\.\w+\s+line\s+\d+\s+//;
-            $model->set ($model->append(undef), 0, $@, 1, "");
+            $model->set($model->append(undef), 0, $@, 1, "");
         }
     }
     on_layer_treeview_cursor_changed($treeview, $self);
@@ -753,7 +751,7 @@ sub show_schema {
     $self->{open_dialog}->get_widget('open_vector_schema_label')->set_label($label);
     
     my $iter = $property_model->insert (undef, 0);
-    $property_model->set ($iter,
+    $property_model->set($iter,
 			  0, 'Features',
 			  1, $vector->feature_count()
 			  );
@@ -762,7 +760,7 @@ sub show_schema {
 	my @world = $vector->world;
 	@world = ('undef','undef','undef','undef') unless @world;
 	$iter = $property_model->insert (undef, 0);
-	$property_model->set ($iter,
+	$property_model->set($iter,
 			      0, 'Bounding box',
 			      1, "minX = $world[0]\nminY = $world[1]\nmaxX = $world[2]\nmaxY = $world[3]"
 	    );
@@ -788,7 +786,7 @@ sub show_schema {
 	}
 	$srs =~ s/\n$//;
     }
-    $property_model->set ($iter,
+    $property_model->set($iter,
 			  0, 'SpatialRef',
 			  1, $srs
 			  );
@@ -796,7 +794,7 @@ sub show_schema {
     my $schema = $vector->schema();
     for my $field (@{$schema->{Fields}}) {
 	my $iter = $schema_model->insert(undef, 0);
-	$schema_model->set ($iter,
+	$schema_model->set($iter,
 			    0, $field->{Name},
 			    1, $field->{Type}
 	    );

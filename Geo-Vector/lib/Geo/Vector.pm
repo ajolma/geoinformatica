@@ -141,7 +141,7 @@ sub layers {
     $driver = '' unless $driver;
     $data_source = '' unless $data_source;
     my $self = {};
-    open_data_source($self, driver => $driver, data_source=>$data_source, update => 0);
+    open_data_source($self, driver => $driver, data_source => $data_source, update => 0);
     return unless $self->{OGR}->{DataSource};
     my %layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
@@ -370,50 +370,37 @@ sub open_data_source {
     my %params = @_;
     my($driver, $data_source, $update, $create_options) = 
 	($params{driver}, $params{data_source}, $params{update}, $params{create_options});
-    if ($driver or !$data_source) {
-	if (!$data_source) {
-	    $data_source = '';
-	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver('Memory');
-	    $create_options = {};
-	} elsif (blessed($driver) and $driver->isa('Geo::OGR::Driver')) {
+    if ($driver) {
+	if (blessed($driver) and $driver->isa('Geo::OGR::Driver')) {
 	    $self->{OGR}->{Driver} = $driver;
 	} else {
 	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
 	}
-	croak "Can't find driver: $driver" unless $self->{OGR}->{Driver};
-	
-	unless ($create_options) {
-
+	if ($create_options) {
+	    croak "driver $self->{OGR}->{Driver}->{name} does not have the capability to create data sources"
+		unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
+	    eval {
+		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
+	    };
+	    $@ = "no reason given" unless $@;
+	    croak "can't open nor create data source '$data_source': $@" unless $self->{OGR}->{DataSource};
+	} else {
 	    eval {
 		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->Open($data_source, $update);
 	    };
-	    unless ($self->{OGR}->{DataSource}) {
-		$@ = "no reason given" unless $@;
-		croak "Can't open data source '$data_source': $@"
-	    }
-	    
-	} else {
-
-	    croak "$self->{OGR}->{Driver}->{name}: ".
-		"Driver does not have the capability to create data sources"
-		unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
-	    
-	    eval {
-		$self->{OGR}->{DataSource} = 
-		    $self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
-	    };
 	    $@ = "no reason given" unless $@;
-	    croak "Can't open nor create data source '$data_source': $@" unless $self->{OGR}->{DataSource};
-
+	    croak "can't open data source '$data_source': $@" unless $self->{OGR}->{DataSource};
 	}
-
-    } else {
+    } elsif ($data_source) {
 	eval {
 	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $update);
 	};
         $@ = "no reason given" unless $@;
-	croak "Can't open data source: $@" unless $self->{OGR}->{DataSource};
+	croak "can't open data source '$data_source': $@" unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
+    } else {
+	$self->{OGR}->{Driver} = Geo::OGR::GetDriver('Memory');
+	$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource();
     }
 }
 

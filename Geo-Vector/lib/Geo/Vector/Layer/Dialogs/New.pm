@@ -45,8 +45,8 @@ sub open {
 	for my $driver (Geo::OGR::Drivers()) {
 	    my $n = $driver->FormatName;
 	    $n = $driver->GetName unless $n;
+	    $self->{drivers}{$n} = $driver;
 	    next if $n eq 'Memory';
-	    $self->{drivers}{$n} = $driver->GetName;
 	    $model->set ($model->append, 0, $n);
 	}
 	$combo->set_active(0);
@@ -58,6 +58,9 @@ sub open {
 	    $model->set ($model->append, 0, $data_source);
 	}
 	$combo->set_active(0);
+
+	my $entry = $self->{new_dialog}->get_widget('new_vector_folder_entry');
+	$entry->set_text('.');
 
 	# replace with @Geo::OGR::Geometry::GEOMETRY_TYPES
 	# when new GDAL comes out
