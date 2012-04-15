@@ -41,10 +41,11 @@ sub open {
 
 	$combo = $dialog->get_widget('new_vector_driver_combobox');
 	$model = $combo->get_model();
-	$model->set ($model->append, 0, '');
+	$model->set ($model->append, 0, 'Memory');
 	for my $driver (Geo::OGR::Drivers()) {
 	    my $n = $driver->FormatName;
 	    $n = $driver->GetName unless $n;
+	    next if $n eq 'Memory';
 	    $self->{drivers}{$n} = $driver->GetName;
 	    $model->set ($model->append, 0, $n);
 	}

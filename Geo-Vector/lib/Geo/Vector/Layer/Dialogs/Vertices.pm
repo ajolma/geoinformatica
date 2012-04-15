@@ -4,6 +4,7 @@ package Geo::Vector::Layer::Dialogs::Vertices;
 use strict;
 use warnings;
 use Carp;
+use Scalar::Util 'blessed';
 use Geo::Vector::Layer::Dialogs qw/:all/;
 
 ## @ignore
@@ -140,7 +141,7 @@ sub get_geom_data {
 	my @rect = $gui->{overlay}->get_viewport; #_of_selection;
 	#@rect = $gui->{overlay}->get_viewport unless @rect;
 	my $s = $gui->{overlay}->{selection};
-	my $a = ($s and $s->isa('Geo::OGR::Geometry'));
+	my $a = (blessed($s) and $s->isa('Geo::OGR::Geometry'));
 	my @d;
 	for my $i (0..$geom->GetPointCount-1) {	    
 	    my $x = $geom->GetX($i);

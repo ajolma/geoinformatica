@@ -29,14 +29,11 @@ documentation of Geo::Raster</a> is written in doxygen format.
 
 use strict;
 use warnings;
+use Carp;
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.gdal.org/faq.html nr. 12
-use Carp;
-use FileHandle;
-use Config; # For byteorder
-use Scalar::Util qw(blessed);
 use XSLoader;
-use File::Basename;
+use Scalar::Util 'blessed';
 use Geo::GDAL;
 
 # subsystems:
@@ -51,13 +48,11 @@ use Geo::Raster::TerrainAnalysis;
 use Geo::Raster::Geostatistics;
 use Geo::Raster::Layer; # requires Gtk2 and Gtk2::Ex::Geo
 
-use vars qw($BYTE_ORDER $INTEGER_GRID $REAL_GRID);
-
 our $VERSION = '0.63';
 
 # TODO: make these constants derived from libral:
-$INTEGER_GRID = 1;
-$REAL_GRID = 2;
+our $INTEGER_GRID = 1;
+our $REAL_GRID = 2;
 
 require Exporter;
 
@@ -69,10 +64,70 @@ our %EXPORT_TAGS = (types  => [ qw ( $INTEGER_GRID $REAL_GRID ) ],
 our @EXPORT_OK = qw ( $INTEGER_GRID $REAL_GRID
 		      &not &and &or );
 
+our $AUTOLOAD;
+
 ## @ignore
 sub dl_load_flags {0x01}
 
 XSLoader::load( 'Geo::Raster', $VERSION );
+
+my %dispatch = (
+    GetBandNumber =>  \&Geo::GDAL::Band::GetBandNumber,
+    DataType =>  \&Geo::GDAL::Band::DataType,
+    Size =>  \&Geo::GDAL::Band::Size,
+    GetBlockSize =>  \&Geo::GDAL::Band::GetBlockSize,
+    ColorInterpretation =>  \&Geo::GDAL::Band::ColorInterpretation,
+    NoDataValue =>  \&Geo::GDAL::Band::NoDataValue,
+    Unit =>  \&Geo::GDAL::Band::Unit,
+    ScaleAndOffset =>  \&Geo::GDAL::Band::ScaleAndOffset,
+    GetMinimum =>  \&Geo::GDAL::Band::GetMinimum,
+    GetMaximum =>  \&Geo::GDAL::Band::GetMaximum,
+    ComputeStatistics =>  \&Geo::GDAL::Band::ComputeStatistics,
+    GetStatistics =>  \&Geo::GDAL::Band::GetStatistics,
+    SetStatistics =>  \&Geo::GDAL::Band::SetStatistics,
+    GetOverviewCount =>  \&Geo::GDAL::Band::GetOverviewCount,
+    GetOverview =>  \&Geo::GDAL::Band::GetOverview,
+    HasArbitraryOverviews =>  \&Geo::GDAL::Band::HasArbitraryOverviews,
+    Checksum =>  \&Geo::GDAL::Band::Checksum,
+    ComputeRasterMinMax =>  \&Geo::GDAL::Band::ComputeRasterMinMax,
+    ComputeBandStats =>  \&Geo::GDAL::Band::ComputeBandStats,
+    Fill =>  \&Geo::GDAL::Band::Fill,
+    WriteTile =>  \&Geo::GDAL::Band::WriteTile,
+    ReadTile =>  \&Geo::GDAL::Band::ReadTile,
+    WriteRaster =>  \&Geo::GDAL::Band::WriteRaster,
+    ReadRaster =>  \&Geo::GDAL::Band::ReadRaster,
+    GetHistogram =>  \&Geo::GDAL::Band::GetHistogram,
+    GetDefaultHistogram =>  \&Geo::GDAL::Band::GetDefaultHistogram,
+    SetDefaultHistogram =>  \&Geo::GDAL::Band::SetDefaultHistogram,
+    FlushCache =>  \&Geo::GDAL::Band::FlushCache,
+    ColorTable =>  \&Geo::GDAL::Band::ColorTable,
+    GetColorTable =>  \&Geo::GDAL::Band::GetColorTable,
+    SetColorTable =>  \&Geo::GDAL::Band::SetColorTable,
+    CreateMaskBand =>  \&Geo::GDAL::Band::CreateMaskBand,
+    GetMaskBand =>  \&Geo::GDAL::Band::GetMaskBand,
+    GetMaskFlags =>  \&Geo::GDAL::Band::GetMaskFlags,
+    CategoryNames =>  \&Geo::GDAL::Band::CategoryNames,
+    GetRasterCategoryNames =>  \&Geo::GDAL::Band::GetRasterCategoryNames,
+    SetRasterCategoryNames =>  \&Geo::GDAL::Band::SetRasterCategoryNames,
+    AttributeTable =>  \&Geo::GDAL::Band::AttributeTable,
+    GetDefaultRAT =>  \&Geo::GDAL::Band::GetDefaultRAT,
+    SetDefaultRAT =>  \&Geo::GDAL::Band::SetDefaultRAT,
+    Contours =>  \&Geo::GDAL::Band::Contours,
+    FillNodata =>  \&Geo::GDAL::Band::FillNodata,
+    );
+
+## @ignore
+# call Geo::GDAL::Band methods as a fallback
+sub AUTOLOAD {
+    my $self = shift;
+    (my $sub = $AUTOLOAD) =~ s/.*:://;
+    if (exists $dispatch{$sub}) {
+	unshift @_, $self->band();
+	goto $dispatch{$sub};
+    } else {
+	croak "Undefined subroutine $sub";
+    }
+}
 
 ## @ignore
 sub from_piddle {
@@ -224,7 +279,7 @@ sub new {
     
     $params{datatype} = $params{datatype} ? _interpret_datatype($params{datatype}) : 0;
     
-    if ($params{copy} and blessed($params{copy}) and $params{copy}->isa('Geo::Raster')) {
+    if (blessed($params{copy}) and $params{copy}->isa('Geo::Raster')) {
 	croak "Can't copy an empty raster." unless $params{copy}->{GRID};
 	$self->{GRID} = ral_grid_create_copy($params{copy}->{GRID}, $params{datatype})
     } elsif ($params{use} and ref($params{use}) eq 'ral_gridPtr') {
@@ -691,8 +746,7 @@ sub table {
 	    push @{$self->{TABLE}}, [@$record];
 	}
     } elsif (defined $table) {
-	my $fh = new FileHandle;
-	croak "can't read from $table: $!\n" unless $fh->open("< $table");
+	open(my $fh, '<', $table) or croak "can't read from $table: $!\n";
 	$self->{TABLE_NAMES} = 0;
 	$self->{TABLE_TYPES} = 0;
 	$self->{TABLE} = [];
@@ -703,7 +757,7 @@ sub table {
 	    $self->{TABLE_TYPES} = [@record],next unless $self->{TABLE_TYPES};
 	    push @{$self->{TABLE}},\@record;
 	}
-	$fh->close;
+	close($fh);
     } else {
 	return $self->{TABLE};
     }
@@ -1526,10 +1580,6 @@ sub neighbors {
     $a = ral_grid_neighbors($self->{GRID});
     return $a;
 }
-
-call_g_type_init();
-Geo::GDAL::AllRegister;
-Geo::GDAL::UseExceptions();
 
 1;
 __END__

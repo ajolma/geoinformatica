@@ -8,7 +8,8 @@
 package Geo::Raster;
 
 use strict;
-use Scalar::Util qw(blessed);
+use Scalar::Util 'blessed';
+use File::Basename; # for fileparse
 use Geo::OGC::Geometry;
 
 ## @method @fit_surface($z_factor)
@@ -700,7 +701,7 @@ sub catchment {
     my $i = shift;
     my ($M, $N) = $fdg->size();
     my ($j, $m, $catchment);
-    if ($i and blessed($i) and $i->isa('Geo::Raster')) {
+    if (blessed($i) and $i->isa('Geo::Raster')) {
 	$catchment = $i;
 	$i = shift;
 	$j = shift;
@@ -737,7 +738,7 @@ sub prune {
     my $fdg = shift;
     my $lakes;
     my $min_length = shift;
-    if ($min_length and blessed($min_length) and $min_length->isa('Geo::Raster')) {
+    if (blessed($min_length) and $min_length->isa('Geo::Raster')) {
 	$lakes = $min_length;
 	$min_length = shift;
     }
@@ -772,7 +773,7 @@ sub number_streams {
     my $fdg = shift;
     my $lakes;
     my $i = shift;
-    if ($i and blessed($i) and $i->isa('Geo::Raster')) {
+    if (blessed($i) and $i->isa('Geo::Raster')) {
 	$lakes = $i;
 	$i = shift;
     }
@@ -818,7 +819,7 @@ sub subcatchments {
     my $fdg = shift;
     my $lakes;
     my $i = shift;
-    if ($i and blessed($i) and $i->isa('Geo::Raster')) {
+    if (blessed($i) and $i->isa('Geo::Raster')) {
 	$lakes = $i;
 	$i = undef;
     }

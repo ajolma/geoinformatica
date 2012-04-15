@@ -3,6 +3,8 @@
 package Geo::Raster;
 
 use strict;
+use Config; # For byteorder
+use Scalar::Util 'blessed';
 
 ## @ignore
 # internal
@@ -119,7 +121,7 @@ sub cache {
     my $cell_size;
     if (defined $_[0]) {
 	if (@_ == 1) { # use the given grid as a model
-	    croak "usage: \$raster->cache(\$another_raster)" unless $_[0]->isa('Geo::Raster');
+	    croak "usage: \$raster->cache(\$another_raster)" unless blessed($_[0]) and $_[0]->isa('Geo::Raster');
 	    if ($_[0]->{GDAL}) {
 		my $ds = $_[0]->{GDAL}->{dataset};
 		my $h = $ds->{RasterYSize};
@@ -217,8 +219,7 @@ sub save {
 	return;
     }
 
-    my $fh = new FileHandle;
-    croak "Can't write to $filename.hdr: $!\n" unless $fh->open(">$filename.hdr");
+    open(my $fh, '>', "$filename.hdr") or croak "can't write to $filename.hdr: $!\n";
 
     my($datatype, $M, $N, $cell_size, $minX, $maxX, $minY, $maxY, $nodata_value) = 
 	$self->_attributes();
@@ -248,7 +249,7 @@ sub save {
     print $fh "ULYMAP        ",_with_decimal_point($maxY),"\n";
     print $fh "XDIM          ",_with_decimal_point($cell_size),"\n";
     print $fh "YDIM          ",_with_decimal_point($cell_size),"\n";
-    $fh->close;
+    close($fh);
     ral_grid_write($self->{GRID}, $filename.'.bil');
 }
 
@@ -271,9 +272,8 @@ sub dump {
     my($self, $to) = @_;
     my $close;
     if ($to) {
-	unless (ref($to) eq 'GLOB' or ref($to) eq 'FileHandle') {
-	    my $fh = new FileHandle;
-	    croak "Can't dump to $to: $!" unless $fh->open(">$to");
+	unless (ref($to) eq 'GLOB' or (blessed($to) and $to->isa('FileHandle'))) {
+	    open(my $fh, '>', $to) or croak "can't write to $to: $!";
 	    $to = $fh;
 	    $close = 1;
 	}
@@ -284,7 +284,7 @@ sub dump {
     for my $point (@$points) {
 	print $to "$point->[0], $point->[1], $point->[2]\n";
     }
-    $to->close if $close;
+    close($to) if $close;
 }
 
 ## @method void restore($from)
@@ -298,9 +298,8 @@ sub restore {
     my($self, $from) = @_;
     my $close;
     if ($from) {
-	unless (ref($from) eq 'GLOB' or ref($from) eq 'FileHandle') {
-	    my $fh = new FileHandle;
-	    croak "Can't restore from $from: $!" unless $fh->open($from);
+	unless (ref($from) eq 'GLOB' or (blessed($from) and $from->isa('FileHandle'))) {
+	    open(my $fh, '<', $from) or croak "can't read from $from: $!";
 	    $from = $fh;
 	    $close = 1;
 	}
@@ -312,7 +311,7 @@ sub restore {
 	my($i, $j, $x) = split(/,/);
 	ral_grid_set($self->{GRID}, $i, $j, $x);
     }
-    $from->close if $close;
+    close($from) if $close;
 }
 
 ## @method void save_as_image($filename, $type, listref option_keys, listref option_values)

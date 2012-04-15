@@ -16,11 +16,10 @@ use strict;
 use warnings;
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
-use FileHandle;
 use Carp;
-use Scalar::Util qw(blessed);
+use Scalar::Util 'blessed';
+use File::Basename; # for fileparse
 use File::Spec;
-use File::Basename;
 use Glib qw/TRUE FALSE/;
 use Gtk2;
 use Gtk2::Ex::Geo::Layer qw /:all/;
@@ -105,7 +104,7 @@ sub save_all_rasters {
     my @rasters;
     if ($gui->{overlay}->{layers}) {
 	for my $layer (@{$gui->{overlay}->{layers}}) {
-	    if ($layer->isa('Geo::Raster')) {
+	    if (blessed($layer) and $layer->isa('Geo::Raster')) {
 		next if $layer->{GDAL};
 		push @rasters, $layer;
 	    }
@@ -140,8 +139,7 @@ sub save_all_rasters {
 ## @ignore
 sub upgrade {
     my($object) = @_;
-    return 0 unless blessed($object);
-    if ($object->isa('Geo::Raster') and !$object->isa('Geo::Raster::Layer')) {
+    if (blessed($object) and $object->isa('Geo::Raster') and !(blessed($object) and $object->isa('Geo::Raster::Layer'))) {
 	bless($object, 'Geo::Raster::Layer');
 	$object->defaults();
 	return 1;
@@ -202,14 +200,13 @@ sub save {
     my($self, $filename, $format) = @_;
     $self->SUPER::save($filename, $format);
     if ($self->{COLOR_TABLE} and @{$self->{COLOR_TABLE}}) {
-	my $fh = new FileHandle;
-	croak "can't write to $filename.clr: $!\n" unless $fh->open(">$filename.clr");
+	open(my $fh, '>', "$filename.clr") or croak "can't write to $filename.clr: $!\n";
 	for my $color (@{$self->{COLOR_TABLE}}) {
 	    next if $color->[0] < 0 or $color->[0] > 255;
 	    # skimming out data because this format does not support all
 	    print $fh "@$color[0..3]\n";
 	}
-	$fh->close;
+	close($fh);
 	eval {
 	    $self->save_color_table("$filename.color_table");
 	};

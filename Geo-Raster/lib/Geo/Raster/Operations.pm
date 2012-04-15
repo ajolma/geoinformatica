@@ -7,7 +7,6 @@
 package Geo::Raster;
 
 use strict;
-use Scalar::Util qw(blessed);
 use overload (
 	      'fallback' => undef,
               # not having "" overloaded makes print "$raster" to print "1"
@@ -42,6 +41,7 @@ use overload (
 	      'log'      => 'log',
 	      'sqrt'     => 'sqrt',
 	      );
+use Scalar::Util 'blessed';
 
 ## @ignore
 sub as_string {

@@ -94,15 +94,29 @@ sub upgrade {
 	bless($object, 'Geo::Vector::Layer');
 	$object->defaults();
 	return 1;
-    } elsif ($object->isa('Geo::OGR::Feature') or $object->isa('Geo::Vector::Feature')) {
+    } elsif ($object->isa('Geo::OGR::Layer')) {
+	my $layer = Geo::Vector->new($object);
+	bless($layer, 'Geo::Vector::Layer');
+	$layer->defaults();
+	return $layer;
+    } elsif ($object->isa('Geo::OGR::Feature')) {
+	my $layer = Geo::Vector->new(update => 1);
+	bless($layer, 'Geo::Vector::Layer');
+	$layer->defaults();
+	$layer->feature($object);
+	return $layer;
+    } elsif ($object->isa('Geo::Vector::Feature')) {
 	my $layer = Geo::Vector->new(features => [$object]);
 	bless($layer, 'Geo::Vector::Layer');
 	$layer->defaults();
 	return $layer;
     } elsif ($object->isa('Geo::OGR::Geometry')) {
-	my $layer = Geo::Vector->new(geometries => [$object]);
+	my $layer = Geo::Vector->new(update => 1);
 	bless($layer, 'Geo::Vector::Layer');
 	$layer->defaults();
+	my $feature = $layer->feature();
+	$feature->Geometry($object);
+	$layer->feature($feature);
 	return $layer;
     }
     return 0;

@@ -31,8 +31,8 @@ use warnings;
 use Carp;
 use POSIX;
 POSIX::setlocale( &POSIX::LC_NUMERIC, "C" ); # http://www.remotesensing.org/gdal/faq.html nr. 11
-use Scalar::Util qw(blessed);
 use XSLoader;
+use Scalar::Util 'blessed';
 use Geo::GDAL;
 use Geo::OGC::Geometry;
 use Geo::Vector::Feature;
@@ -52,6 +52,8 @@ our %EXPORT_TAGS = ( 'all' => [qw( %RENDER_AS )] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
+our $AUTOLOAD;
+
 # from ral_visual.h:
 %RENDER_AS = ( Native => 0, Points => 1, Lines => 2, Polygons => 4 );
 
@@ -60,6 +62,57 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 sub dl_load_flags {0x01}
 
 XSLoader::load( 'Geo::Vector', $VERSION );
+
+my %dispatch = (
+    Capabilities => \&Geo::OGR::Layer::Capabilities,
+    TestCapability =>  \&Geo::OGR::Layer::TestCapability,
+    Schema =>  \&Geo::OGR::Layer::Schema,
+    Row =>  \&Geo::OGR::Layer::Row,
+    Tuple =>  \&Geo::OGR::Layer::Tuple,
+    SpatialFilter =>  \&Geo::OGR::Layer::SpatialFilter,
+    SpatialFilter =>  \&Geo::OGR::Layer::SpatialFilter,
+    SetSpatialFilter =>  \&Geo::OGR::Layer::SetSpatialFilter,
+    SetSpatialFilterRect =>  \&Geo::OGR::Layer::SetSpatialFilterRect,
+    GetSpatialFilter =>  \&Geo::OGR::Layer::GetSpatialFilter,
+    SetAttributeFilter =>  \&Geo::OGR::Layer::SetAttributeFilter,
+    ResetReading =>  \&Geo::OGR::Layer::ResetReading,
+    GetNextFeature =>  \&Geo::OGR::Layer::GetNextFeature,
+    SetNextByIndex =>  \&Geo::OGR::Layer::SetNextByIndex,
+    GetFeaturesRead =>  \&Geo::OGR::Layer::GetFeaturesRead,
+    GetName =>  \&Geo::OGR::Layer::GetName,
+    GetFeature =>  \&Geo::OGR::Layer::GetFeature,
+    SetFeature =>  \&Geo::OGR::Layer::SetFeature,
+    CreateFeature =>  \&Geo::OGR::Layer::CreateFeature,
+    InsertFeature =>  \&Geo::OGR::Layer::InsertFeature,
+    DeleteFeature =>  \&Geo::OGR::Layer::DeleteFeature,
+    SyncToDisk =>  \&Geo::OGR::Layer::SyncToDisk,
+    GetLayerDefn =>  \&Geo::OGR::Layer::GetLayerDefn,
+    GetFeatureCount =>  \&Geo::OGR::Layer::GetFeatureCount,
+    GetExtent =>  \&Geo::OGR::Layer::GetExtent,
+    CreateField =>  \&Geo::OGR::Layer::CreateField,
+    StartTransaction =>  \&Geo::OGR::Layer::StartTransaction,
+    CommitTransaction =>  \&Geo::OGR::Layer::CommitTransaction,
+    RollbackTransaction =>  \&Geo::OGR::Layer::RollbackTransaction,
+    GetSpatialRef =>  \&Geo::OGR::Layer::GetSpatialRef,
+    AlterFieldDefn =>  \&Geo::OGR::Layer::AlterFieldDefn,
+    DeleteField =>  \&Geo::OGR::Layer::DeleteField,
+    GetFIDColumn =>  \&Geo::OGR::Layer::GetFIDColumn,
+    GetGeometryColumn =>  \&Geo::OGR::Layer::GetGeometryColumn,
+    GeometryType =>  \&Geo::OGR::Layer::GeometryType,
+    SetIgnoredFields =>  \&Geo::OGR::Layer::SetIgnoredFields );
+
+## @ignore
+# call Geo::OGR::Layer method as a fallback
+sub AUTOLOAD {
+    my $self = shift;
+    (my $sub = $AUTOLOAD) =~ s/.*:://;
+    if (exists $dispatch{$sub} and $self->{OGR}->{Layer}) {
+	unshift @_, $self->{OGR}->{Layer};
+	goto $dispatch{$sub};
+    } else {
+	croak "Undefined subroutine $sub";
+    }
+}
 
 ## @cmethod @geometry_types()
 #
@@ -88,7 +141,7 @@ sub layers {
     $driver = '' unless $driver;
     $data_source = '' unless $data_source;
     my $self = {};
-    open_data_source($self, $driver, $data_source, 0);
+    open_data_source($self, driver => $driver, data_source=>$data_source, update => 0);
     return unless $self->{OGR}->{DataSource};
     my %layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
@@ -110,7 +163,7 @@ sub layers {
 sub delete_layer {
     my($driver, $data_source, $layer) = @_;
     my $self = {};
-    open_data_source($self, $driver, $data_source, 1);
+    open_data_source($self, driver => $driver, data_source=>$data_source, update => 1);
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
 	my $l = $self->{OGR}->{DataSource}->GetLayerByIndex($i);
 	$self->{OGR}->{DataSource}->DeleteLayer($i), last
@@ -182,13 +235,17 @@ sub new {
 
     my %params = @_ == 1 ? ( single => $_[0] ) : @_;
 
-    # the single parameter can be a filename, geometry, feature, or a
-    # list of geometries or features, which are copied into a new
-    # memory layer
-
-    if (ref($params{single})) {
-    } else {
-	$params{data_source} = $params{single} if $params{single};
+    if (blessed($params{single})) {
+	# create from an object
+	if ($params{single}->isa('Geo::OGR::Layer')) {
+	    $self->{OGR}->{Layer} = $params{single};
+	    $self->{update} = undef;
+	}
+    } elsif (ref($params{single})) {
+	# create from a list of things, assuming a list of geometry or feature objects
+    } elsif ($params{single}) {
+	# create from a scalar, assuming an OGR datasource string
+	$params{data_source} = $params{single};
     }
 
     # aliases
@@ -231,12 +288,12 @@ sub new {
 
     $params{update} = 0 unless defined $params{update};
     $params{update} = 1 if $params{create};
-    $self->{update} = $params{update};
+    $self->{update} = $params{update} unless exists $self->{update};
     $params{create_options} = [] if (!$params{create_options} and $params{create});
 
-    $self->open_data_source($params{driver}, $params{data_source}, $params{update}, $params{create_options});
+    $self->open_data_source(%params) unless $self->{OGR};
 
-    if ($params{create} or $self->{OGR}->{Driver}->{name} eq 'Memory') {
+    if ($params{create} or ($self->{OGR}->{Driver} and $self->{OGR}->{Driver}->{name} eq 'Memory')) {
 
 	my $srs;
 	if (blessed($params{srs}) and $params{srs}->isa('Geo::OSR::SpatialReference')) {
@@ -280,7 +337,7 @@ sub new {
 	    $self->{OGR}->{DataSource}->Layer( $params{open} );
 	croak "Could not open layer '$params{open}': $@" unless $self->{OGR}->{Layer};
 	
-    } else {
+    } elsif (!$self->{OGR}->{Layer}) {
 	
 	# open the first layer
 	$self->{OGR}->{Layer} = $self->{OGR}->{DataSource}->GetLayerByIndex();
@@ -289,7 +346,7 @@ sub new {
     }
 
     schema($self, $params{schema}) if $params{schema};
-    $self->{OGR}->{Layer}->SyncToDisk unless $self->{OGR}->{Driver}->{name} eq 'Memory';
+    #$self->{OGR}->{Layer}->SyncToDisk unless $self->{OGR}->{Driver}->{name} eq 'Memory';
     return $self;
 }
 
@@ -309,7 +366,10 @@ sub save {
 
 ## @ignore
 sub open_data_source {
-    my($self, $driver, $data_source, $update, $create_options) = @_;
+    my $self = shift;
+    my %params = @_;
+    my($driver, $data_source, $update, $create_options) = 
+	($params{driver}, $params{data_source}, $params{update}, $params{create_options});
     if ($driver or !$data_source) {
 	if (!$data_source) {
 	    $data_source = '';
@@ -887,13 +947,11 @@ sub feature {
 	
 	# update at fid
 	if ( $self->{features} ) {
-	    $feature = $self->make_feature($feature) unless 
-		blessed($feature) and $feature->isa('Geo::Vector::Feature');
+	    $feature = $self->make_feature($feature) unless blessed($feature) and $feature->isa('Geo::Vector::Feature');
 	    $self->{features}{$fid} = $feature;
 	    $feature->{FID} = $fid;
 	} else {
-	    $feature = $self->make_feature($feature) unless 
-		blessed($feature) and $feature->isa('Geo::OGR::Feature');
+	    $feature = $self->make_feature($feature) unless blessed($feature) and $feature->isa('Geo::OGR::Feature');
 	    $feature->SetFID($fid);
 	    $self->{OGR}->{Layer}->SetFeature($feature);
 	}
@@ -909,15 +967,13 @@ sub feature {
 	# add
 	$feature = $fid;
 	if ($self->{features}) {
-	    $feature = $self->make_feature($feature) unless 
-		blessed($feature) and $feature->isa('Geo::Vector::Feature');
+	    $feature = $self->make_feature($feature) unless blessed($feature) and $feature->isa('Geo::Vector::Feature');
 	    $fid = 0;
 	    while (exists $self->{features}{$fid}) {$fid++}
 	    $self->{features}{$fid} = $feature;
 	    $feature->{FID} = $fid;
 	} else {
-	    $feature = $self->make_feature($feature) unless 
-		blessed($feature) and $feature->isa('Geo::OGR::Feature');
+	    $feature = $self->make_feature($feature) unless blessed($feature) and $feature->isa('Geo::OGR::Feature');
 	    $self->{OGR}->{Layer}->CreateFeature($feature);
 	}
     } elsif (defined $fid) {
@@ -1311,6 +1367,26 @@ sub rasterize {
 		  $params{feature}, $field );
     
     return $gd;
+}
+
+sub ForFeatures {
+    my $self = shift;
+    my $code = shift;
+    eval '$self->ResetReading; '.
+	'while (my $f = $self->GetNextFeature) {'.
+	"$code;".
+	'$self->SetFeature($f) if $f}';
+}
+
+sub ForGeometries {
+    my $self = shift;
+    my $code = shift;
+    eval '$self->ResetReading; '.
+	'while (my $f = $self->GetNextFeature) {'.
+	'my $g = $f->Geometry();'.
+	"$code;".
+	'$f->Geometry($g);'.
+	'$self->SetFeature($f)}';
 }
 
 sub MIN {
