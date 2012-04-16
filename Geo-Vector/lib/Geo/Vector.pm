@@ -99,7 +99,10 @@ my %dispatch = (
     GetFIDColumn =>  \&Geo::OGR::Layer::GetFIDColumn,
     GetGeometryColumn =>  \&Geo::OGR::Layer::GetGeometryColumn,
     GeometryType =>  \&Geo::OGR::Layer::GeometryType,
-    SetIgnoredFields =>  \&Geo::OGR::Layer::SetIgnoredFields );
+    SetIgnoredFields =>  \&Geo::OGR::Layer::SetIgnoredFields,
+    ForFeatures => \&Geo::OGR::Layer::ForFeatures,
+    ForGeometries => \&Geo::OGR::Layer::ForGeometries,
+    );
 
 ## @ignore
 # call Geo::OGR::Layer method as a fallback
@@ -1354,26 +1357,6 @@ sub rasterize {
 		  $params{feature}, $field );
     
     return $gd;
-}
-
-sub ForFeatures {
-    my $self = shift;
-    my $code = shift;
-    eval '$self->ResetReading; '.
-	'while (my $f = $self->GetNextFeature) {'.
-	"$code;".
-	'$self->SetFeature($f) if $f}';
-}
-
-sub ForGeometries {
-    my $self = shift;
-    my $code = shift;
-    eval '$self->ResetReading; '.
-	'while (my $f = $self->GetNextFeature) {'.
-	'my $g = $f->Geometry();'.
-	"$code;".
-	'$f->Geometry($g);'.
-	'$self->SetFeature($f)}';
 }
 
 sub MIN {
