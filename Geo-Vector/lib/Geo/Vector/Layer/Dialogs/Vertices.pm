@@ -79,6 +79,7 @@ sub fill_vtv {
 	my $name = $geom->GetGeometryName;
 	my $vertices2 = $vertices;
 	my $d = get_geom_data($self, $gui, $geom, \$vertex, \$vertices2, $from, $count);
+	print STDERR "fid: $fid, $vertices2 > $vertices\n";
 	push @data,["Feature (fid=$fid) ($name)",$d,$fid] if $vertices2 > $vertices;
 	$vertices = $vertices2;
 	last if $vertices >= $count;
@@ -107,7 +108,7 @@ sub set_geom_data {
 	}
 
     } else {
-
+	print STDERR "path=$path gid=$gid\n";
 	$self->{GIDS}->{$path} = $gid;
 
     }
@@ -116,7 +117,7 @@ sub set_geom_data {
 ##@ignore
 sub get_geom_data {
     my($self, $gui, $geom, $vertex, $vertices, $from, $count) = @_;
-
+    print STDERR "$geom, $$vertices >= $count\n";
     return if $$vertices >= $count;
     
     if ($geom->GetGeometryCount) {

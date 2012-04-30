@@ -2527,6 +2527,27 @@
                     <property name="position">4</property>
                   </packing>
                 </child>
+                <child>
+                  <widget class="GtkCheckButton" id="vertices_limit_checkbutton">
+                    <property name="label" translatable="yes">List only visible vertices</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="draw_indicator">True</property>
+                  </widget>
+                  <packing>
+                    <property name="position">5</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="all_vertices_label">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">All vertices listed</property>
+                  </widget>
+                  <packing>
+                    <property name="position">6</property>
+                  </packing>
+                </child>
               </widget>
               <packing>
                 <property name="expand">False</property>

@@ -102,6 +102,12 @@ my %dispatch = (
     SetIgnoredFields =>  \&Geo::OGR::Layer::SetIgnoredFields,
     ForFeatures => \&Geo::OGR::Layer::ForFeatures,
     ForGeometries => \&Geo::OGR::Layer::ForGeometries,
+    Intersection => \&Geo::OGR::Layer::Intersection,
+    Union => \&Geo::OGR::Layer::Union,
+    Identity => \&Geo::OGR::Layer::Identity,
+    Update => \&Geo::OGR::Layer::Update,
+    Clip => \&Geo::OGR::Layer::Clip,
+    Erase => \&Geo::OGR::Layer::Erase,
     );
 
 ## @ignore
