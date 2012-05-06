@@ -23,7 +23,7 @@ warn "Problems with required modules: @missing_modules\n" if @missing_modules;
 require ExtUtils::Depends; 
 require ExtUtils::PkgConfig;
 
-my($inc,$libs,$cflags) = ('','','');
+my($inc,$libs,$cflags) = ('','',$Config{ccflags});
 
 for $package ('gdal','gdk-pixbuf-2.0','libral') {
     print "Checking for $package: ";

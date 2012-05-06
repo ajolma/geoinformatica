@@ -1,4 +1,4 @@
-use UNIVERSAL qw(isa);
+use UNIVERSAL;
 use Test::More qw(no_plan);
 
 BEGIN { 
@@ -29,7 +29,7 @@ sub diff {
     }
     $gd = Geo::Raster->new('real',5,10);
     my $gd2 = Geo::Raster::new($gd);
-    ok(isa($gd2, 'Geo::Raster'));
+    ok(UNIVERSAL::isa($gd2, 'Geo::Raster'));
 }
 
 {

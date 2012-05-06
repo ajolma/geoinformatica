@@ -18,7 +18,7 @@ exit 0 if @missing_modules;
 require ExtUtils::Depends;
 require ExtUtils::PkgConfig;
 
-my($inc,$libs,$cflags) = ('','','');
+my($inc,$libs,$cflags) = ('','',$Config{ccflags});
 
 my @packages = ('gdk-pixbuf-2.0');
 
