@@ -38,7 +38,7 @@ BEGIN {
     }
 }
 
-use vars qw/%RENDER_AS2INDEX %INDEX2RENDER_AS $BORDER_COLOR/;
+use vars qw/%RENDER_AS2INDEX %INDEX2RENDER_AS $BORDER_COLOR $FILL_COLOR/;
 
 require Exporter;
 our @ISA = qw(Exporter Geo::Vector Gtk2::Ex::Geo::Layer);
@@ -52,9 +52,10 @@ for (keys %RENDER_AS2INDEX) {
     $INDEX2RENDER_AS{$RENDER_AS2INDEX{$_}} = $_;
 }
 
-# default values for new objects:
+# default values for new polygons:
 
-$BORDER_COLOR = [255, 255, 255];
+$BORDER_COLOR = [0, 0, 0];
+$FILL_COLOR = [255, 255, 255, 255];
 
 ## @ignore
 sub registration {
@@ -141,6 +142,7 @@ sub defaults {
     $self->name($self->{OGR}->{Layer}->GetName()) if $self->{OGR}->{Layer};
     my $gt = $self->geometry_type;
     @{$self->{BORDER_COLOR}} = @$BORDER_COLOR if $gt and $gt =~ /Polygon/;    
+    @{$self->{SINGLE_COLOR}} = @$FILL_COLOR if $gt and $gt =~ /Polygon/;    
     $self->{RENDER_AS} = 'Native' unless exists $self->{RENDER_AS};
     $self->{RENDER_AS} = $params{render_as} if exists $params{render_as};
     $self->{LINE_WIDTH} = 1;

@@ -675,13 +675,14 @@ sub copy {
     $self->init_iterate(%params);
     while (my $f = $self->next_feature()) {
 	
-	my $geometry = $f->GetGeometryRef();
-
+	my $geometry = $f->GetGeometry();
+	
 	# transformation if that is wished
 	if ($params{transformation}) {
-	    my $points = $geometry->Points;
-	    transform_points($points, $params{transformation});
-	    $geometry->Points($points);
+	    eval {
+		$geometry->Transform($params{transformation});
+	    };
+	    next if $@;
 	}
 	
 	# make copies of the features and add them to copy

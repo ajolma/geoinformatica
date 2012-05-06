@@ -391,7 +391,6 @@ sub open_polygonize_dialog {
 ##@ignore
 sub epsg_help {
     my $entry = shift;
-    my $text = $entry->get_text;
     my $auto = $entry->get_completion;
     my $list = $auto->get_model if $auto;
 
@@ -401,24 +400,33 @@ sub epsg_help {
 	    if (CORE::open(EPSG, $f)) {
 		while (<EPSG>) {
 		    next unless /^\d/;
-		    my @t = split/,/;
-		    $t[1] =~ s/^"//;
-		    $t[1] =~ s/"$//;
-		    $EPSG{$t[1].' ['.$t[0].']'} = $t[0];
+		    my $code; 
+		    $code = $1 if s/^(\d+)//;
+		    my $desc;
+		    if (/^,"/) {
+			$desc = $1 if s/^,"(.+?)"//;
+		    } else {
+			$desc = $1 if s/^,(.+?),//;
+		    }
+		    $EPSG{$code} = "$desc [$code]";
 		}
 		close EPSG;
 	    }
 	}
-	@EPSG = sort {$a cmp $b} keys %EPSG;
     }
 
     if ($list) {
 	$list->clear;
+	my $text = $entry->get_text;
+	$text =~ s/\(/\\(/g;
+	$text =~ s/\)/\\)/g;
+	$text =~ s/\[/\\[/g;
+	$text =~ s/\]/\\]/g;
 	my $i = 0;
-	for (@EPSG) {
-	    next unless /$text/i;
+	for my $code (keys %EPSG) {
+	    next unless $EPSG{$code} =~ /$text/i;
 	    my $iter = $list->append();
-	    $list->set($iter, 0, $_);
+	    $list->set($iter, 0, $EPSG{$code});
 	    last if ($i++) > 10;
 	}
     }

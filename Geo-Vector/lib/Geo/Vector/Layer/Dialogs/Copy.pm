@@ -57,7 +57,18 @@ sub open {
 		my(undef, $self) = @_;
 		my $entry = $self->{copy_dialog}->get_widget('copy_datasource_entry');
 		file_chooser('Select folder', 'select_folder', $entry);
-			      }, $self); 
+			      }, $self);
+    }
+
+    my $from = $dialog->get_widget('from_EPSG_entry');
+    my $srs = $self->GetSpatialRef;
+    if ($srs) {
+	my $code = $srs->GetAuthorityCode(undef);
+	my $name = $srs->GetAuthorityName(undef);
+	if ($code and $name eq 'EPSG') {
+	    Geo::Raster::Layer::epsg_help($from);
+	    $from->set_text($Geo::Raster::Layer::EPSG{$code});
+	}
     }
 
     my $combo = $dialog->get_widget('copy_driver_combobox');
@@ -147,25 +158,24 @@ sub do_copy {
 	    $params{driver} = $dialog->get_widget('copy_driver_combobox')->get_active_text;
 	}
 	$params{create} = $into;    
-	my $layers;	
-	if ($params{driver} ne 'Memory') {
-	    eval {
-		$layers = Geo::Vector::layers($params{driver}, $params{data_source});
-	    };
-	}    
+	my $layers;
+	$params{data_source} = 'mem' if $params{driver} eq 'Memory';
+	eval {
+	    $layers = Geo::Vector::layers($params{driver}, $params{data_source});
+	};
 	croak "Data source '$params{data_source}' already contains a layer with name '$params{create}'."
 	    if ($layers and $layers->{$params{create}});
     }
 
-    my $from = $dialog->get_widget('from_EPSG_entry')->get_text;
-    my $to = $dialog->get_widget('to_EPSG_entry')->get_text;
+    my $from = $1 if $dialog->get_widget('from_EPSG_entry')->get_text =~ /\[(\d+)\]/;
+    my $to = $1 if $dialog->get_widget('to_EPSG_entry')->get_text =~ /\[(\d+)\]/;
     my $ct;
     my $p = $dialog->get_widget('copy_projection_checkbutton')->get_active;
     #print STDERR "do proj: $p\n";
     if ($p) {
 	if ($Geo::Raster::Layer::EPSG{$from} and $Geo::Raster::Layer::EPSG{$to}) {
-	    my $src = Geo::OSR::SpatialReference->create( EPSG => $Geo::Raster::Layer::EPSG{$from} );
-	    my $dst = Geo::OSR::SpatialReference->create( EPSG => $Geo::Raster::Layer::EPSG{$to} );
+	    my $src = Geo::OSR::SpatialReference->create( EPSG => $from );
+	    my $dst = Geo::OSR::SpatialReference->create( EPSG => $to );
 	    eval {
 		$ct = Geo::OSR::CoordinateTransformation->new($src, $dst);
 	    };
@@ -174,7 +184,7 @@ sub do_copy {
 	if ($@ or !$ct) {
 	    $@ = '' unless $@;
 	    $@ = ": $@" if $@;
-	    $gui->message("can't create coordinate transformation$@");
+	    $gui->message("can't create coordinate transformation from $from to $to: $@");
 	    return;
 	}
 	$params{transformation} = $ct;

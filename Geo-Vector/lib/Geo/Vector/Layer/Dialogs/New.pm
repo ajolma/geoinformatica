@@ -213,9 +213,9 @@ sub ok_new_vector {
     my $data_source = get_value_from_combo($d, 'new_vector_data_source_combobox');
     $data_source = $d->get_widget('new_vector_folder_entry')->get_text unless $data_source;
     my $layer_options = $d->get_widget('new_vector_layer_options_entry')->get_text;
-    my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox');
+    my $geometry_type = get_value_from_combo($d, 'new_vector_geometry_type_combobox') || 'Unknown';
     my $srs = $d->get_widget('new_vector_srs_entry')->get_text;
-    my %schema = ( Fields => [] );
+    my %schema = ( GeometryType => $geometry_type, Fields => [] );
     $self->{schema}->foreach(sub {
 	my($model, $path, $iter) = @_;
 	my @row = $model->get($iter);
