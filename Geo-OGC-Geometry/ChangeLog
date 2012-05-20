@@ -1,7 +1,7 @@
-The changes are logged onto the SVN, which is at https://svn.osgeo.org/geoinformatica/libral/
+The changes are logged onto the master repository, which is at https://github.com/ajolma/geoinformatica/tree/master/Geo-OGC-Geometry
 
 Moved to svn.osgeo.org
-	
+
 Date: 22:36:10, 9. syyskuuta 2007
 revert back to parsing polygon wkt correctly, polyhedralsurface is a collection of polygons, support comma and space is point wkt (does not work in linestrings)
 

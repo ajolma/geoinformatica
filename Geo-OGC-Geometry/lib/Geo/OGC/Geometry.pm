@@ -51,7 +51,7 @@ BEGIN {
     our %EXPORT_TAGS = ( 'all' => [ qw( &ccw &intersect &distance_point_line_sqr 
 					$SNAP_DISTANCE_SQR ) ] );
     our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-    our $VERSION = '0.05';
+    our $VERSION = '0.06';
     $SNAP_DISTANCE_SQR = 1E-6;
 }
 
@@ -1814,22 +1814,22 @@ sub Assert {
     # f) The exterior of a Polygon with 1 or more holes is not
     # connected. Each hole defines a connected component of the
     # exterior.
-
+    
     for my $i (0..$#{$self->{InteriorRings}}) {
 	my $r1 = $self->{InteriorRings}[$i];
-	my $i = $r1->Intersection($self->{ExteriorRing});
+	my $r2 = $r1->Intersection($self->{ExteriorRing});
 	croak "an interior intersects too much with the exterior"
-	    if @{$i->{Geometries}} and (@{$i->{Geometries}} > 1 or 
-					!$i->{Geometries}[0]->isa('Geo::OGC::Point'));
+	    if @{$r2->{Geometries}} and (@{$r2->{Geometries}} > 1 or 
+					 !$r2->{Geometries}[0]->isa('Geo::OGC::Point'));
 	for my $j ($i+1..$#{$self->{InteriorRings}}) {
 	    my $r2 = $self->{InteriorRings}[$j];
-	    $i = $r1->Intersection($r2);
+	    $r2 = $r1->Intersection($r2);
 	    croak "an interior intersects too much with another interior"
-		if @{$i->{Geometries}} and (@{$i->{Geometries}} > 1 or 
-					    !$i->{Geometries}[0]->isa('Geo::OGC::Point'));
+		if @{$r2->{Geometries}} and (@{$r2->{Geometries}} > 1 or 
+					     !$r2->{Geometries}[0]->isa('Geo::OGC::Point'));
 	}
     }
-
+    
     return 1;
 
 }
