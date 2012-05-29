@@ -47,6 +47,7 @@ sub page {
     $service = 'WMS'unless $service;
 
     $params{EPSG} = $1 if $q->param($names{SRS}) and $q->param($names{SRS}) =~ /EPSG:(\d+)/;
+    $params{EPSG} = 3857 if $params{EPSG} == 900913;
     $params{LAYERS} = [split(/,/, $q->param($names{LAYERS}))] if $q->param($names{LAYERS});
     $params{BBOX} = [split(/,/, $q->param($names{BBOX}))] if $q->param($names{BBOX});
     ($params{WIDTH}) = $q->param($names{WIDTH}) =~ /(\d+)/ if $q->param($names{WIDTH});

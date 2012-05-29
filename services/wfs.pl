@@ -7,6 +7,9 @@ use Carp;
 use Encode;
 use DBI;
 use CGI;
+use XML::Simple;
+use Data::Dumper;
+
 use Geo::GDAL;
 #use Geo::Proj4;
 #use Gtk2::Ex::Geo;
@@ -35,31 +38,73 @@ sub page {
 	croak "Parameter ".uc($_)." given more than once.#" if exists $names{uc($_)};
 	$names{uc($_)} = $_;
     }
-    $q->{resource} = $config->{resource};
-    my $request = $q->param($names{REQUEST}) || 'capabilities';
-    my $version = $q->param($names{WMTVER});
-    $version = $q->param($names{VERSION}) if $q->param($names{VERSION});
-    $version = '1.1.0' unless $version;
-    #croak "Not a supported WFS version.#" unless $version eq $config->{version};
-    my $service = $q->param($names{SERVICE});
-    $service = 'WFS'unless $service;
+
+    my $request;
+    my $version;
+    my $service;
+    my $bbox;
+    my $typename;
+
+    if ($names{POSTDATA}) {
+	my $post = XMLin('<xml>'.$q->param($names{POSTDATA}).'</xml>');
+	remove_ns($post);
+
+	#print STDERR Dumper($post);
+
+	for my $k (keys %$post) {
+	    if ($k eq 'wfs:GetFeature') {
+		my $h = $post->{$k};
+		$service = $h->{'service'};
+		$version = $h->{'version'};
+		$request = 'GetFeature';
+		next unless $h->{'wfs:Query'};
+		$h = $h->{'wfs:Query'};
+		$typename = $h->{typeName};
+		$typename =~ s/^feature://;
+		next unless $h->{'ogc:Filter'};
+		$h = $h->{'ogc:Filter'};
+		next unless $h->{'ogc:BBOX'};
+		$h = $h->{'ogc:BBOX'};
+		$bbox = $h->{'gml:Box'}{'gml:coordinates'}{content};
+		$bbox =~ s/ /,/;
+	    } elsif ($k eq 'x') {
+	    }
+	}
+
+	print STDERR "$request; $version; $service; $bbox; $typename\n";
+
+    } else {
+
+	$q->{resource} = $config->{resource};
+	$request = $q->param($names{REQUEST}) || 'capabilities';
+	$version = $q->param($names{WMTVER});
+	$version = $q->param($names{VERSION}) if $q->param($names{VERSION});
+	$version = '1.1.0' unless $version;
+	#croak "Not a supported WFS version.#" unless $version eq $config->{version};
+	$service = $q->param($names{SERVICE});
+	$service = 'WFS'unless $service;
+	$bbox = $q->param($names{BBOX});
+	$typename = decode utf8=>$q->param($names{TYPENAME});
+
+    }
+
+
     if ($request eq 'GetCapabilities' or $request eq 'capabilities') {
 	GetCapabilities($version);
     } elsif ($request eq 'DescribeFeatureType') {
-	DescribeFeatureType($version, decode utf8=>$q->param($names{TYPENAME}));
+	DescribeFeatureType($version, $typename);
     } elsif ($request eq 'GetFeature') {
-	GetFeature($version, decode utf8=>$q->param($names{TYPENAME}));
+	GetFeature($version, $typename, $bbox);
     } else {
 	croak('Unrecognized request: '.$request);
     }
 }
 
 sub GetFeature {
-    my($version, $typename) = @_;
+    my($version, $typename, $bbox) = @_;
     my $type = feature($typename);
     croak "No such feature type: $typename" unless $type;
 
-    my $bbox = $q->param($names{BBOX});
     my $maxfeatures = $q->param($names{MAXFEATURES});
     ($maxfeatures) = $maxfeatures =~ /(\d+)/ if defined $maxfeatures;
     
@@ -83,7 +128,28 @@ sub GetFeature {
 	    next if $type->{Schema}{$f} eq 'geometry' and not ($f eq $type->{GeometryColumn});
 	    push @cols, "\"$f\" as \"$n\"";
 	}
-	my $sql = "select ".join(',',@cols)." from \"$type->{Table}\"";
+	#my $sql = "select ".join(',',@cols)." from \"$type->{Table}\"";
+
+# todo: a join between two tables, howto configure?      
+	my $sql;
+
+# select "Lajin nimi" from "Lajiesiintymät","Lajit" where
+# "Lajiesiintymät"."Lajin nimi"="Lajit"."Nimi"
+#
+
+	if ($type->{Table} eq 'Lajiesiintymät') {
+	    for (@cols) {
+		$_ = "\"$type->{Table}\".".$_;
+	    }
+	    push @cols,"\"Lajit\".\"IUCN 2010\" as \"IUCN_2010\"";
+	    my @tables = ("\"$type->{Table}\"",'"Lajit"');
+	    $sql = "select ".join(',',@cols)." from ".join(',',@tables)." where ST_IsValid($type->{GeometryColumn})";
+	    $sql .= " and \"$type->{Table}\".\"Lajin nimi\"=\"Lajit\".\"Nimi\"";
+	    #print STDERR "$sql\n";
+	} else {
+	    $sql = "select ".join(',',@cols)." from \"$type->{Table}\" where ST_IsValid($type->{GeometryColumn})";
+	}
+
 	$layer = $datasource->ExecuteSQL($sql);
     } else {
 	croak "missing information in configuration file";
@@ -150,6 +216,16 @@ sub DescribeFeatureType {
 		$t = "gml:GeometryPropertyType" if $t eq 'geometry';
 		my $c = $col;
 		$c =~ s/ /_/g; # field name adjustments as GDAL does them
+		$c =~ s/ä/a/g; # extra name adjustments, needed by QGIS
+		push @elements, ['element', { name => $c,
+					      type => $t,
+					      minOccurs => "0",
+					      maxOccurs => "1" } ];
+	    }
+	    # todo: add a column from another table through join (see above in GetFeature)
+	    if ($type->{Table} eq 'Lajiesiintymät') {
+		my $c = 'IUCN_2010';
+		my $t = 'text';
 		push @elements, ['element', { name => $c,
 					      type => $t,
 					      minOccurs => "0",
@@ -302,7 +378,7 @@ sub layers {
     my($connect, $user, $pass) = split / /, $dbi;
     my $dbh = DBI->connect($connect, $user, $pass) or croak('no db');
     $dbh->{pg_enable_utf8} = 1;
-    my $sth = $dbh->table_info( '', 'public', undef, 'TABLE' );
+    my $sth = $dbh->table_info( '', 'public', undef, "'TABLE','VIEW'" );
     my @tables;
     while (my $data = $sth->fetchrow_hashref) {
 	#my $n = decode("utf8", $data->{TABLE_NAME});
