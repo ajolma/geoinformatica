@@ -96,97 +96,108 @@ sub copy {
     $clone->{Precision} = $self->{Precision} if exists $self->{Precision};
 }
 
-## @method Geo::OGC::Geometry parse_wkt($Text)
+## @cmethod Geo::OGC::Geometry parse_wkt($Text)
 # @brief parse well known text and construct respective geometry
 sub parse_wkt {
+    my $text = shift;
     my $self;
-    #print STDERR "parse: $_[0]\n";
-    for ($_[0]) {
-	if (/^\s*POINT/i) {
-	    s/^\s*POINT\s*([ZM]*)\s*\(\s*//i;
-	    my $m = lc($1);
-	    s/\s*\)\s*$//;
-	    my @point = split /\s+/;
-	    $self = Geo::OGC::Point->new("point$m"=>\@point);
-	} elsif (/^\s*MULTIPOINT/i) {
-	    s/^\s*MULTIPOINT\s*([ZM]*)\s*\(\s*//i;
-	    my $m = $1;
-	    s/\s*\)\s*$//;
-	    my @points = split /\s*,\s*/;
-	    $self = Geo::OGC::MultiPoint->new();
-	    for my $p (@points) {
-		$self->AddGeometry(parse_wkt("POINT$m ($p)"));
-	    }
-	} elsif (/^\s*LINESTRING/i) {
-	    s/^\s*LINESTRING\s*([ZM]*)\s*\(\s*//i;
-	    my $m = $1;
-	    s/\s*\)\s*$//;
-	    my @points = split /\s*,\s*/;
-	    $self = Geo::OGC::LineString->new();
-	    for my $p (@points) {
-		$self->AddPoint(parse_wkt("POINT$m ($p)"));
-	    }
-	} elsif (/^\s*MULTILINESTRING/i) {
-	    s/^\s*MULTILINESTRING\s*([ZM]*)[\s\(]*//i;
-	    my $m = $1;
-	    s/[\s\)]*$//;
-	    my @strings = split /\)\s*,\s*\(/;
-	    $self = Geo::OGC::MultiLineString->new();
-	    for my $s (@strings) {
-		$self->AddGeometry(parse_wkt("LINESTRING$m ($s)"));
-	    }
-	} elsif (/^\s*LINEARRING/i) {
-	    s/^\s*LINEARRING\s*([ZM]*)\s*\(\s*//i;
-	    my $m = $1;
-	    s/\s*\)\s*$//;
-	    my @points = split /\s*,\s*/;
-	    $self = Geo::OGC::LinearRing->new();
-	    for my $p (@points) {
-		$self->AddPoint(parse_wkt("POINT$m ($p)"));
-	    }
-	} elsif (/^\s*POLYGON/i) {
-	    s/^\s*POLYGON\s*([ZM]*)[\s\(]*//i;
-	    my $m = $1;
-	    s/[\s\)]*$//;
-	    my @rings = split /\)\s*,\s*\(/;
-	    $self = Geo::OGC::Polygon->new();
-	    $self->ExteriorRing(parse_wkt("LINEARRING$m (".shift(@rings).")"));
-	    for my $r (@rings) {
-		$self->AddInteriorRing(parse_wkt("LINEARRING$m ($r)"));
-	    }
-	} elsif (/^\s*POLYHEDRALSURFACE/i) {
-	    s/^\s*POLYHEDRALSURFACE\s*([ZM]*)[\s\(]*//i;
-	    my $m = $1;
-	    s/[\s\)]*$//;
-	    my @patches = split /\)\s*,\s*\(/;
-	    $self = Geo::OGC::PolyhedralSurface->new();
-	    for my $p (@patches) {
-		$self->AddPatch(parse_wkt("POLYGON$m (($p)"));
-	    }
-	} elsif (/^\s*MULTIPOLYGON/i) {
-	    s/^\s*MULTIPOLYGON\s*([ZM]*)[\s\(]*//i;
-	    my $m = $1;
-	    s/[\s\)]*$//;
-	    my @polygons = split /\)\s*\)\s*,\s*\(\s*\(/;
-	    $self = Geo::OGC::MultiPolygon->new();
-	    for my $p (@polygons) {
-		$self->AddGeometry(parse_wkt("POLYGON$m (($p))"));
-	    }
-	} elsif (/^\s*GEOMETRYCOLLECTION/i) {
-	    s/^\s*GEOMETRYCOLLECTION\s*([ZM]*)\s*\(\s*//i;
-	    my $m = $1;
-	    s/\s*\)\s*$//;
-	    my @b = /,([A-Z])/g;
-	    unshift @b,'';
-	    my @geometries = split /,[A-Z]/;
-	    $self = Geo::OGC::GeometryCollection->new();
-	    for my $i (0..$#geometries) {
-		$self->AddGeometry(parse_wkt($b[$i].$geometries[$i]));
-	    }
-	} else {
-	    my $beginning = substr $_, 0, 20;
-	    croak "can't parse text beginning as: $beginning";
-	}
+    my $type;
+    my $prefix;
+    for my $t (qw/POINT MULTIPOINT LINESTRING MULTILINESTRING
+    LINEARRING POLYGON POLYHEDRALSURFACE MULTIPOLYGON
+    GEOMETRYCOLLECTION/) {
+        next unless $text =~ /^\s*$t/i;
+        $type = $t;
+        $text =~ s/^\s*$t\s*//i;
+        if ($text =~ /^EMPTY/i) {
+            $text = undef;
+        } else {
+            $text =~ s/^([ZM]*)\s*\(\s*//i;
+            $prefix = lc($1);
+            $text =~ s/\s*\)\s*$//;
+        }
+        last;
+    }
+    if ($type eq 'POINT') {
+        return Geo::OGC::Point->new unless $text;
+        my @point = split /\s+/, $text;
+        $self = Geo::OGC::Point->new("point$prefix"=>\@point);
+    } elsif ($type eq 'MULTIPOINT') {
+        return Geo::OGC::MultiPoint->new unless $text;
+        $text =~ s/^\(\s*//;
+        $text =~ s/\)\s*$//;
+        my @points = split /\s*,\s*/, $text;
+        $self = Geo::OGC::MultiPoint->new();
+        for my $p (@points) {
+            $self->AddGeometry(parse_wkt("POINT $prefix ($p)"));
+        }
+    } elsif ($type eq 'LINESTRING') {
+        return Geo::OGC::LineString->new unless $text;
+        $text =~ s/^\(\s*//;
+        $text =~ s/\)\s*$//;
+        my @points = split /\s*,\s*/, $text;
+        $self = Geo::OGC::LineString->new();
+        for my $p (@points) {
+            $self->AddPoint(parse_wkt("POINT $prefix ($p)"));
+        }
+    } elsif ($type eq 'MULTILINESTRING') {
+        return Geo::OGC::MultiLineString->new unless $text;
+        $text =~ s/^\(\s*//;
+        $text =~ s/\)\s*$//;
+        my @strings = split /\)\s*,\s*\(/, $text;
+        $self = Geo::OGC::MultiLineString->new();
+        for my $s (@strings) {
+            $self->AddGeometry(parse_wkt("LINESTRING $prefix ($s)"));
+        }
+    } elsif ($type eq 'LINEARRING') {
+        return Geo::OGC::LinearRing->new unless $text;
+        $text =~ s/^\(\s*//;
+        $text =~ s/\)\s*$//;
+        my @points = split /\s*,\s*/, $text;
+        $self = Geo::OGC::LinearRing->new();
+        for my $p (@points) {
+            $self->AddPoint(parse_wkt("POINT $prefix ($p)"));
+        }
+    } elsif ($type eq 'POLYGON') {
+        return Geo::OGC::Polygon->new unless $text;
+        $text =~ s/^\(\s*//;
+        $text =~ s/\)\s*$//;
+        my @rings = split /\)\s*,\s*\(/, $text;
+        $self = Geo::OGC::Polygon->new();
+        $self->ExteriorRing(parse_wkt("LINEARRING $prefix (".shift(@rings).")"));
+        for my $r (@rings) {
+            $self->AddInteriorRing(parse_wkt("LINEARRING $prefix ($r)"));
+        }
+    } elsif ($type eq 'POLYHEDRALSURFACE') {
+        return Geo::OGC::PolyhedralSurface->new unless $text;
+        $text =~ s/^\(\s*//;
+        $text =~ s/\)\s*$//;
+        my @patches = split /\)\s*,\s*\(/, $text;
+        $self = Geo::OGC::PolyhedralSurface->new();
+        for my $p (@patches) {
+            $self->AddPatch(parse_wkt("POLYGON $prefix ($p)"));
+        }
+    } elsif ($type eq 'MULTIPOLYGON') {
+        return Geo::OGC::MultiPolygon->new unless $text;
+        $text =~ s/^\(\s*\(\s*//;
+        $text =~ s/\)\s*\)\s*$//;
+        my @polygons = split /\)\s*\)\s*,\s*\(\s*\(/, $text;
+        $self = Geo::OGC::MultiPolygon->new();
+        for my $p (@polygons) {
+            $self->AddGeometry(parse_wkt("POLYGON $prefix (($p))"));
+        }
+    } elsif ($type eq 'GEOMETRYCOLLECTION') {
+        return Geo::OGC::GeometryCollection->new unless $text;
+        my @b = $text =~ /,([A-Z])/g;
+        unshift @b,'';
+        my @geometries = split /,[A-Z]/, $text;
+        $self = Geo::OGC::GeometryCollection->new();
+        for my $i (0..$#geometries) {
+            $self->AddGeometry(parse_wkt($b[$i].$geometries[$i]));
+        }
+    } else {
+        my $b = substr $text, 0, 20;
+        croak "can't parse text beginning as: $b";
     }
     return $self;
 }
@@ -314,6 +325,7 @@ sub as_text {
 # @brief Returns this object in Well-known Text Representation of Geometry
 sub AsText {
     my($self) = @_;
+    return uc($self->GeometryType).' '.'EMPTY' if $self->IsEmpty;
     return $self->as_text(1, 1);
 }
 
@@ -903,6 +915,12 @@ sub copy {
     for my $p (@{$self->{Points}}) {
 	$clone->AddPoint($p->Clone);
     }
+}
+
+sub IsEmpty {
+    my($self) = @_;
+    return 1 if !$self->{Points} or @{$self->{Points}} == 0;
+    return 0;
 }
 
 sub GeometryType {
@@ -1770,6 +1788,12 @@ sub copy {
     }
 }
 
+sub IsEmpty {
+    my($self) = @_;
+    return 1 unless $self->{ExteriorRing};
+    return undef;
+}
+
 sub GeometryType {
     return 'Polygon';
 }
@@ -2159,6 +2183,12 @@ sub copy {
     }
 }
 
+sub IsEmpty {
+    my($self) = @_;
+    return 1 if !$self->{Patches} or @{$self->{Patches}} == 0;
+    return undef;
+}
+
 sub GeometryType {
     return 'PolyhedralSurface';
 }
@@ -2270,6 +2300,12 @@ sub copy {
     for my $g (@{$self->{Geometries}}) {
 	$clone->AddGeometry($g->Clone);
     }
+}
+
+sub IsEmpty {
+    my($self) = @_;
+    return 1 if !$self->{Geometries} or @{$self->{Geometries}} == 0;
+    return undef;
 }
 
 sub GeometryType {

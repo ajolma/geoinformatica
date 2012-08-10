@@ -4,6 +4,9 @@ BEGIN {
     use_ok( 'Geo::OGC::Geometry' );
 }
 
+my $g = Geo::OGC::Geometry->new(Text => 'geometrycollection empty');
+ok($g->AsText eq 'GEOMETRYCOLLECTION EMPTY', "empty");
+
 my $p = new Geo::OGC::Polygon;
 my $r = new Geo::OGC::LinearRing;
 $r->AddPoint(Geo::OGC::Point->new(0, 0));
