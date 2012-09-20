@@ -30,7 +30,7 @@ WriteMakefile(
 	      NAME              => 'Gtk2::Ex::Geo::Graph',
 	      VERSION_FROM      => 'lib/Gtk2/Ex/Geo/Graph.pm',
 	      ABSTRACT_FROM   => 'lib/Gtk2/Ex/Geo/Graph.pm', # retrieve abstract from module
-	      AUTHOR          => 'Ari Jolma <ari.jolma @ tkk.fi>',
+	      AUTHOR          => 'Ari Jolma <ari.jolma @ aalto.fi>',
 	      PREREQ_PM         => {
 		  'Gtk2::Ex::Geo' => 0,
 		  },
