@@ -2,8 +2,7 @@
 
 \section index_intro Introduction
 
-<a
-href="http://geoinformatics.tkk.fi/twiki/bin/view/Main/GeoinformaticaSoftware">Geoinformatica</a>
+<a href="https://github.com/ajolma/geoinformatica">Geoinformatica</a>
 is a geospatial software toolkit, which builds on Perl, GTK+, GDAL,
 and libral. These pages document the Perl modules specific to
 Geoinformatica.

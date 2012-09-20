@@ -92,7 +92,7 @@ $deps->save_config("Files.pm");
 WriteMakefile(NAME                        => 'Geo::Raster',
 	      VERSION_FROM                => 'lib/Geo/Raster.pm',
 	      ABSTRACT_FROM               => 'lib/Geo/Raster.pm',
-	      AUTHOR                      => 'Ari Jolma <ari.jolma @ tkk.fi>',
+	      AUTHOR                      => 'Ari Jolma <ari.jolma @ aalto.fi>',
 	      $deps->get_makefile_vars(),
 	      #'EXE_FILES'                => [ 'rash' ],
 	      CCFLAGS                     => "-O2 -fno-builtin $cflags $inc",

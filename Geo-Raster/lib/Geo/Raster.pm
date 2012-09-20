@@ -9,7 +9,7 @@ package Geo::Raster;
 # This module should be discussed in geo-perl@list.hut.fi.
 #
 # The homepage of this module is 
-# http://geoinformatics.tkk.fi/twiki/bin/view/Main/GeoinformaticaSoftware.
+# https://github.com/ajolma/geoinformatica.
 #
 # @author Ari Jolma
 # @author Copyright (c) 1999- by Ari Jolma
@@ -22,8 +22,8 @@ package Geo::Raster;
 
 Geo::Raster - Perl extension for geospatial rasters
 
-The <a href="http://map.hut.fi/doc/Geoinformatica/html/">
-documentation of Geo::Raster</a> is written in doxygen format.
+The <a href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">
+documentation for Geo::Raster</a> is written in doxygen format.
 
 =cut
 
@@ -1592,11 +1592,11 @@ Geo::GDAL
 This module should be discussed in geo-perl@list.hut.fi.
 
 The homepage of this module is
-http://geoinformatics.tkk.fi/twiki/bin/view/Main/GeoinformaticaSoftware.
+https://github.com/ajolma/geoinformatica
 
 =head1 AUTHOR
 
-Ari Jolma, ari.jolma _at_ tkk.fi
+Ari Jolma, ari.jolma _at_ aalto.fi
 
 =head1 COPYRIGHT AND LICENSE
 
