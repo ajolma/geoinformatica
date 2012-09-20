@@ -83,7 +83,7 @@ href="http://www.bigsister.ch/doxygenfilter/">perl doxygen filter</a>.
 
 The documentation is of this framework is available as a part of the
 documentation for <a
-href="http://map.hut.fi/doc/Geoinformatica/html/">Geoinformatica</a>.
+href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">Geoinformatica</a>.
 
 =cut
 

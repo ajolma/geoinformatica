@@ -24,7 +24,7 @@ BEGIN {
 
 Gtk2::Ex::Geo::DialogMaster - A class which maintains a set of glade dialogs
 
-The <a href="http://map.hut.fi/doc/Geoinformatica/html/">
+The <a href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">
 documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 =cut

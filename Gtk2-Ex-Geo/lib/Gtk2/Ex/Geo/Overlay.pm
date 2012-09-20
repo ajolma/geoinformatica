@@ -24,7 +24,7 @@ our $VERSION = '0.62'; # same as Geo.pm
 
 Gtk2::Ex::Geo::Overlay - A Gtk2 widget for a visual overlay of geospatial data
 
-The <a href="http://map.hut.fi/doc/Geoinformatica/html/">
+The <a href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">
 documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 =cut

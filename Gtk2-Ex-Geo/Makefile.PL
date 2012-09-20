@@ -84,7 +84,7 @@ WriteMakefile(
 	      NAME              => 'Gtk2::Ex::Geo',
 	      VERSION_FROM      => 'lib/Gtk2/Ex/Geo.pm',
 	      ABSTRACT_FROM   => 'lib/Gtk2/Ex/Geo.pm', # retrieve abstract from module
-	      AUTHOR          => 'Ari Jolma <ari.jolma @ tkk.fi>',
+	      AUTHOR          => 'Ari Jolma <ari.jolma @ aalto.fi>',
 	      PREREQ_PM         => {
 		  'ExtUtils::Depends' => 0,
 		  'ExtUtils::PkgConfig' => 0,

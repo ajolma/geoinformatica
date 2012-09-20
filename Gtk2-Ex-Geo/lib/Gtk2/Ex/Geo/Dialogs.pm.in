@@ -13,7 +13,7 @@ package Gtk2::Ex::Geo::Dialogs;
 
 Gtk2::Ex::Geo::Dialogs - Generic dialogs for geospatial layers
 
-The <a href="http://map.hut.fi/doc/Geoinformatica/html/">
+The <a href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">
 documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 =cut
