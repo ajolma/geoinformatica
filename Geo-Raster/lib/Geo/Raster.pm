@@ -6,7 +6,7 @@ package Geo::Raster;
 # Import tags:
 # - \a logics Imports (overrides) \c not, \c and, and \c or
 #
-# This module should be discussed in geo-perl@list.hut.fi.
+# This module should be discussed in https://list.hut.fi/mailman/listinfo/geo-perl
 #
 # The homepage of this module is 
 # https://github.com/ajolma/geoinformatica.
@@ -1589,7 +1589,7 @@ __END__
 
 Geo::GDAL
 
-This module should be discussed in geo-perl@list.hut.fi.
+This module should be discussed in https://list.hut.fi/mailman/listinfo/geo-perl
 
 The homepage of this module is
 https://github.com/ajolma/geoinformatica
