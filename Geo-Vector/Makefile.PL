@@ -91,7 +91,7 @@ WriteMakefile(
 	      $deps->get_makefile_vars(),
 	      ( $] >= 5.005 ?
 		(ABSTRACT_FROM  => 'lib/Geo/Vector.pm',
-		 AUTHOR         => 'Ari Jolma <ajolma at tkk.fi>') : () ),
+		 AUTHOR         => 'Ari Jolma <ajolma at aalto.fi>') : () ),
 	      CCFLAGS => "-O2 -fno-builtin $cflags $inc",
 	      $deps->get_makefile_vars,
 	      @for_windows

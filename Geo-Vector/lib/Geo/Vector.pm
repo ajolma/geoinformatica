@@ -3,10 +3,10 @@ package Geo::Vector;
 ## @class Geo::Vector
 # @brief A geospatial layer that consists of Geo::OGR::Features.
 #
-# This module should be discussed in geo-perl@list.hut.fi.
+# This module should be discussed in https://list.hut.fi/mailman/listinfo/geo-perl
 #
 # The homepage of this module is 
-# http://geoinformatics.tkk.fi/twiki/bin/view/Main/GeoinformaticaSoftware.
+# https://github.com/ajolma/geoinformatica
 #
 # @author Ari Jolma
 # @author Copyright (c) 2005- by Ari Jolma
@@ -20,7 +20,7 @@ package Geo::Vector;
 
 Geo::Vector - Perl extension for geospatial vectors
 
-The <a href="http://map.hut.fi/doc/Geoinformatica/html/">documentation
+The <a href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">documentation
 of Geo::Vector</a> is in doxygen format.
 
 =cut
@@ -1383,13 +1383,13 @@ __END__
 
 Geo::GDAL
 
-This module should be discussed in geo-perl@list.hut.fi.
+This module should be discussed in https://list.hut.fi/mailman/listinfo/geo-perl
 
-The homepage of this module is http://libral.sf.net.
+The homepage of this module is https://github.com/ajolma/geoinformatica
 
 =head1 AUTHOR
 
-Ari Jolma, E<lt>ari.jolma at tkk.fiE<gt>
+Ari Jolma, E<lt>ari.jolma at aalto.fiE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
