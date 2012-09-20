@@ -590,7 +590,7 @@ http://lists.osgeo.org/pipermail/standards/
 
 =head1 AUTHOR
 
-Ari Jolma, E<lt>ari.jolma at tkk.fiE<gt>
+Ari Jolma, E<lt>ari.jolma at aalto.fiE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
