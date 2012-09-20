@@ -8,7 +8,7 @@ WriteMakefile(
 	       $] >= 5.005 ?     ## Add these new keywords supported since 5.005
 	       (
 		ABSTRACT_FROM  => 'lib/IPC/Gnuplot.pm', # retrieve abstract from module
-		AUTHOR         => 'Ari Jolma <ari.jolma @ tkk.fi>'
+		AUTHOR         => 'Ari Jolma <ari.jolma @ aalto.fi>'
 		) : 
 	       ()
 	       ),
