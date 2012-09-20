@@ -34,7 +34,7 @@ href="http://www.stack.nl/~dimitri/doxygen/">doxygen</a> and <a
 href="http://www.bigsister.ch/doxygenfilter/">perl doxygen filter</a>.
 
 The latest version of the documentation is automatically generated at
-http://map.hut.fi/doc/Geoinformatica/html/class_geo_1_1_o_g_c_1_1_geometry.html
+http://geoinformatics.aalto.fi/doc/Geoinformatica/html/
 
 =cut
 
