@@ -3,15 +3,7 @@ under the LGPL licence, see file "lesser.txt".
 
 This library is a part of Geoinformatica. See 
 
-http://geoinformatics.tkk.fi/twiki/bin/view/Main/GeoinformaticaSoftware
-
-and 
-
-http://trac.osgeo.org/geoinformatica/
-
-Discussions at 
-
-http://hoslab.cs.helsinki.fi/cgi-bin/mailman/listinfo/geoinformatica-dev
+https://github.com/ajolma/geoinformatica
 
 HISTORY
 
@@ -117,4 +109,4 @@ a gdk style pixbuf but will be changed to use Cairo.
 AUTHOR 
 
 Ari Jolma
-ari.jolma _at_ tkk.fi
+ari.jolma _at_ aalto.fi

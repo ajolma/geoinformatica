@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.59)
 VERSION=0.64
-AC_INIT(libral, 0.64, ari.jolma_at_tkk.fi)
+AC_INIT(libral, 0.64, ari.jolma_at_aalto.fi)
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile libral.pc ral/config.h])
