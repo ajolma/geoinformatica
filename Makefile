@@ -14,6 +14,13 @@ all:
 		cd ..; \
 	done;
 
+perl:
+	for m in ${PERL_MODULES}; do \
+		cd $$m; \
+		perl Makefile.PL; \
+		cd ..; \
+	done;
+
 make:
 	for m in ${MODULES}; do \
 		cd $$m; \

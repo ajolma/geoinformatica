@@ -152,7 +152,7 @@ sub setup {
 	}
     }
     
-    tie *STDOUT => "Buffer", \$buffer;
+    tie *STDOUT => "Buffer", \$buffer unless $ENV{DEBUG};
 
     $gis->register_command(tag => 'out', 
 			   label => 'Output',
