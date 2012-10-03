@@ -104,6 +104,7 @@ my %dispatch = (
     ForGeometries => \&Geo::OGR::Layer::ForGeometries,
     Intersection => \&Geo::OGR::Layer::Intersection,
     Union => \&Geo::OGR::Layer::Union,
+    SymDifference => \&Geo::OGR::Layer::SymDifference,
     Identity => \&Geo::OGR::Layer::Identity,
     Update => \&Geo::OGR::Layer::Update,
     Clip => \&Geo::OGR::Layer::Clip,
@@ -380,12 +381,14 @@ sub open_data_source {
     my($driver, $data_source, $update, $create_options) = 
 	($params{driver}, $params{data_source}, $params{update}, $params{create_options});
     if ($driver) {
-	if (blessed($driver) and $driver->isa('Geo::OGR::Driver')) {
-	    $self->{OGR}->{Driver} = $driver;
-	} else {
-	    $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
-	}
-	if ($create_options) {
+        if (blessed($driver) and $driver->isa('Geo::OGR::Driver')) {
+            $self->{OGR}->{Driver} = $driver;
+        } else {
+            $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
+        }
+        if ($self->{OGR}->{Driver}->{name} eq 'Memory') {
+            $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource();
+        } elsif ($create_options) {
 	    croak "driver $self->{OGR}->{Driver}->{name} does not have the capability to create data sources"
 		unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
 	    eval {
