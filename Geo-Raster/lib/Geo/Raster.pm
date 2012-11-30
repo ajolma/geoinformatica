@@ -835,6 +835,13 @@ sub _datatype {
 # or 'Real'.
 sub datatype {
     my $self = shift;
+    if ($self->{GDAL} and $self->{GDAL}->{dataset}) {
+	my $t = $self->{GDAL}->{dataset}->GetRasterBand($self->{GDAL}->{band})->DataType;
+	return 'GDAL Complex Data Type' if $t =~ /^C/;
+	return 'Integer' if $t eq 'Byte' or $t =~ /Int/;
+	return 'Real' if $t =~ /Float/;
+	return 'Unknown GDAL Data Type';
+    }
     return unless $self->{GRID};
     $self->{DATATYPE} = ral_grid_get_datatype($self->{GRID});
     return 'Integer' if $self->{DATATYPE} == $INTEGER_GRID;
