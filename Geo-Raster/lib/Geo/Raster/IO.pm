@@ -11,7 +11,7 @@ use Scalar::Util 'blessed';
 sub gdal_open {
     my($self, %params) = @_;
     $params{access} = 'ReadOnly' unless $params{access};
-    croak "gdal_open called with empty filename" if not defined $params{filename} or $params{filename} eq '';
+    croak "gdal_open called with empty filename" if !(defined $params{filename}) or $params{filename} eq '';
     my $dataset = Geo::GDAL::Open($params{filename}, $params{access});
     croak "Geo::GDAL::Open failed for ".$params{filename} unless $dataset;
     my $t = $dataset->GetGeoTransform;
