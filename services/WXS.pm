@@ -73,6 +73,8 @@ sub error {
 	$error = 'Unspecified error: '.$arg{msg};
     }
     xml_element('ServiceExceptionReport',['ServiceException', $error]);
+    select(STDERR);
+    print "$error\n";
 }
 
 sub serve_document {

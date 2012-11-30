@@ -108,8 +108,8 @@ sub GetMap {
 
     my @stack = ();
     for my $layer (@{$params{LAYERS}}) {
-	my $l = layer($layer);
-	push @stack, $l if $l;
+	my @layers = layer($layer);
+	push @stack, @layers if @layers;
     }
     croak "LayerNotDefined .#" unless @stack;
 
@@ -165,11 +165,34 @@ sub layer {
     for my $l (@layers) {
 	next unless $layer eq $l->{Name};
 	print STDERR "creating layer $l->{Name}\n" if $debug;
+	my $scales = $l->{Scales};
+	if ($scales) {
+	    my $epsg = $l->{EPSG};
+	    for my $s (@$scales) {
+		if ($s->{Minimum_pixe_size}) {
+		    if ($pixel_scale > $s->{Minimum_pixe_size}) {
+			$l = $s;
+			last;
+		    }
+		} else {
+		    $l = $s;
+		    last;
+		}
+	    }
+	    $l->{EPSG} = $epsg;
+	}
 	if ($l->{Filename}) {
-	    my $r = Geo::Raster::Layer->new(filename => $l->{Filename});
-	    $r->band()->SetNoDataValue($l->{NoDataValue}) if exists $l->{NoDataValue};
-	    print STDERR "created layer $r\n" if $debug;
-	    return $r;
+            my $dataset = Geo::GDAL::Open($l->{Filename});
+	    croak "$l->{Filename} is not recognized by GDAL" unless $dataset;
+	    my $bands = $dataset->{RasterCount};
+	    my @layers;
+	    for my $band (1..$bands) {
+                my $layer = Geo::Raster::Layer->new(filename => $l->{Filename}, band => $band);
+		$layer->band()->SetNoDataValue($layer->{NoDataValue}) if exists $layer->{NoDataValue};
+                print STDERR "created layer $r\n" if $debug;
+                push @layers, $layer;
+            }
+	    return @layers;
 	}
 	if ($l->{Datasource}) {
 	    my %param = (datasource => $l->{Datasource});

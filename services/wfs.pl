@@ -33,6 +33,38 @@ eval {
 };
 error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
 
+sub remove_ns {
+    my $hashref = shift;
+    for my $k (keys %$hashref) {
+	delete $hashref->{$k} if $k =~ /^xmlns/;
+	remove_ns($hashref->{$k}) if ref($hashref->{$k}) eq 'HASH';
+    }
+}
+
+sub get_bbox {
+    my $e = shift;
+    my $bbox;
+    if ($e->{'gml:Envelope'}) { # WFS 1.1 GML 3
+	$e = $e->{'gml:Envelope'};
+	$bbox = $e->{'gml:lowerCorner'}.' '.$e->{'gml:upperCorner'};
+	$bbox =~ s/ /,/g;
+    } else { # GML 2
+	$bbox = $e->{'gml:Box'}{'gml:coordinates'}{content};
+	$bbox =~ s/ /,/;
+    }
+    return $bbox;
+}
+
+sub get_filter {
+    my $e = shift; # list of or'red constraints
+    my $filter;
+    if ($e->{'ogc:PropertyIsEqualTo'}) {
+	$e = $e->{'ogc:PropertyIsEqualTo'};
+	$filter = $e->{'ogc:PropertyName'}."='".$e->{'ogc:Literal'}."'";
+    }
+    return $filter;
+}
+
 sub page {
     for ($q->param) {
 	croak "Parameter ".uc($_)." given more than once.#" if exists $names{uc($_)};
@@ -42,11 +74,15 @@ sub page {
     my $request;
     my $version;
     my $service;
-    my $bbox;
+    my $bbox = '';
+    my $filter = '';
     my $typename;
 
-    if ($names{POSTDATA}) {
-	my $post = XMLin('<xml>'.$q->param($names{POSTDATA}).'</xml>');
+    my $post = $names{POSTDATA};
+    $post = $names{'XFORMS:MODEL'} unless $post;
+
+    if ($post) {
+	my $post = XMLin('<xml>'.$q->param($post).'</xml>');
 	remove_ns($post);
 
 	#print STDERR Dumper($post);
@@ -63,10 +99,19 @@ sub page {
 		$typename =~ s/^feature://;
 		next unless $h->{'ogc:Filter'};
 		$h = $h->{'ogc:Filter'};
-		next unless $h->{'ogc:BBOX'};
-		$h = $h->{'ogc:BBOX'};
-		$bbox = $h->{'gml:Box'}{'gml:coordinates'}{content};
-		$bbox =~ s/ /,/;
+
+                if ($h->{'ogc:And'}) {
+		    $h = $h->{'ogc:And'};
+		    if ($h->{'ogc:Or'}) {
+			$filter = get_filter($h->{'ogc:Or'});
+		    }
+		    if ($h->{'ogc:BBOX'}) {
+			$bbox = get_bbox($h->{'ogc:BBOX'});
+		    }
+		} elsif ($h->{'ogc:BBOX'}) {
+		    $bbox = get_bbox($h->{'ogc:BBOX'});
+		}
+
 	    } elsif ($k eq 'x') {
 	    }
 	}
@@ -124,7 +169,10 @@ sub GetFeature {
 	    next if $f eq 'ID';
 	    my $n = $f;
 	    $n =~ s/ /_/g;
-	    # need to use specified GeometryColumn and only it
+            $n =~ s/ä/a/g;
+	    $n =~ s/ö/o/g;
+
+	    # need to use the specified GeometryColumn and only it
 	    next if $type->{Schema}{$f} eq 'geometry' and not ($f eq $type->{GeometryColumn});
 	    push @cols, "\"$f\" as \"$n\"";
 	}
@@ -132,24 +180,8 @@ sub GetFeature {
 
 # todo: a join between two tables, howto configure?      
 	my $sql;
-
-# select "Lajin nimi" from "Lajiesiintymät","Lajit" where
-# "Lajiesiintymät"."Lajin nimi"="Lajit"."Nimi"
-#
-
-	if ($type->{Table} eq 'Lajiesiintymät') {
-	    for (@cols) {
-		$_ = "\"$type->{Table}\".".$_;
-	    }
-	    push @cols,"\"Lajit\".\"IUCN 2010\" as \"IUCN_2010\"";
-	    my @tables = ("\"$type->{Table}\"",'"Lajit"');
-	    $sql = "select ".join(',',@cols)." from ".join(',',@tables)." where ST_IsValid($type->{GeometryColumn})";
-	    $sql .= " and \"$type->{Table}\".\"Lajin nimi\"=\"Lajit\".\"Nimi\"";
-	    #print STDERR "$sql\n";
-	} else {
-	    $sql = "select ".join(',',@cols)." from \"$type->{Table}\" where ST_IsValid($type->{GeometryColumn})";
-	}
-
+        $sql = "select ".join(',',@cols)." from \"$type->{Table}\" where ST_IsValid($type->{GeometryColumn})";
+        $sql .= " and $filter" if $filter;
 	$layer = $datasource->ExecuteSQL($sql);
     } else {
 	croak "missing information in configuration file";
@@ -217,15 +249,7 @@ sub DescribeFeatureType {
 		my $c = $col;
 		$c =~ s/ /_/g; # field name adjustments as GDAL does them
 		$c =~ s/ä/a/g; # extra name adjustments, needed by QGIS
-		push @elements, ['element', { name => $c,
-					      type => $t,
-					      minOccurs => "0",
-					      maxOccurs => "1" } ];
-	    }
-	    # todo: add a column from another table through join (see above in GetFeature)
-	    if ($type->{Table} eq 'Lajiesiintymät') {
-		my $c = 'IUCN_2010';
-		my $t = 'text';
+                $c =~ s/ö/o/g;
 		push @elements, ['element', { name => $c,
 					      type => $t,
 					      minOccurs => "0",
