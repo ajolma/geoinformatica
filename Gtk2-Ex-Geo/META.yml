@@ -1,0 +1,26 @@
+--- #YAML:1.0
+name:               Gtk2-Ex-Geo
+version:            0.63
+abstract:           The main module to use for geospatial applications
+author:
+    - Ari Jolma <ari.jolma @ aalto.fi>
+license:            unknown
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    ExtUtils::Depends:    0
+    ExtUtils::PkgConfig:  0
+    Geo::OGC::Geometry:   0
+    Graphics::ColorUtils:  0
+    Gtk2::GladeXML:       0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.55_02
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

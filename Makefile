@@ -6,7 +6,7 @@ LIBRAL = libral
 MODULES = ${LIBRAL} ${PERL_MODULES}
 
 all:
-	cd ${LIBRAL}; sh autogen; ./configure --prefix=${PREFIX}; make; cd ..
+	cd ${LIBRAL}; sh autogen.sh; ./configure --prefix=${PREFIX}; make; cd ..
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
 		perl Makefile.PL INSTALL_BASE=${PREFIX}; \
@@ -50,3 +50,11 @@ distclean:
 		cd ..; \
 	done;
 	cd ${LIBRAL}; $(MAKE) distclean; cd ..
+
+dist:
+	cd ${LIBRAL}; $(MAKE) dist; cd ..
+	for m in ${PERL_MODULES}; do \
+		cd $$m; \
+		$(MAKE) dist; \
+		cd ..; \
+	done;
