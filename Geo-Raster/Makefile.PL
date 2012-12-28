@@ -15,7 +15,7 @@ require ExtUtils::Depends;
 require ExtUtils::PkgConfig;
 
 $missing_modules{chk_module('Statistics::Descriptive')} = 1;
-$missing_modules{chk_module('Geo::GDAL', 1.81)} = 1; # should this be optional?
+$missing_modules{chk_module('Geo::GDAL')} = 1; # should this be optional?
 $missing_modules{chk_module('Gtk2::Ex::Geo', 0.62)} = 1;
 delete $missing_modules{''};
 my @missing_modules = keys %missing_modules;

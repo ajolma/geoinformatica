@@ -52,10 +52,10 @@ typedef struct {
 #define RAL_RAINBOW_HUE_AT_MIN 235
 #define RAL_RAINBOW_HUE_AT_MAX 0
 
-/**\brief a hash, where the keys are RAL_INTEGERs and values are colors */
+/**\brief a hash, where the keys are long ints and values are colors */
 typedef struct {
     int n;
-    RAL_INTEGER *keys;
+    long *keys;
     GDALColorEntry *colors;
 } ral_color_table;
 

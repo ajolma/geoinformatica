@@ -1408,7 +1408,9 @@ void ral_set_color(ral_visual *visual, ral_feature *feature)
 		RAL_COLOR_TABLE_GET(visual->color_table, key, feature->color);
 	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
 		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
+                /*fprintf(stderr, "value %i\n", field->Integer);*/
 		RAL_COLOR_TABLE_GET(visual->color_table, field->Integer, feature->color);
+                /*fprintf(stderr, "color %i %i %i\n", feature->color.c1, feature->color.c2, feature->color.c3);*/
 	    }
 	    break;
 	case OFTString:
@@ -1593,6 +1595,14 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
     }
 
     RAL_CHECK(ral_setup_color_interpolator(layer->visualization, defn, &feature));
+
+    /*
+    if (layer->visualization.color_table) for (int i = 0; i < layer->visualization.color_table->n; i++) {
+            int k = layer->visualization.color_table->keys[i];
+            GDALColorEntry c = layer->visualization.color_table->colors[i];
+            fprintf(stderr, "key %i color %i %i %i\n", k, c.c1, c.c2, c.c3);
+        }
+    */
 
     OGR_L_SetSpatialFilterRect(layer->layer, pb->world.min.x, pb->world.min.y, pb->world.max.x, pb->world.max.y);
     

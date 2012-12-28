@@ -7,7 +7,7 @@ my %missing_modules;
 $missing_modules{chk_module('ExtUtils::Depends')} = 1;
 $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
 $missing_modules{chk_module('JSON')} = 1;
-$missing_modules{chk_module('Geo::GDAL', 1.81)} = 1;
+$missing_modules{chk_module('Geo::GDAL')} = 1;
 $missing_modules{chk_module('Geo::Raster', 0.62)} = 1;
 $missing_modules{chk_module('Geo::OGC::Geometry', 0.04)} = 1;
 $missing_modules{chk_module('Gtk2::GladeXML')} = 1;
