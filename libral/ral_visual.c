@@ -19,7 +19,7 @@ ral_color_table *ral_color_table_create(int n)
     table->n = n;
     table->keys = NULL;
     table->colors = NULL;
-    RAL_CHECKM(table->keys = RAL_CALLOC(n, RAL_INTEGER), RAL_ERRSTR_OOM);
+    RAL_CHECKM(table->keys = RAL_CALLOC(n, long), RAL_ERRSTR_OOM);
     RAL_CHECKM(table->colors = RAL_CALLOC(n, GDALColorEntry), RAL_ERRSTR_OOM);
     return table;
  fail:
