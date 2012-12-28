@@ -23,7 +23,7 @@ my $q = CGI->new;
 my %names = ();
 my %params;
 my $header = 0;
-my $debug = 0;
+my $debug = 1;
 
 eval {
     $config = config();
@@ -47,8 +47,8 @@ sub page {
     $service = 'WMS'unless $service;
 
     $params{EPSG} = $1 if $q->param($names{SRS}) and $q->param($names{SRS}) =~ /EPSG:(\d+)/;
-    $params{EPSG} = 3857 if $params{EPSG} == 900913;
-    $params{LAYERS} = [split(/,/, $q->param($names{LAYERS}))] if $q->param($names{LAYERS});
+    $params{EPSG} = 3857 if $params{EPSG} and $params{EPSG} == 900913;
+    $params{LAYERS} = [split(/,/, decode utf8=>$q->param($names{LAYERS}))] if $q->param($names{LAYERS});
     $params{BBOX} = [split(/,/, $q->param($names{BBOX}))] if $q->param($names{BBOX});
     ($params{WIDTH}) = $q->param($names{WIDTH}) =~ /(\d+)/ if $q->param($names{WIDTH});
     ($params{HEIGHT}) = $q->param($names{HEIGHT}) =~ /(\d+)/ if $q->param($names{HEIGHT});
@@ -58,7 +58,7 @@ sub page {
     $params{HEIGHT} = $config->{max_height} if $params{HEIGHT} > $config->{max_height};
     $params{pixel_size} = ($params{BBOX}[2] - $params{BBOX}[0])/$params{WIDTH} if $params{BBOX}; # assuming square pixels
     $params{FORMAT} = $q->param($names{FORMAT});
-    $params{TRANSPARENT} = uc($q->param($names{TRANSPARENT})) eq 'TRUE';
+    $params{TRANSPARENT} = uc($q->param($names{TRANSPARENT})) eq 'TRUE' if $q->param($names{TRANSPARENT});
     $params{POLYGON} = $q->param($names{POLYGON});
     ($params{X}) = $q->param($names{X}) =~ /(\d+)/ if $q->param($names{X});
     ($params{Y}) = $q->param($names{Y}) =~ /(\d+)/ if $q->param($names{Y});
@@ -68,6 +68,14 @@ sub page {
     $_ = hex($_) for (@{$params{BGCOLOR}});
     push @{$params{BGCOLOR}}, $params{TRANSPARENT} ? 0 : 255;
     $params{TIME} = $q->param($names{TIME});
+
+    if ($debug) {
+        for (sort keys %params) {
+            next unless $params{$_};
+            print STDERR "$_ => $params{$_}\n" unless ref $params{$_};
+            print STDERR "$_ => @{$params{$_}}\n" if ref $params{$_} eq 'ARRAY';
+        }
+    }
 
     if ($request eq 'GetCapabilities' or $request eq 'capabilities') {
 	GetCapabilities($version);
@@ -170,7 +178,7 @@ sub layer {
 	    my $epsg = $l->{EPSG};
 	    for my $s (@$scales) {
 		if ($s->{Minimum_pixe_size}) {
-		    if ($pixel_scale > $s->{Minimum_pixe_size}) {
+		    if ($params{pixel_scale} > $s->{Minimum_pixe_size}) {
 			$l = $s;
 			last;
 		    }
@@ -189,7 +197,7 @@ sub layer {
 	    for my $band (1..$bands) {
                 my $layer = Geo::Raster::Layer->new(filename => $l->{Filename}, band => $band);
 		$layer->band()->SetNoDataValue($layer->{NoDataValue}) if exists $layer->{NoDataValue};
-                print STDERR "created layer $r\n" if $debug;
+                print STDERR "created layer $layer\n" if $debug;
                 push @layers, $layer;
             }
 	    return @layers;
@@ -197,6 +205,8 @@ sub layer {
 	if ($l->{Datasource}) {
 	    my %param = (datasource => $l->{Datasource});
 	    if (exists $l->{SQL}) {
+
+                my $geom = 'geom'; # need to get this from config...
 
 		# a hack to allow a direct SQL injection
 		my $SQL = decode utf8=>$q->param('SQL');
@@ -209,9 +219,14 @@ sub layer {
 		}
 		# the_geom should be replaced with a column name coming from the config
 		if ($params{EPSG} != $l->{EPSG}) {
-		    $l->{SQL} =~ s/the_geom/st_transform(the_geom,$params{EPSG})/;
+		    $l->{SQL} =~ s/$geom/st_transform($geom,$params{EPSG})/;
 		}
-		$l->{SQL} .= " where the_geom && SetSRID(".
+                if (not $l->{SQL} =~ /where/) {
+                    $l->{SQL} .= " where";
+                } else {
+                    $l->{SQL} .= " and";
+                }
+		$l->{SQL} .= " st_transform($geom,$params{EPSG}) && st_SetSRID(".
 		    "'BOX3D($params{BBOX}[0] $params{BBOX}[1],$params{BBOX}[2] $params{BBOX}[3])'::box3d,$params{EPSG})";
 		$param{SQL} = $l->{SQL};
 		print STDERR "SQL: $param{SQL}\n" if $debug;
