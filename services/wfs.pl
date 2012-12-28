@@ -11,10 +11,6 @@ use XML::Simple;
 use Data::Dumper;
 
 use Geo::GDAL;
-#use Geo::Proj4;
-#use Gtk2::Ex::Geo;
-#use Geo::Raster;
-#use Geo::Vector;
 use JSON;
 use lib '.';
 require WXS;
@@ -26,6 +22,8 @@ my $config;
 my $q = CGI->new;
 my $header = 0;
 my %names = ();
+my %params = ();
+my $debug = 1;
 
 eval {
     $config = WXS::config();
@@ -66,17 +64,16 @@ sub get_filter {
 }
 
 sub page {
+    print STDERR "\n" if $debug;
     for ($q->param) {
 	croak "Parameter ".uc($_)." given more than once.#" if exists $names{uc($_)};
 	$names{uc($_)} = $_;
+        print STDERR "$_ => ".$q->param($_)."\n" if $debug > 1;
     }
 
-    my $request;
-    my $version;
-    my $service;
-    my $bbox = '';
-    my $filter = '';
-    my $typename;
+    $params{bbox} = '';
+    $params{filter} = '';
+    $params{EPSG} = '';
 
     my $post = $names{POSTDATA};
     $post = $names{'XFORMS:MODEL'} unless $post;
@@ -85,70 +82,94 @@ sub page {
 	my $post = XMLin('<xml>'.$q->param($post).'</xml>');
 	remove_ns($post);
 
-	#print STDERR Dumper($post);
+	print STDERR Dumper($post) if $debug > 2;
 
 	for my $k (keys %$post) {
 	    if ($k eq 'wfs:GetFeature') {
 		my $h = $post->{$k};
-		$service = $h->{'service'};
-		$version = $h->{'version'};
-		$request = 'GetFeature';
+		$params{service} = $h->{'service'};
+		$params{version} = $h->{'version'};
+		$params{request} = 'GetFeature';
+
 		next unless $h->{'wfs:Query'};
 		$h = $h->{'wfs:Query'};
-		$typename = $h->{typeName};
-		$typename =~ s/^feature://;
+		$params{typename} = $h->{typeName};
+		$params{typename} =~ s/^feature://;
+                $params{EPSG} = $1 if $h->{srsName} and $h->{srsName} =~ /EPSG:(\d+)/;
+
 		next unless $h->{'ogc:Filter'};
 		$h = $h->{'ogc:Filter'};
 
                 if ($h->{'ogc:And'}) {
 		    $h = $h->{'ogc:And'};
 		    if ($h->{'ogc:Or'}) {
-			$filter = get_filter($h->{'ogc:Or'});
+			$params{filter} = get_filter($h->{'ogc:Or'});
+		    }
+                    if ($h->{'ogc:PropertyIsEqualTo'}) {
+			$params{filter} = get_filter($h);
 		    }
 		    if ($h->{'ogc:BBOX'}) {
-			$bbox = get_bbox($h->{'ogc:BBOX'});
+			$params{bbox} = get_bbox($h->{'ogc:BBOX'});
 		    }
 		} elsif ($h->{'ogc:BBOX'}) {
-		    $bbox = get_bbox($h->{'ogc:BBOX'});
+		    $params{bbox} = get_bbox($h->{'ogc:BBOX'});
 		}
 
 	    } elsif ($k eq 'x') {
 	    }
 	}
 
-	print STDERR "$request; $version; $service; $bbox; $typename\n";
-
     } else {
 
 	$q->{resource} = $config->{resource};
-	$request = $q->param($names{REQUEST}) || 'capabilities';
-	$version = $q->param($names{WMTVER});
-	$version = $q->param($names{VERSION}) if $q->param($names{VERSION});
-	$version = '1.1.0' unless $version;
-	#croak "Not a supported WFS version.#" unless $version eq $config->{version};
-	$service = $q->param($names{SERVICE});
-	$service = 'WFS'unless $service;
-	$bbox = $q->param($names{BBOX});
-	$typename = decode utf8=>$q->param($names{TYPENAME});
+	$params{request} = $q->param($names{REQUEST}) || 'capabilities';
+	$params{version} = $q->param($names{WMTVER});
+	$params{version} = $q->param($names{VERSION}) if $q->param($names{VERSION});
+	$params{version} = '1.1.0' unless $params{version};
+	#croak "Not a supported WFS version.#" unless $params{version} eq $config->{version};
+	$params{service} = $q->param($names{SERVICE});
+	$params{service} = 'WFS'unless $params{service};
+	$params{bbox} = $q->param($names{BBOX}) if $q->param($names{BBOX});
+        $params{EPSG} = $1 if $q->param($names{SRSNAME}) and $q->param($names{SRSNAME}) =~ /EPSG:(\d+)/;
+	$params{typename} = decode utf8=>$q->param($names{TYPENAME});
+        $params{filter} = decode utf8=>$q->param($names{FILTER});
+        if ($params{filter} and $params{filter} =~ /^</) {
+            my $e = XMLin('<xml>'.$params{filter}.'</xml>');
+            $e = $e->{Filter} if $e->{Filter};
+            if ($e->{PropertyIsEqualTo}) {
+                $e = $e->{PropertyIsEqualTo};
+                $params{filter} = $e->{PropertyName}."='".$e->{Literal}."'";
+            }
+        } else {
+            $params{filter} = '';
+        }
 
     }
 
+    $params{EPSG} = 3857 if $params{EPSG} and $params{EPSG} == 900913;
 
-    if ($request eq 'GetCapabilities' or $request eq 'capabilities') {
-	GetCapabilities($version);
-    } elsif ($request eq 'DescribeFeatureType') {
-	DescribeFeatureType($version, $typename);
-    } elsif ($request eq 'GetFeature') {
-	GetFeature($version, $typename, $bbox);
+    if ($debug) {
+        for (sort keys %params) {
+            next unless $params{$_};
+            print STDERR "$_ => $params{$_}\n" unless ref $params{$_};
+            print STDERR "$_ => @{$params{$_}}\n" if ref $params{$_} eq 'ARRAY';
+        }
+    }
+
+    if ($params{request} eq 'GetCapabilities' or $params{request} eq 'capabilities') {
+	GetCapabilities();
+    } elsif ($params{request} eq 'DescribeFeatureType') {
+	DescribeFeatureType();
+    } elsif ($params{request} eq 'GetFeature') {
+	GetFeature();
     } else {
-	croak('Unrecognized request: '.$request);
+	croak('Unrecognized request: '.$params{request});
     }
 }
 
 sub GetFeature {
-    my($version, $typename, $bbox) = @_;
-    my $type = feature($typename);
-    croak "No such feature type: $typename" unless $type;
+    my $type = feature();
+    croak "No such feature type: $params{typename}" unless $type;
 
     my $maxfeatures = $q->param($names{MAXFEATURES});
     ($maxfeatures) = $maxfeatures =~ /(\d+)/ if defined $maxfeatures;
@@ -174,21 +195,22 @@ sub GetFeature {
 
 	    # need to use the specified GeometryColumn and only it
 	    next if $type->{Schema}{$f} eq 'geometry' and not ($f eq $type->{GeometryColumn});
-	    push @cols, "\"$f\" as \"$n\"";
+            if ($params{EPSG} and $f eq $type->{GeometryColumn}) {
+                push @cols, "st_transform(\"$f\",$params{EPSG}) as \"$n\"";
+            } else {
+                push @cols, "\"$f\" as \"$n\"";
+            }
 	}
-	#my $sql = "select ".join(',',@cols)." from \"$type->{Table}\"";
-
-# todo: a join between two tables, howto configure?      
 	my $sql;
         $sql = "select ".join(',',@cols)." from \"$type->{Table}\" where ST_IsValid($type->{GeometryColumn})";
-        $sql .= " and $filter" if $filter;
+        $sql .= " and $params{filter}" if $params{filter};
 	$layer = $datasource->ExecuteSQL($sql);
     } else {
 	croak "missing information in configuration file";
     }
 
-    if ($bbox) {
-	my @bbox = split /,/, $bbox;
+    if ($params{bbox}) {
+	my @bbox = split /,/, $params{bbox};
 	$layer->SetSpatialFilterRect(@bbox);
     }    
 
@@ -207,16 +229,15 @@ sub GetFeature {
 	$i++;
 	last if defined $maxfeatures and $i >= $maxfeatures;
     }
+    print STDERR "$i features\n" if $debug;
 
 }
 
 sub DescribeFeatureType {
-    my($version, $typename) = @_;
-
-    my @typenames = split(/\s*,\s*/, $typename);
+    my @typenames = split(/\s*,\s*/, $params{typename});
     for my $name (@typenames) {
 	my $type = feature($name);
-	croak "No such feature type: $typename" unless $type;
+	croak "No such feature type: $params{typename}" unless $type;
     }
 
     my($out, $var);
@@ -241,7 +262,7 @@ sub DescribeFeatureType {
 	my @elements;
 	if ($type->{Schema}) {
 	    for my $col (keys %{$type->{Schema}}) {
-		if ($type->{Schema}{$col} eq 'geometry' and not($typename =~ /$col$/)) {
+		if ($type->{Schema}{$col} eq 'geometry' and not($params{typename} =~ /$col$/)) {
 		    next;
 		}
 		my $t = $type->{Schema}{$col};
@@ -261,13 +282,13 @@ sub DescribeFeatureType {
 				       minOccurs => "0",
 				       maxOccurs => "1" } ]);
 	}
-	xml_element('complexType', {name => $typename.'Type'},
+	xml_element('complexType', {name => $params{typename}.'Type'},
 		    ['complexContent', 
 		     ['extension', { base => 'gml:AbstractFeatureType' }, 
 		      ['sequence', \@elements
 		       ]]]);
 	xml_element('element', { name => $type->{Name}, 
-				 type => 'ogr:'.$typename.'Type',
+				 type => 'ogr:'.$params{typename}.'Type',
 				 substitutionGroup => 'gml:_Feature' } );
     }
 
@@ -279,13 +300,12 @@ sub DescribeFeatureType {
 }
 
 sub GetCapabilities {
-    my($version) = @_;
     my($out, $var);
     open($out,'>', \$var);
     select $out;
     print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
     xml_element('wfs:WFS_Capabilities', 
-		{ version => $version,
+		{ version => $params{version},
 		  'xmlns:gml' => "http://www.opengis.net/gml",
 		  'xmlns:wfs' => "http://www.opengis.net/wfs",
 		  'xmlns:ows' => "http://www.opengis.net/ows",
@@ -295,11 +315,11 @@ sub GetCapabilities {
 		  'xmlns' => "http://www.opengis.net/wfs",
 		  'xsi:schemaLocation' => "http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd" }, 
 		'<');
-    ServiceIdentification($version);
-    ServiceProvider($version);
-    OperationsMetadata($version);
-    FeatureTypeList($version);
-    Filter_Capabilities($version);
+    ServiceIdentification();
+    ServiceProvider();
+    OperationsMetadata();
+    FeatureTypeList();
+    Filter_Capabilities();
     xml_element('/wfs:WFS_Capabilities', '>');
     select(STDOUT);
     close $out;
@@ -308,19 +328,17 @@ sub GetCapabilities {
 }
 
 sub ServiceIdentification {
-    my($version) = @_;
     xml_element('ows:ServiceIdentification', '<');
     xml_element('ows:Title', 'WFS Server');
     xml_element('ows:Abstract');
     xml_element('ows:ServiceType', {codeSpace=>"OGC"}, 'OGC WFS');
-    xml_element('ows:ServiceTypeVersion', $version);
+    xml_element('ows:ServiceTypeVersion', $params{version});
     xml_element('ows:Fees');
     xml_element('ows:AccessConstraints');
     xml_element('/ows:ServiceIdentification', '>');
 }
 
 sub ServiceProvider {
-    my($version) = @_;
     xml_element('ows:ServiceProvider', '<');
     xml_element('ows:ProviderName');
     xml_element('ows:ProviderSite', {'xlink:type'=>"simple", 'xlink:href'=>""});
@@ -329,7 +347,6 @@ sub ServiceProvider {
 }
 
 sub OperationsMetadata  {
-    my($version) = @_;
     xml_element('ows:OperationsMetadata', '<');
     Operation($config, 'GetCapabilities', 
 	      [{service => ['WFS']}, {AcceptVersions => ['1.1.0','1.0.0']}, {AcceptFormats => ['text/xml']}]);
@@ -341,7 +358,6 @@ sub OperationsMetadata  {
 }
 
 sub FeatureTypeList  {
-    my($version) = @_;
     xml_element('FeatureTypeList', '<');
     xml_element('Operations', ['Operation', 'Query']);
     for my $type (@{$config->{FeatureTypeList}}) {
@@ -361,12 +377,13 @@ sub FeatureTypeList  {
 	    my @layers = layers($type->{dbi}, $type->{prefix});
 	    for my $l (@layers) {
 		xml_element('FeatureType', [
-				            ['Name', $l->{Name}],
-					    ['Title', $l->{Title}],
-					    ['Abstract', $l->{Abstract}],
-					    ['DefaultSRS', $l->{DefaultSRS}],
-				            ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
-					    ]);
+                                ['Name', $l->{Name}],
+                                ['Title', $l->{Title}],
+                                ['Abstract', $l->{Abstract}],
+                                ['DefaultSRS', $l->{DefaultSRS}],
+                                ['SRS', 'EPSG:3587'],
+                                ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
+                            ]);
 	    }
 	}
     }
@@ -374,17 +391,16 @@ sub FeatureTypeList  {
 }
 
 sub feature {
-    my($typename) = @_;
     my $type;
     for my $t (@{$config->{FeatureTypeList}}) {
 	if ($t->{Layer}) {
-	    $type = $t, last if $t->{Name} eq $typename;
+	    $type = $t, last if $t->{Name} eq $params{typename};
 	} else {
-	    next unless $typename =~ /^$t->{prefix}/;
+	    next unless $params{typename} =~ /^$t->{prefix}/;
 	    # restrict now to postgis databases
 	    my @layers = layers($t->{dbi}, $t->{prefix});
 	    for my $l (@layers) {
-		if ($l->{Name} eq $typename) {
+		if ($l->{Name} eq $params{typename}) {
 		    $type = $t;
 		    for (keys %$l) {
 			$type->{$_} = $l->{$_};
@@ -424,7 +440,7 @@ sub layers {
 	}
 	for my $geom (@l) {
 	    my $sql = "select auth_name,auth_srid ".
-		"from \"$table\" join spatial_ref_sys on srid=srid(\"$geom\") limit 1";
+		"from \"$table\" join spatial_ref_sys on srid=st_srid(\"$geom\") limit 1";
 	    my $sth = $dbh->prepare($sql) or croak($dbh->errstr);
 	    my $rv = $sth->execute or croak($dbh->errstr);
 	    my($name,$srid)  = $sth->fetchrow_array;
@@ -443,7 +459,6 @@ sub layers {
 }
 
 sub Filter_Capabilities  {
-    my($version) = @_;
     xml_element('ogc:Filter_Capabilities', '<');
     my @operands = ();
     for my $o (qw/Point LineString Polygon Envelope/) {
