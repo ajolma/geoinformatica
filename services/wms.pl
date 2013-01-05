@@ -222,7 +222,7 @@ sub layer {
 		    $l->{SQL} =~ s/\$pixel_scale/$params{pixel_size}/g;
 		}
 		# the_geom should be replaced with a column name coming from the config
-		if ($params{EPSG} != $l->{EPSG}) {
+		if ($l->{EPSG} and $params{EPSG} != $l->{EPSG}) {
 		    $l->{SQL} =~ s/$geom/st_transform($geom,$params{EPSG})/;
 		}
                 if (not $l->{SQL} =~ /where/) {
@@ -315,43 +315,99 @@ sub Exception {
 
 sub Layers {
     my($version) = @_;    
-    my ($minX, $minY, $maxX, $maxY) = ($config->{minX}, $config->{minY}, $config->{maxX}, $config->{maxY});
-    my $epsg = $config->{Layer}->{EPSG};
-    my @epsg = split /,/, $epsg;
-    $epsg = $epsg[0];
-    #print STDERR "epsg=@epsg $epsg\n";
-    shift @epsg;
-    my $proj = Geo::Proj4->new(init => "epsg:$epsg");
-    my ($min_lat,$min_lon) = $proj->inverse($minX, $minY);
-    my ($max_lat,$max_lon) = $proj->inverse($maxX, $maxY);
     
-    Layer($version, 
-	  Name => $config->{Layer}->{Name},
-	  Title => $config->{Layer}->{Title},
-	  SRS => "EPSG:$epsg",
-	  EPSG => \@epsg,
-	  LatLonBoundingBox => { minx => $min_lon, miny=> $min_lat, maxx => $max_lon, maxy => $max_lat },
-	  BoundingBox => { SRS => "EPSG:$epsg", minx => $minX, miny=> $minY, maxx => $maxX, maxy => $maxY },
-	  Layers => $config->{Layer}->{Layers}
-	);
+    # support top level BoundingBox element and EPSG
+    
+    my @BoundingBoxes;
+    my $LatLonBoundingBox;
+    if (exists $config->{BoundingBox}) {
+        my $bs = $config->{BoundingBox};
+        $bs = [$bs] if ref($bs) eq 'HASH';
+        for my $b (@$bs) {
+            push @BoundingBoxes, { SRS => "EPSG:$b->{EPSG}",
+                                   minx => $b->{minX},
+                                   miny => $b->{minY},
+                                   maxx => $b->{maxX},
+                                   maxy => $b->{maxY} };
+        }
+        $LatLonBoundingBox = LatLonBoundingBox(@BoundingBoxes);
+    }
+    my %epsg = map { $_ => 1 } split /,/, $config->{EPSG} if $config->{EPSG};
+    
+    # output Layer element(s) from the top level Layer in configuration
+    
+    my $layers = $config->{Layer};
+    croak "Missing Layer in configuration" unless $layers;
+    $layers = [$layers] if ref($layers) eq 'HASH';
+    for my $layer (@$layers) {
+        Layer($version,
+              $layer,
+              EPSG => \%epsg,
+              LatLonBoundingBox => $LatLonBoundingBox,
+              BoundingBoxes => \@BoundingBoxes
+            );
+    }
 }
 
 sub Layer {
-    my($version, %def) = @_;
+    my($version, $layer, %inherit) = @_;
+
+    # inherit BoundingBoxes
+    my @bb = @{$inherit{BoundingBoxes}} if $inherit{BoundingBoxes};
+    my $bs = $layer->{BoundingBox};
+    if ($bs) {
+        $bs = [$bs] if ref($bs) eq 'HASH';
+        for my $b (@$bs) {
+            push @bb, { SRS => "EPSG:$b->{EPSG}",
+                        minx => $b->{minX},
+                        miny => $b->{minY},
+                        maxx => $b->{maxX},
+                        maxy => $b->{maxY} };        
+        }
+    }
+    my $ll = $inherit{LatLonBoundingBox} ? $inherit{LatLonBoundingBox} : LatLonBoundingBox(@bb) if @bb;
+    
+    # inherit EPSGs
+    my %epsg;
+    if ($inherit{EPSGs}) {
+        for (keys %{$inherit{EPSGs}}) {
+            $epsg{$_} = 1;
+        }
+    }
+    if ($layer->{EPSG}) {
+        for (split /,/, $layer->{EPSG}) {
+            $epsg{$_} = 1;
+        }
+    }
+    
     xml_element('Layer', '<');
-    xml_elements( ['Name', $def{Name}], 
-		  ['Title', $def{Title}],
-		  ['SRS', $def{SRS}],
-		  ['LatLonBoundingBox', $def{LatLonBoundingBox}],
-		  ['BoundingBox', $def{BoundingBox}] );
-    for my $epsg  (@{$def{EPSG}}) {
+    xml_elements( ['Name', $layer->{Name}], 
+		  ['Title', $layer->{Title}],
+                  ['Abstract', $layer->{Abstract}] );
+    xml_element(LatLonBoundingBox => $ll) if $ll;
+    for my $epsg  (keys %epsg) {
 	xml_element('SRS', "EPSG:$epsg");
     }
-    for my $simple (@{$def{Layers}}) {
-	xml_element('Layer', [
-			['Name', $simple->{Name}],
-			['Title', $simple->{Title}],
-			['Abstract', $simple->{Abstract}]]);
+    for my $bb (@bb) {
+        xml_element('BoundingBox', $bb);
+    }
+    my $layers = $layer->{Layers};
+    if ($layers) {
+        $layers = [$layers] if ref($layers) eq 'HASH';
+        for my $l (@$layers) {
+            Layer($version, $l);
+        }
     }
     xml_element('/Layer', '>');
+}
+
+sub LatLonBoundingBox {
+    for (@_) {
+        return {minx => $_->{minx}, miny=> $_->{miny}, maxx => $_->{maxx}, maxy => $_->{maxy}} if $_->{SRS} eq "EPSG:4326";
+    }
+    $b = shift;
+    my $proj = Geo::Proj4->new(init => lc($b->{SRS}));
+    my ($min_lat,$min_lon) = $proj->inverse($b->{minx}, $b->{miny});
+    my ($max_lat,$max_lon) = $proj->inverse($b->{maxx}, $b->{maxy});
+    return { minx => $min_lon, miny=> $min_lat, maxx => $max_lon, maxy => $max_lat };
 }
