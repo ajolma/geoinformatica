@@ -168,8 +168,12 @@ sub GetFeatureInfo {
 
 sub layer {
     my($layer) = @_;
-    #print STDERR "create layer $layer\n";
     my @layers = @{$config->{Layer}->{Layers}};
+
+    # go through all layers in configuration and create the one that
+    # was requested
+    # returns an empty list in the case of an error
+
     for my $l (@layers) {
 	next unless $layer eq $l->{Name};
 	print STDERR "creating layer $l->{Name}\n" if $debug;
@@ -251,7 +255,7 @@ sub layer {
 	    return Scale->new(dx => $l->{dx}, dy => $l->{dy}) if $l->{Special} eq 'Scale';
 	}
     }
-    0;
+    return ();
 }
 
 sub Service {
