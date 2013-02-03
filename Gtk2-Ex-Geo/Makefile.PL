@@ -102,7 +102,7 @@ WriteMakefile1(
 	      @for_windows,
 	      META_MERGE => {
 	          resources => {
-	              repository => 'http://svn.osgeo.org/geoinformatica/Gtk2-Ex-Geo/trunk/',
+	              repository => 'https://github.com/ajolma/geoinformatica.git/trunk/Gtk2-Ex-Geo',
 	          },
 	      },
 	      TEST_REQUIRES => {

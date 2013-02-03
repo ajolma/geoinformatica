@@ -12,8 +12,9 @@ package Gtk2::Ex::Geo::Layer;
 
 Gtk2::Ex::Geo::Layer - A root class for visual geospatial layers
 
-The <a href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">
-documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
+The documentation of Gtk2::Ex::Geo(1) is written in doxygen format.
+
+1) http://geoinformatics.aalto.fi/doc/Geoinformatica/html/
 
 =cut
 

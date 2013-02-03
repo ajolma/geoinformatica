@@ -76,14 +76,16 @@ For inspecting layer and other objects.
 =head1 DOCUMENTATION
 
 The documentation of Gtk2::Ex::Geo is included into the source code in
-<a href="http://www.stack.nl/~dimitri/doxygen/">doxygen</a>
-format. The documentation can be generated in HTML, LaTeX, and other
-formats using the doxygen executable and the <a
-href="http://www.bigsister.ch/doxygenfilter/">perl doxygen filter</a>.
+doxygen(1) format. The documentation can be generated in HTML, LaTeX,
+and other formats using the doxygen executable and the perl doxygen
+filter(2).
 
 The documentation is of this framework is available as a part of the
-documentation for <a
-href="http://geoinformatics.aalto.fi/doc/Geoinformatica/html/">Geoinformatica</a>.
+documentation for Geoinformatica(3).
+
+1) http://www.stack.nl/~dimitri/doxygen
+2) http://www.bigsister.ch/doxygenfilter and http://geoinformatics.aalto.fi/trac/browser/doxygenfilter
+3) http://geoinformatics.aalto.fi/doc/Geoinformatica/html/
 
 =cut
 
@@ -106,7 +108,7 @@ BEGIN {
     our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
     our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
     our @EXPORT = qw( );
-    our $VERSION = '0.65';
+    our $VERSION = '0.66';
     XSLoader::load( 'Gtk2::Ex::Geo', $VERSION );
 }
 
