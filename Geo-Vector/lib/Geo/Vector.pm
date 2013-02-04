@@ -387,7 +387,7 @@ sub open_data_source {
             $self->{OGR}->{Driver} = Geo::OGR::GetDriver($driver);
         }
         if ($self->{OGR}->{Driver}->{name} eq 'Memory') {
-            $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource();
+            $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource('', {});
         } elsif ($create_options) {
 	    croak "driver $self->{OGR}->{Driver}->{name} does not have the capability to create data sources"
 		unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
@@ -412,7 +412,7 @@ sub open_data_source {
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     } else {
 	$self->{OGR}->{Driver} = Geo::OGR::GetDriver('Memory');
-	$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource();
+	$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource('', {});
     }
 }
 
