@@ -13,7 +13,7 @@ GDALColorEntry RAL_CALL ral_hsv2rgb(GDALColorEntry hsv);
 /**\brief a cairo image canvas and a gdk style pixbuf 
 
 The idea is to first draw to the cairo image and then convert it into
-a gdal pixbuf for GUI.
+a gdk pixbuf for GUI.
 
 */
 typedef struct {

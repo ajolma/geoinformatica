@@ -1,3 +1,4 @@
+ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -fno-builtin -Wall -std=c99 -pedantic
 
 test: all test.c
@@ -6,7 +7,7 @@ test: all test.c
 
 lib_LTLIBRARIES = libral.la
 
-libral_la_HEADERFILES = ral.h ral/config.h ral/hash.h ral/vector.h ral/grid.h ral/dem.h ral/visual.h ral/backend.h ral/statistics.h
+libral_la_HEADERFILES = ral/ral.h ral/config.h ral/hash.h ral/vector.h ral/grid.h ral/dem.h ral/visual.h ral/backend.h ral/statistics.h
 
 libral_la_SOURCES = ral_hash.c ral_vd.c ral_visual.c ral_pixbuf.c ral_grid.c ral_grid_rw.c ral_catchment.c ral_statistics.c ${libral_la_HEADERFILES}
 

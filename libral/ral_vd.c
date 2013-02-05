@@ -1,6 +1,6 @@
 #include "config.h"
 #include "msg.h"
-#include "ral.h"
+#include "ral/ral.h"
 
 /* counterclockwise from Sedgewick: Algorithms in C */
 int ral_ccw(ral_point p0, ral_point p1, ral_point p2)

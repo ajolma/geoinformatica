@@ -1,6 +1,6 @@
 #include "config.h"
 #include "msg.h"
-#include "ral.h"
+#include "ral/ral.h"
 
 /* grid routines */
 

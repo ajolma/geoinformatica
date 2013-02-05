@@ -1,6 +1,6 @@
 #include "config.h"
 #include "msg.h"
-#include "ral.h"
+#include "ral/ral.h"
 
 #ifdef RAL_HAVE_GDAL
 #ifdef RAL_HAVE_GDK_PIXBUF

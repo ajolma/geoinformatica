@@ -1,6 +1,6 @@
 #include "config.h"
 #include "msg.h"
-#include "ral.h"
+#include "ral/ral.h"
 
 /* 
    a border cell of an area is a grid cell which has at least one cell
