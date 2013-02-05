@@ -5,11 +5,16 @@ use ExtUtils::MakeMaker;
 
 my %missing_modules;
 
-$missing_modules{chk_module('ExtUtils::Depends')} = 1;
-$missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
+my @configure_requires = qw/ExtUtils::Depends ExtUtils::PkgConfig Gtk2/;
+foreach my $m (@configure_requires) {
+    $missing_modules{chk_module($m)} = 1;
+}
+
 delete $missing_modules{''};
+
 my @missing_modules = keys %missing_modules;
-die "Following required modules are missing: @missing_modules\n" if @missing_modules;
+print "Following required modules are missing: @missing_modules\n" if @missing_modules;
+exit 0 if @missing_modules;
 
 require ExtUtils::Depends;
 require ExtUtils::PkgConfig;
@@ -89,16 +94,30 @@ $deps->add_xs('lib/Geo/Raster.xs');
 
 $deps->save_config("Files.pm");
 
-WriteMakefile(NAME                        => 'Geo::Raster',
-	      VERSION_FROM                => 'lib/Geo/Raster.pm',
-	      ABSTRACT_FROM               => 'lib/Geo/Raster.pm',
-	      AUTHOR                      => 'Ari Jolma <ari.jolma @ aalto.fi>',
-	      $deps->get_makefile_vars(),
-	      #'EXE_FILES'                => [ 'rash' ],
-	      CCFLAGS                     => "-O2 -fno-builtin $cflags $inc",
-	      $deps->get_makefile_vars,
-	      @for_windows
-	      );
+WriteMakefile1(NAME                        => 'Geo::Raster',
+               VERSION_FROM                => 'lib/Geo/Raster.pm',
+               ABSTRACT_FROM               => 'lib/Geo/Raster.pm',
+               AUTHOR                      => 'Ari Jolma <ari.jolma @ aalto.fi>',
+               LICENSE                     => 'perl',
+               $deps->get_makefile_vars(),
+               #'EXE_FILES'                => [ 'rash' ],
+               PREREQ_PM         => {
+                   'Gtk2::Ex::Geo' => 0,
+                   'Geo::GDAL'     => 0
+               },
+               CONFIGURE_REQUIRES          => { map {$_ => 0} @configure_requires },
+               CCFLAGS                     => "-O2 -fno-builtin $cflags $inc",
+               $deps->get_makefile_vars,
+               @for_windows,
+               META_MERGE => {
+                   resources => {
+                       repository => 'https://github.com/ajolma/geoinformatica.git/trunk/Geo-Raster',
+                   },
+               },
+               TEST_REQUIRES => {
+                   'Test::More' => 0,
+               },
+    );
 
 sub chk_module {
     my($pkg, $version) = @_;
@@ -149,6 +168,37 @@ sub gdal_config {
     $LIB =~ s/$usr_local/$msys_local/;
     $INC =~ s/$usr_local/$msys_local/;
     return ("$LIB -lgdal", $INC);
+}
+
+sub WriteMakefile1 {  #Compatibility code for old versions of EU::MM. Written by Alexandr Ciornii, version 0.23. Added by eumm-upgrade.
+    my %params=@_;
+    my $eumm_version=$ExtUtils::MakeMaker::VERSION;
+    $eumm_version=eval $eumm_version;
+    die "EXTRA_META is deprecated" if exists $params{EXTRA_META};
+    die "License not specified" if not exists $params{LICENSE};
+    if ($params{AUTHOR} and ref($params{AUTHOR}) eq 'ARRAY' and $eumm_version < 6.5705) {
+        $params{META_ADD}->{author}=$params{AUTHOR};
+        $params{AUTHOR}=join(', ',@{$params{AUTHOR}});
+    }
+    if ($params{TEST_REQUIRES} and $eumm_version < 6.64) {
+        $params{BUILD_REQUIRES}={ %{$params{BUILD_REQUIRES} || {}} , %{$params{TEST_REQUIRES}} };
+        delete $params{TEST_REQUIRES};
+    }
+    if ($params{BUILD_REQUIRES} and $eumm_version < 6.5503) {
+        #EUMM 6.5502 has problems with BUILD_REQUIRES
+        $params{PREREQ_PM}={ %{$params{PREREQ_PM} || {}} , %{$params{BUILD_REQUIRES}} };
+        delete $params{BUILD_REQUIRES};
+    }
+    delete $params{CONFIGURE_REQUIRES} if $eumm_version < 6.52;
+    delete $params{MIN_PERL_VERSION} if $eumm_version < 6.48;
+    delete $params{META_MERGE} if $eumm_version < 6.46;
+    delete $params{META_ADD} if $eumm_version < 6.46;
+    delete $params{LICENSE} if $eumm_version < 6.31;
+    delete $params{AUTHOR} if $] < 5.005;
+    delete $params{ABSTRACT_FROM} if $] < 5.005;
+    delete $params{BINARY_LOCATION} if $] < 5.005;
+
+    WriteMakefile(%params);
 }
 
 # -o on the compiler command line...

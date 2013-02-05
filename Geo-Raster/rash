@@ -182,7 +182,7 @@ or a string. The options should be a hash, i.e, a list of key, value
 
 For example:
 
-C<plot($raster->contents,title=>'cell count of raster',with=>'impulses');>
+C<< plot($raster->contents,title=>'cell count of raster',with=>'impulses'); >>
 
 A hash argument is printed to a temporary file (F<.raster-tmp>)
 and the command line

@@ -48,7 +48,7 @@ use Geo::Raster::TerrainAnalysis;
 use Geo::Raster::Geostatistics;
 use Geo::Raster::Layer; # requires Gtk2 and Gtk2::Ex::Geo
 
-our $VERSION = '0.63';
+our $VERSION = '0.65';
 
 # TODO: make these constants derived from libral:
 our $INTEGER_GRID = 1;

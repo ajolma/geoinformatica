@@ -10,7 +10,7 @@ extern "C" {
 
 #include <gtk2-ex-geo.h>
 
-#include <ral.h>
+#include <ral/ral.h>
 
 #include "arrays.h"   /* Pack functions decs */
 #include "arrays.c"   /* Pack functions defs */
