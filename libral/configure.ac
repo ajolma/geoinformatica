@@ -22,6 +22,12 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 
+case "$target_os" in
+cygwin*)
+    LDFLAGS = "$LDFLAGS -no-undefined"
+    ;;
+esac
+
 # Checks for byteorder, typedefs, structures, and compiler characteristics.
 AC_C_BIGENDIAN
 AC_C_CONST
