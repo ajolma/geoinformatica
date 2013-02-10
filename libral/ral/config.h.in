@@ -47,7 +47,7 @@ typedef unsigned int OGRwkbGeometryType;
 #endif
 
 #ifdef RAL_HAVE_GDK_PIXBUF
-#include <glib/gtypes.h>
+#include <glib.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #else
 #define guchar char
