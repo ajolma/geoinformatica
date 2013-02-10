@@ -1477,7 +1477,7 @@ int ral_render_feature(ral_pixbuf *pb, ral_feature *feature, ral_visual *visual)
 	    for (i = 0; i < n; i++) {
 		double size;
 		g = OGR_G_GetGeometryRef(feature->geometry, i);
-		size = OGR_G_GetArea(g);
+		size = OGR_G_Area(g);
 		if (i == 0 OR size > max_size) {
 		    max_size = size;
 		    i_of_max = i;
