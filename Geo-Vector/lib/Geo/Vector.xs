@@ -4,7 +4,7 @@
 
 #include <gtk2-ex-geo.h>
 
-#include <ral.h>
+#include <ral/ral.h>
 
 #define RAL_GRIDPTR "ral_gridPtr"
 #define RAL_ERRSTR_OOM "Out of memory"
