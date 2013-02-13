@@ -288,7 +288,7 @@ sub new {
 	from_piddle($self, $params{piddle});
     } elsif (defined $params{like}) {
 	$self->{GRID} = ral_grid_create_like($params{like}->{GRID}, $params{datatype});
-    } elsif ($params{filename}) {
+    } elsif ($params{filename} or $params{dataset}) {
 	gdal_open($self, %params);
 	$self->{FILENAME} = $params{filename};
     } elsif ($params{M} and $params{N}) {

@@ -86,7 +86,7 @@ sub open_raster {
 	
 	for my $band (1..$bands) {
 	    
-	    my $layer = Geo::Raster::Layer->new(filename => $filename, band => $band);
+	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename, band => $band);
 	    
 	    my $name = fileparse($filename);
 	    $name =~ s/\.\w+$//;

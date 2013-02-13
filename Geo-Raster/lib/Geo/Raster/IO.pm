@@ -10,14 +10,18 @@ use Scalar::Util 'blessed';
 # internal
 sub gdal_open {
     my($self, %params) = @_;
-    $params{access} = 'ReadOnly' unless $params{access};
-    croak "gdal_open called with empty filename" if !(defined $params{filename}) or $params{filename} eq '';
-    my $dataset = Geo::GDAL::Open($params{filename}, $params{access});
-    croak "Geo::GDAL::Open failed for ".$params{filename} unless $dataset;
-    my $t = $dataset->GetGeoTransform;
-    unless ($t) {
-		@$t = (0,1,0,0,0,1);
+    my $dataset;
+    if ($params{dataset}) {
+	$dataset = $params{dataset};
+    } elsif ($params{filename}) {
+	my $access = $params{access} || 'ReadOnly';
+	$dataset = Geo::GDAL::Open($params{filename}, $access);
+	croak "Geo::GDAL::Open failed for ".$params{filename} unless $dataset;
+    } else {
+	croak "gdal_open called without a filename or dataset";
     }
+    my $t = $dataset->GetGeoTransform;
+    @$t = (0,1,0,0,0,1) unless $t;
     croak "The raster is not a strict north up image."
 	unless $t->[2] == $t->[4] and $t->[2] == 0;
     my $band = $params{band} || 1;
