@@ -51,6 +51,11 @@ sub registration {
 	    tip => 'Add a new raster layer.',
 	    sub => \&open_raster
 	},
+	#{
+	#    label => 'Open WMS',
+	#    tip => 'Add a new WMS layer.',
+	#    sub => \&open_wms
+	#},
 	{
 	    label => 'Save all',
 	    tip => 'Save all libral raster layers.',
@@ -58,6 +63,59 @@ sub registration {
 	}
 	];
     return { dialogs => $dialogs, commands => $commands };
+}
+
+sub open_wms {
+    my(undef, $gui) = @_;
+
+    # these need to come from someplace:
+    my $url = 'https://geoinformatics.aalto.fi/OILRISK-protected/wms.pl';
+    my $username = 'ajolma';
+    my $passwd = 'xxxxxx';
+    
+    my($protocol) = $url =~ /^(https?:\/\/)/;
+    my $address = $url;
+    $address =~ s/^$protocol//;
+    my $auth = $username ? $username.':'.$passwd.'@' : '';
+    my $wms = 'WMS:'.$protocol.$auth.$address;
+    
+    my $dataset = Geo::GDAL::Open($wms);
+    my $metadata = $dataset->Metadata("SUBDATASETS");
+    my $i = 1;
+    while (1) {
+        my $desc = 'SUBDATASET_'.$i.'_DESC';
+        last unless $metadata->{$desc};
+        my $name = 'SUBDATASET_'.$i.'_NAME';
+        my($srs) = $metadata->{$name} =~ /SRS=([\w:]+)/;
+        my($box) = $metadata->{$name} =~ /BBOX=([\w,]+)/;
+        #print "$i: Name = $metadata->{$desc}, SRS = $srs, Bounding box = $box\n";
+        $i++;
+    }
+    
+    # this needs to come from the user:
+    my $choice = 4;
+    
+    $url = $metadata->{'SUBDATASET_'.$choice.'_NAME'};
+    ($protocol) = $url =~ /^WMS:(https?:\/\/)/;
+    $address = $url;
+    $address =~ s/^WMS:$protocol//;
+    $wms = 'WMS:'.$protocol.$auth.$address;
+
+    $dataset = Geo::GDAL::Open($wms);
+    my $driver = Geo::GDAL::Driver('WMS');
+    my $vsi = Geo::GDAL::VSIFOpenL('/vsimem/xml','w');
+    my $xml = $driver->Copy('/vsimem/xml', $dataset);
+    $dataset = Geo::GDAL::Open('/vsimem/xml');
+    Geo::GDAL::VSIFCloseL($vsi);
+
+    my $name = $metadata->{'SUBDATASET_'.$choice.'_DESC'};
+    my $bands = $dataset->{RasterCount};
+    for my $band (1..$bands) {
+        my $layer = Geo::Raster::Layer->new(dataset => $dataset, band => $band);
+        my $n = $name.'_'.$band if $bands > 1;
+        $gui->add_layer($layer, $n, 1);
+    }
+    $gui->{overlay}->render;
 }
 
 sub open_raster {
@@ -84,17 +142,14 @@ sub open_raster {
 	croak "$filename is not recognized by GDAL" unless $dataset;
 	my $bands = $dataset->{RasterCount};
 	
+        my $name = fileparse($filename);
+        $name =~ s/\.\w+$//;
 	for my $band (1..$bands) {
-	    
 	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename, band => $band);
-	    
-	    my $name = fileparse($filename);
-	    $name =~ s/\.\w+$//;
-	    $name .= "_$band" if $bands > 1;
-	    $gui->add_layer($layer, $name, 1);
-	    $gui->{overlay}->render;
-	    
+	    my $n = $name.'_'.$band if $bands > 1;
+	    $gui->add_layer($layer, $n, 1);
 	}
+        $gui->{overlay}->render;
     }
     $gui->{tree_view}->set_cursor(Gtk2::TreePath->new(0));
 }

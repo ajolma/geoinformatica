@@ -65,7 +65,7 @@ sub open {
     my $i = 1;
     my $active = 0;
     $model->set($model->append, 0, ''); # create into existing data source 
-    for my $driver (Geo::OGR::Drivers) {
+    for my $driver (Geo::OGR::Drivers()) {
 	next unless $driver->TestCapability('CreateDataSource');
 	my $name = $driver->GetName;
 	$active = $i if $name eq 'Memory';

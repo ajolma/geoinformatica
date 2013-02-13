@@ -72,7 +72,7 @@ sub open {
     my $model = Gtk2::ListStore->new('Glib::String');
     $model->set($model->append, 0, 'libral');
     my @drivers;
-    for my $driver (Geo::GDAL::Drivers) {
+    for my $driver (Geo::GDAL::Drivers()) {
 	next unless $driver->TestCapability('Create');
 	my $name = $driver->{ShortName};
 	push @drivers, $name;

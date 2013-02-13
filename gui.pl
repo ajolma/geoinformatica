@@ -24,7 +24,7 @@ my $OS = $Config::Config{'osname'};
 require Win32::TieRegistry if $OS eq 'MSWin32';
 
 # the four top level objects
-($window, $gis, $log, $icon);
+my($window, $gis, $log, $icon);
 
 if ($OS eq 'MSWin32') {
 
