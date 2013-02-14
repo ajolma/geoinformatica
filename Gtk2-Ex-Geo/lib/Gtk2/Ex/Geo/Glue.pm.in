@@ -817,7 +817,21 @@ sub layer_menu {
 		$item = Gtk2::SeparatorMenuItem->new();
 	    } else {
 		$item = Gtk2::MenuItem->new($items[$i]);
-		$item->signal_connect(activate => $items[$i+1], $params);
+                my $value = $items[$i+1];
+                if (ref($value) eq 'CODE') {
+                    $item->signal_connect(activate => $value, $params);
+                } elsif (ref($value) eq 'ARRAY') {
+                    my $submenu = Gtk2::Menu->new();
+                    $item->set_submenu($submenu);
+                    for (my $j =0; $j < @$value; $j+=2) {
+                        my $subitem = Gtk2::MenuItem->new($value->[$j]);
+                        $subitem->signal_connect(activate => $value->[$j+1], $params);
+                        $subitem->show;
+                        $submenu->append($subitem);
+                    }
+                } else {
+                    die "Value of a menuitem '$items[$i]' is not code nor an array!";
+                }
 	    }
 	    $item->show;
 	    $menu->append($item);
