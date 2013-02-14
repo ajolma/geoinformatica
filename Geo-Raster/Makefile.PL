@@ -82,6 +82,7 @@ our %pm_files =
      $root.'/TerrainAnalysis.pm'  => $i.'/TerrainAnalysis.pm',
      $root.'/Geostatistics.pm'    => $i.'/Geostatistics.pm',
      $root.'/Layer.pm'            => $i.'/Layer.pm',
+     $root.'/MultiBandLayer.pm'   => $i.'/MultiBandLayer.pm',
      $root.'/Layer/Dialogs.pm'    => $i.'/Layer/Dialogs.pm',
      $root.'/Layer/Dialogs/Copy.pm' => $i.'/Layer/Dialogs/Copy.pm',
      $root.'/Layer/Dialogs/Polygonize.pm' => $i.'/Layer/Dialogs/Polygonize.pm',

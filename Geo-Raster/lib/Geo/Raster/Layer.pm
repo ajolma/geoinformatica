@@ -52,11 +52,11 @@ sub registration {
 	    tip => 'Add a new raster layer.',
 	    sub => \&open_raster
 	},
-	#{
-	#    label => 'Open WMS',
-	#    tip => 'Add a new WMS layer.',
-	#    sub => \&open_wms
-	#},
+	{
+	    label => 'Open WMS',
+	    tip => 'Add a new WMS layer.',
+	    sub => \&open_wms
+	},
 	{
 	    label => 'Save all',
 	    tip => 'Save all libral raster layers.',
@@ -72,7 +72,7 @@ sub open_wms {
     # these need to come from someplace:
     my $url = 'https://geoinformatics.aalto.fi/OILRISK-protected/wms.pl';
     my $username = 'ajolma';
-    my $passwd = 'xxxxxx';
+    my $passwd = 'xxxxx';
     
     my($protocol) = $url =~ /^(https?:\/\/)/;
     my $address = $url;
@@ -111,10 +111,13 @@ sub open_wms {
 
     my $name = $metadata->{'SUBDATASET_'.$choice.'_DESC'};
     my $bands = $dataset->{RasterCount};
-    for my $band (1..$bands) {
-        my $layer = Geo::Raster::Layer->new(dataset => $dataset, band => $band);
-        my $n = $bands == 1 ? $name : $name.'_'.$band;
-        $gui->add_layer($layer, $n, 1);
+    if ($bands == 1) {
+        my $layer = Geo::Raster::Layer->new(dataset => $dataset);
+        $gui->add_layer($layer, $name, 1);
+    } else {
+        my $layer = Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
+                                                     name => $name);
+        $gui->add_layer($layer, $name, 1);
     }
     $gui->{overlay}->render;
 }
@@ -146,17 +149,14 @@ sub open_raster {
         my $name = fileparse($filename);
         $name =~ s/\.\w+$//;
 	if ($bands == 1) {
-	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename);
+	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, 
+                                                filename => $filename);
 	    $gui->add_layer($layer, $name, 1);
 	} else {
-	    my $layer = Geo::Raster::MultiBandLayer->new(dataset => $dataset, filename => $filename);
+	    my $layer = Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
+                                                         filename => $filename, 
+                                                         name => $name);
 	    $gui->add_layer($layer, $name, 1);
-
-	    #for my $band (1..$bands) {
-		#my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename, band => $band);
-		#my $n = $bands == 1 ? $name : $name.'_'.$band;
-		#$gui->add_layer($layer, $n, 1);
-	    #}
 	}
         $gui->{overlay}->render;
     }

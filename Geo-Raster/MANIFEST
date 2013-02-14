@@ -18,6 +18,7 @@ lib/Geo/Raster/IO.pm
 lib/Geo/Raster/Image.pm
 lib/Geo/Raster/TerrainAnalysis.pm
 lib/Geo/Raster/Layer.pm
+lib/Geo/Raster/MultiBandLayer.pm
 lib/Geo/Raster/Layer/Dialogs.glade
 lib/Geo/Raster/Layer/Dialogs.pm.in
 lib/Geo/Raster/Layer/Dialogs/Copy.pm
