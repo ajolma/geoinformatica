@@ -29,6 +29,7 @@ use Geo::Raster::Layer::Dialogs::Copy;
 use Geo::Raster::Layer::Dialogs::Polygonize;
 use Geo::Raster::Layer::Dialogs::Properties::GDAL;
 use Geo::Raster::Layer::Dialogs::Properties::libral;
+use Geo::Raster::MultiBandLayer;
 
 require Exporter;
 
@@ -144,10 +145,18 @@ sub open_raster {
 	
         my $name = fileparse($filename);
         $name =~ s/\.\w+$//;
-	for my $band (1..$bands) {
-	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename, band => $band);
-	    my $n = $bands == 1 ? $name : $name.'_'.$band;
-	    $gui->add_layer($layer, $n, 1);
+	if ($bands == 1) {
+	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename);
+	    $gui->add_layer($layer, $name, 1);
+	} else {
+	    my $layer = Geo::Raster::MultiBandLayer->new(dataset => $dataset, filename => $filename);
+	    $gui->add_layer($layer, $name, 1);
+
+	    #for my $band (1..$bands) {
+		#my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename, band => $band);
+		#my $n = $bands == 1 ? $name : $name.'_'.$band;
+		#$gui->add_layer($layer, $n, 1);
+	    #}
 	}
         $gui->{overlay}->render;
     }
