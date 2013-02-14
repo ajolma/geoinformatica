@@ -112,7 +112,7 @@ sub open_wms {
     my $bands = $dataset->{RasterCount};
     for my $band (1..$bands) {
         my $layer = Geo::Raster::Layer->new(dataset => $dataset, band => $band);
-        my $n = $name.'_'.$band if $bands > 1;
+        my $n = $bands == 1 ? $name : $name.'_'.$band;
         $gui->add_layer($layer, $n, 1);
     }
     $gui->{overlay}->render;
@@ -146,7 +146,7 @@ sub open_raster {
         $name =~ s/\.\w+$//;
 	for my $band (1..$bands) {
 	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, filename => $filename, band => $band);
-	    my $n = $name.'_'.$band if $bands > 1;
+	    my $n = $bands == 1 ? $name : $name.'_'.$band;
 	    $gui->add_layer($layer, $n, 1);
 	}
         $gui->{overlay}->render;
