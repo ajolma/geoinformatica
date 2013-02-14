@@ -237,7 +237,7 @@ sub DescribeFeatureType {
     my @typenames = split(/\s*,\s*/, $params{typename});
     for my $name (@typenames) {
 	my $type = feature($name);
-	croak "No such feature type: $params{typename}" unless $type;
+	croak "No such feature type: $name (extracted from $params{typename})" unless $type;
     }
 
     my($out, $var);
@@ -391,16 +391,17 @@ sub FeatureTypeList  {
 }
 
 sub feature {
+    my $name = @_ ? shift : $params{typename};
     my $type;
     for my $t (@{$config->{FeatureTypeList}}) {
 	if ($t->{Layer}) {
-	    $type = $t, last if $t->{Name} eq $params{typename};
+	    $type = $t, last if $t->{Name} eq $name;
 	} else {
-	    next unless $params{typename} =~ /^$t->{prefix}/;
+	    next unless $name =~ /^$t->{prefix}/;
 	    # restrict now to postgis databases
 	    my @layers = layers($t->{dbi}, $t->{prefix});
 	    for my $l (@layers) {
-		if ($l->{Name} eq $params{typename}) {
+		if ($l->{Name} eq $name) {
 		    $type = $t;
 		    for (keys %$l) {
 			$type->{$_} = $l->{$_};
@@ -446,6 +447,14 @@ sub layers {
 	    my($name,$srid)  = $sth->fetchrow_array;
 	    $name = 'unknown' unless defined $name;
 	    $srid = -1 unless defined $srid;
+
+	    # check that the table contains at least one spatial feature
+	    $sql = "select \"$geom\" from \"$table\" where not \"$geom\" isnull limit 1";
+	    $sth = $dbh->prepare($sql) or croak($dbh->errstr);
+	    $rv = $sth->execute or croak($dbh->errstr);
+	    my($g)  = $sth->fetchrow_array;
+	    next unless $g;
+
 	    push @layers, { Title => "$table($geom)",
 			    Name => "$prefix.$table.$geom",
 			    Abstract => "Layer from $table in $prefix using column $geom",
