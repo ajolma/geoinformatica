@@ -950,14 +950,13 @@ sub close_inspect {
 # update the layer data in the layer list
 sub set_layer {
     my($self, $layer) = @_;
-    my($type, $colors, $visible, $alpha);
+    return unless defined $layer->{_tree_index}; # a sublayer
 
+    my($type, $colors, $visible, $alpha);
     $type = '';
     $alpha = $layer->alpha();
     $alpha = 'Layer' if ref($alpha);
-
     $type = $layer->type;
-
     $visible = $layer->visible ? 'X' : ' ';
 
     $self->{model}->set ($layer->{_tree_index},
