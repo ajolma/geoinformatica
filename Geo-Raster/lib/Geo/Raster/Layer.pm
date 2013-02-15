@@ -29,6 +29,7 @@ use Geo::Raster::Layer::Dialogs::Copy;
 use Geo::Raster::Layer::Dialogs::Polygonize;
 use Geo::Raster::Layer::Dialogs::Properties::GDAL;
 use Geo::Raster::Layer::Dialogs::Properties::libral;
+use Geo::Raster::Layer::Dialogs::WMS;
 use Geo::Raster::MultiBandLayer;
 
 require Exporter;
@@ -68,6 +69,9 @@ sub registration {
 
 sub open_wms {
     my(undef, $gui) = @_;
+
+    Geo::Raster::Layer::Dialogs::WMS::open($gui);
+    return;
 
     # these need to come from someplace:
     my $url = 'https://geoinformatics.aalto.fi/OILRISK-protected/wms.pl';
@@ -111,14 +115,12 @@ sub open_wms {
 
     my $name = $metadata->{'SUBDATASET_'.$choice.'_DESC'};
     my $bands = $dataset->{RasterCount};
-    if ($bands == 1) {
-        my $layer = Geo::Raster::Layer->new(dataset => $dataset);
-        $gui->add_layer($layer, $name, 1);
-    } else {
-        my $layer = Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
-                                                     name => $name);
-        $gui->add_layer($layer, $name, 1);
-    }
+    my $layer = $bands == 1 ? 
+        Geo::Raster::Layer->new(dataset => $dataset, 
+                                name => $name) :
+        Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
+                                         name => $name);
+    $gui->add_layer($layer, $name, 1);
     $gui->{overlay}->render;
 }
 
@@ -148,16 +150,14 @@ sub open_raster {
 	
         my $name = fileparse($filename);
         $name =~ s/\.\w+$//;
-	if ($bands == 1) {
-	    my $layer = Geo::Raster::Layer->new(dataset => $dataset, 
-                                                filename => $filename);
-	    $gui->add_layer($layer, $name, 1);
-	} else {
-	    my $layer = Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
-                                                         filename => $filename, 
-                                                         name => $name);
-	    $gui->add_layer($layer, $name, 1);
-	}
+        my $layer = $bands == 1 ? 
+            Geo::Raster::Layer->new(dataset => $dataset,
+                                    filename => $filename,
+                                    name => $name) :
+            Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
+                                             filename => $filename, 
+                                             name => $name);
+        $gui->add_layer($layer, $name, 1);
         $gui->{overlay}->render;
     }
     $gui->{tree_view}->set_cursor(Gtk2::TreePath->new(0));

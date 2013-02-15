@@ -87,7 +87,8 @@ our %pm_files =
      $root.'/Layer/Dialogs/Copy.pm' => $i.'/Layer/Dialogs/Copy.pm',
      $root.'/Layer/Dialogs/Polygonize.pm' => $i.'/Layer/Dialogs/Polygonize.pm',
      $root.'/Layer/Dialogs/Properties/GDAL.pm' => $i.'/Layer/Dialogs/Properties/GDAL.pm',
-     $root.'/Layer/Dialogs/Properties/libral.pm' => $i.'/Layer/Dialogs/Properties/libral.pm'
+     $root.'/Layer/Dialogs/Properties/libral.pm' => $i.'/Layer/Dialogs/Properties/libral.pm',
+     $root.'/Layer/Dialogs/WMS.pm' => $i.'/Layer/Dialogs/WMS.pm'
      );
 
 $deps->add_pm(%pm_files);
