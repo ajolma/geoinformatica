@@ -34,13 +34,7 @@ sub open {
 	  ]
 	);
     if ($boot) {
-	my $combo = $dialog->get_widget('WMS_combobox');
-	my $model = $combo->get_model;
-	$model->clear;
-	for my $src (sort keys %{$gui->{resources}{WMS}}) {
-	    $model->set($model->append, 0, $src);
-	}
-	$combo->set_active(0);
+	set_connections($self);
 	my $tree_view = $dialog->get_widget('WMS_treeview');
 	my $tree_store = Gtk2::TreeStore->new(qw/Glib::String/);
 	$tree_view->set_model($tree_store);
@@ -55,12 +49,36 @@ sub open {
 }
 
 ##@ignore
-sub connect {
+sub set_connections {
     my $self = pop;
     my $combo = $self->{WMS_dialog}->get_widget('WMS_combobox');
     my $iter = $combo->get_active_iter();
     my $model = $combo->get_model;
-    my $name = $model->get($iter);
+    my $name = $model->get($iter) if $iter;
+    $model->clear;
+    my $i = 0;
+    my $active = 0;
+    for my $src (sort keys %{$self->{gui}{resources}{WMS}}) {
+	$model->set($model->append, 0, $src);
+	$active = $i if $name and $src eq $name;
+	$i++;
+    }
+    $combo->set_active($active);
+}
+
+##@ignore
+sub connection {
+    my $self = pop;
+    my $combo = $self->{WMS_dialog}->get_widget('WMS_combobox');
+    my $iter = $combo->get_active_iter();
+    my $model = $combo->get_model;
+    return $model->get($iter);
+}
+
+##@ignore
+sub connect {
+    my $self = pop;
+    my $name = connection($self);
     my $connection = $self->{gui}{resources}{WMS}{$name};
     my $ua = LWP::UserAgent->new;
     my $url = $connection->[0].'?service=WMS&version=1.1.1&request=GetCapabilities';
@@ -146,6 +164,7 @@ sub new {
 	     $dialog->get_widget('WMS_edit_username_entry')->get_text(),
 	     $dialog->get_widget('WMS_edit_password_entry')->get_text()
 	    ];
+	set_connections($self);
     }
     $dialog->get_widget('WMS_edit_dialog')->destroy();
 }
@@ -154,12 +173,7 @@ sub new {
 sub edit {
     my $self = pop;
     my $dialog = Geo::Raster::Layer::Dialogs::EditWMS::open($self->{gui}, "Edit WMS connection");
-
-    my $combo = $self->{WMS_dialog}->get_widget('WMS_combobox');
-    my $iter = $combo->get_active_iter();
-    my $model = $combo->get_model;
-    my $name = $model->get($iter);
- 
+    my $name = connection($self);
     my $connection = $self->{gui}{resources}{WMS}{$name};
     $dialog->get_widget('WMS_edit_name_entry')->set_text($name);
     $dialog->get_widget('WMS_edit_name_entry')->set_editable(0);
@@ -185,6 +199,9 @@ sub edit {
 ##@ignore
 sub delete {
     my $self = pop;
+    my $name = connection($self);
+    delete $self->{gui}{resources}{WMS}{$name};
+    set_connections($self);
 }
 
 ##@ignore
@@ -209,14 +226,11 @@ sub apply {
     add_layer($self, @titles);
 }
 
+##@ignore
 sub add_layer {
     my($self, $title) = @_;
 
-    my $combo = $self->{WMS_dialog}->get_widget('WMS_combobox');
-    my $iter = $combo->get_active_iter();
-    my $model = $combo->get_model;
-    my $name = $model->get($iter);
-    
+    my $name = connection($self);
     my $connection = $self->{gui}{resources}{WMS}{$name};
     my $url = $connection->[0];
     my $username = $connection->[1];
