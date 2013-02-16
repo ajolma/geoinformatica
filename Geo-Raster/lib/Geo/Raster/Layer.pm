@@ -69,59 +69,7 @@ sub registration {
 
 sub open_wms {
     my(undef, $gui) = @_;
-
     Geo::Raster::Layer::Dialogs::WMS::open($gui);
-    return;
-
-    # these need to come from someplace:
-    my $url = 'https://geoinformatics.aalto.fi/OILRISK-protected/wms.pl';
-    my $username = 'ajolma';
-    my $passwd = 'xxxxx';
-    
-    my($protocol) = $url =~ /^(https?:\/\/)/;
-    my $address = $url;
-    $address =~ s/^$protocol//;
-    my $auth = $username ? $username.':'.$passwd.'@' : '';
-    my $wms = 'WMS:'.$protocol.$auth.$address;
-    
-    my $dataset = Geo::GDAL::Open($wms);
-    my $metadata = $dataset->Metadata("SUBDATASETS");
-    my $i = 1;
-    while (1) {
-        my $desc = 'SUBDATASET_'.$i.'_DESC';
-        last unless $metadata->{$desc};
-        my $name = 'SUBDATASET_'.$i.'_NAME';
-        my($srs) = $metadata->{$name} =~ /SRS=([\w:]+)/;
-        my($box) = $metadata->{$name} =~ /BBOX=([\w,]+)/;
-        #print "$i: Name = $metadata->{$desc}, SRS = $srs, Bounding box = $box\n";
-        $i++;
-    }
-    
-    # this needs to come from the user:
-    my $choice = 4;
-    
-    $url = $metadata->{'SUBDATASET_'.$choice.'_NAME'};
-    ($protocol) = $url =~ /^WMS:(https?:\/\/)/;
-    $address = $url;
-    $address =~ s/^WMS:$protocol//;
-    $wms = 'WMS:'.$protocol.$auth.$address;
-
-    $dataset = Geo::GDAL::Open($wms);
-    my $driver = Geo::GDAL::Driver('WMS');
-    my $vsi = Geo::GDAL::VSIFOpenL('/vsimem/xml','w');
-    my $xml = $driver->Copy('/vsimem/xml', $dataset);
-    $dataset = Geo::GDAL::Open('/vsimem/xml');
-    Geo::GDAL::VSIFCloseL($vsi);
-
-    my $name = $metadata->{'SUBDATASET_'.$choice.'_DESC'};
-    my $bands = $dataset->{RasterCount};
-    my $layer = $bands == 1 ? 
-        Geo::Raster::Layer->new(dataset => $dataset, 
-                                name => $name) :
-        Geo::Raster::MultiBandLayer->new(dataset => $dataset, 
-                                         name => $name);
-    $gui->add_layer($layer, $name, 1);
-    $gui->{overlay}->render;
 }
 
 sub open_raster {

@@ -22,6 +22,8 @@ require ExtUtils::PkgConfig;
 $missing_modules{chk_module('Statistics::Descriptive')} = 1;
 $missing_modules{chk_module('Geo::GDAL')} = 1; # should this be optional?
 $missing_modules{chk_module('Gtk2::Ex::Geo', 0.62)} = 1;
+$missing_modules{chk_module('XML::LibXML')} = 1;
+$missing_modules{chk_module('LWP::UserAgent')} = 1;
 delete $missing_modules{''};
 my @missing_modules = keys %missing_modules;
 warn "Problems with required modules: @missing_modules\n" if @missing_modules;
@@ -88,7 +90,8 @@ our %pm_files =
      $root.'/Layer/Dialogs/Polygonize.pm' => $i.'/Layer/Dialogs/Polygonize.pm',
      $root.'/Layer/Dialogs/Properties/GDAL.pm' => $i.'/Layer/Dialogs/Properties/GDAL.pm',
      $root.'/Layer/Dialogs/Properties/libral.pm' => $i.'/Layer/Dialogs/Properties/libral.pm',
-     $root.'/Layer/Dialogs/WMS.pm' => $i.'/Layer/Dialogs/WMS.pm'
+     $root.'/Layer/Dialogs/WMS.pm' => $i.'/Layer/Dialogs/WMS.pm',
+     $root.'/Layer/Dialogs/EditWMS.pm' => $i.'/Layer/Dialogs/EditWMS.pm'
      );
 
 $deps->add_pm(%pm_files);

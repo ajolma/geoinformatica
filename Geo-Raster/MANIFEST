@@ -26,6 +26,7 @@ lib/Geo/Raster/Layer/Dialogs/Polygonize.pm
 lib/Geo/Raster/Layer/Dialogs/Properties/GDAL.pm
 lib/Geo/Raster/Layer/Dialogs/Properties/libral.pm
 lib/Geo/Raster/Layer/Dialogs/WMS.pm
+lib/Geo/Raster/Layer/Dialogs/EditWMS.pm
 Makefile.PL
 t/00_basic.t
 t/01_operators.t
