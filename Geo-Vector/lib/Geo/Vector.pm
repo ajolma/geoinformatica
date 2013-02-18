@@ -39,6 +39,7 @@ use Geo::Vector::Feature;
 use Geo::Vector::Layer;
 use JSON;
 use Gtk2;
+use LWP::UserAgent;
 
 use vars qw( @ISA %RENDER_AS );
 
@@ -142,26 +143,75 @@ sub render_as_modes {
     return keys %RENDER_AS;
 }
 
-## @cmethod ref %layers($driver, $data_source)
+##@ignore
+sub WFS_layers {
+    my($url) = @_; # 'WFS:' + CURL style
+    $url =~ s/^WFS://;
+    my($protocol,$username,$password) = $url =~ /(https?:\/\/)(\w+):(.+?)\@/;
+    $url =~ s/$username:$password\@// if $username;
+    my $ua = LWP::UserAgent->new;
+    $url .= '?service=WFS&version=1.1.0&request=GetCapabilities';
+    my $req = HTTP::Request->new(GET => $url);
+    $req->authorization_basic($username, $password) if $username;
+    my $res = $ua->request($req);
+    unless ($res->is_success) {
+	croak $res->status_line;
+    }
+    my $xml = $res->as_string;
+    my @xml = split /\n/, $xml;
+    while (not $xml[0] =~ /^<\w+:WFS_Capabilities/) {
+	shift @xml;
+    }
+    my $capabilities = XML::LibXML->load_xml(string => "<xml>@xml</xml>");
+    my $xpc = XML::LibXML::XPathContext->new($capabilities);
+    $xpc->registerNs('x', 'http://www.opengis.net/wfs');
+
+    my @layers;
+    for my $layer ($xpc->findnodes('//x:FeatureType')) {
+	my $xc = XML::LibXML::XPathContext->new($layer);
+	$xc->registerNs('x', 'http://www.opengis.net/wfs');
+	my $name = $xc->findnodes('./x:Name')->to_literal;
+	my $title = $xc->findnodes('./x:Title')->to_literal;
+	my $abstract = $xc->findnodes('./x:Abstract')->to_literal;
+	my $default_srs = $xc->findnodes('./x:DefaultSRS')->to_literal;
+	my $other_srs = $xc->findnodes('./x:SRS')->to_literal;
+	push @layers, {
+	    Title => $title,
+	    Name => $name,
+	    Abstract => $abstract,
+	    DefaultSRS => $default_srs,
+	    OtherSRS => $other_srs
+	};
+    }
+    @layers = sort {$a->{Title} cmp $b->{Title}} @layers;
+    return \@layers;
+}
+
+## @cmethod ref @layers($driver, $data_source)
 #
 # @brief Lists the layers that are available in a data source.
-# @return A hashref to a (layer_name => geometry_type) hash.
+# @return A reference to a list of references of layer data in tuples
 sub layers {
     my($driver, $data_source) = @_;
-    $driver = '' unless $driver;
-    $data_source = '' unless $data_source;
+    #$driver = '' unless $driver;
+    #$data_source = '' unless $data_source;
+    return WFS_layers($data_source) if $driver and $driver eq 'WFS';
     my $self = {};
     open_data_source($self, driver => $driver, data_source => $data_source, update => 0);
     return unless $self->{OGR}->{DataSource};
-    my %layers;
+    my @layers;
     for my $i ( 0 .. $self->{OGR}->{DataSource}->GetLayerCount - 1 ) {
 	my $l  = $self->{OGR}->{DataSource}->GetLayerByIndex($i);
 	my $fd = $l->GetLayerDefn();
 	my $t  = $fd->GetGeomType;
 	next unless exists $Geo::OGR::Geometry::TYPE_INT2STRING{$t};
-	$layers{ $l->GetName } = $Geo::OGR::Geometry::TYPE_INT2STRING{$t};
+	push @layers, { 
+	    'Name' => $l->GetName,
+	    'Geometry type' => $Geo::OGR::Geometry::TYPE_INT2STRING{$t} 
+	};
     }
-    return \%layers;
+    @layers = sort {$a->{Name} cmp $b->{Name}} @layers;
+    return \@layers;
 }
 
 ## @cmethod void delete_layer($driver, $data_source, $layer)
@@ -179,6 +229,98 @@ sub delete_layer {
 	$self->{OGR}->{DataSource}->DeleteLayer($i), last
 	    if $l->GetName() eq $layer;
     }
+}
+
+##@ignore
+sub describe_WFS_layer {
+    my($url, $layer) = @_; # 'WFS:' + CURL style
+    $url =~ s/^WFS://;
+    my($protocol,$username,$password) = $url =~ /(https?:\/\/)(\w+):(.+?)\@/;
+    $url =~ s/$username:$password\@// if $username;
+    my $ua = LWP::UserAgent->new;
+    $url .= '?service=WFS&version=1.1.0&request=DescribeFeatureType&typename='.$layer;
+    my $req = HTTP::Request->new(GET => $url);
+    $req->authorization_basic($username, $password) if $username;
+    my $res = $ua->request($req);
+    unless ($res->is_success) {
+	croak $res->status_line;
+    }
+    my $xml = $res->as_string;
+    my @xml = split /\n/, $xml;
+    while (not $xml[0] =~ /^<schema/) {
+	shift @xml;
+    }
+    my $schema = XML::LibXML->load_xml(string => "<xml>@xml</xml>");
+    my $xpc = XML::LibXML::XPathContext->new($schema);
+    $xpc->registerNs('x', 'http://www.w3.org/2001/XMLSchema');
+
+    my @schema;
+    for my $element ($xpc->findnodes('//x:element')) {
+	my $x = $element->findvalue('@substitutionGroup');
+	next if $x;
+	my $name = $element->findvalue('@name');
+	my $type = $element->findvalue('@type');
+	push @schema, [ 0 => $name, 1 => $type ];
+    }
+    @schema = sort {$a->[1] cmp $b->[1]} @schema;
+
+    return ([], \@schema);
+}
+
+## @cmethod @describe_layer($driver, $data_source, $layer)
+#
+# @brief Describes a layer in a data source.
+# @return Meta data and schema of the layer
+sub describe_layer {
+    my %attr = @_;
+    
+    return describe_WFS_layer($attr{data_source}, $attr{layer}) 
+	if $attr{driver} and $attr{driver} eq 'WFS';
+
+    my $vector;
+    my @metadata; # key, value pairs
+    my @schema; # field, type pairs
+
+    eval {
+	$vector = Geo::Vector->new( %attr );
+    };
+    croak($@) if $@;
+
+    push @metadata, [ 0 => 'Feature count', 1 => $vector->feature_count() ];
+    eval {
+	my @b = $vector->world;
+	@b = ('undef','undef','undef','undef') unless @b;
+	push @metadata, [ 0 => 'Bounding box', 
+			  1 => "minX = $b[0]\nminY = $b[1]\nmaxX = $b[2]\nmaxY = $b[3]" ];
+    };
+    my $srs = $vector->srs(format=>'Wkt');
+    if ($srs) { # pretty print $srs
+	my @a = split(/(\w+\[)/, $srs);
+	my @b;
+	for (my $i = 1; $i < @a; $i+=2) {
+	    push @b, $a[$i].$a[$i+1];
+	}
+	$srs = '';
+	my $in = 0;
+	for (@b) {
+	    $srs .= "   " for (1..$in);
+	    $srs .= "$_\n";
+	    $in++ while ($_ =~ m/\[/g);
+	    $in-- while ($_ =~ m/\]/g);
+	}
+	$srs =~ s/\n$//;
+    } else {
+	$srs = 'undefined';
+    }
+    push @metadata, [ 0 => 'SRS', 1 => $srs ];
+
+    my $schema = $vector->schema();
+    for my $field (@{$schema->{Fields}}) {
+	push @schema, [ 0 => $field->{Name}, 1 => $field->{Type} ];
+    }
+    @schema = sort {$a->[1] cmp $b->[1]} @schema;
+
+    return (\@metadata, \@schema);
 }
 
 ## @cmethod Geo::Vector new($data_source)
@@ -380,6 +522,7 @@ sub open_data_source {
     my %params = @_;
     my($driver, $data_source, $update, $create_options) = 
 	($params{driver}, $params{data_source}, $params{update}, $params{create_options});
+    #print STDERR "$driver, $data_source, $update, $create_options\n";
     if ($driver) {
         if (blessed($driver) and $driver->isa('Geo::OGR::Driver')) {
             $self->{OGR}->{Driver} = $driver;

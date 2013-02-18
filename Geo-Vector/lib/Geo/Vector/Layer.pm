@@ -786,6 +786,7 @@ use vars qw /%FormatNames/;
     'VFK' => 'VFK data',
     'VRT' => 'VRT - Virtual Datasource',
     'XPLANE' => 'X-Plane/Flightgear aeronautical data',
+    WFS => 'WFS'
     );
 
 ## @ignore
@@ -798,7 +799,7 @@ sub DataSourceTemplate {
     } elsif ($n eq 'SDE') {
 	return ('SDE:<server>,<instance>,<database>,<username>,<password>,<layer>[,<parentversion>][,<childversion>]','');
     } elsif ($n eq 'GeoJSON') {
-	return ('<URL>','');
+	return ('<URL>[@<username>:][<password>]','');
     } elsif ($n eq 'IDB') {
 	return ('IDB:dbname=<database> server=<host> user=<username> pass=<password> table=<tablename>','');
     } elsif ($n eq 'INGRES') {
@@ -810,6 +811,8 @@ sub DataSourceTemplate {
     } elsif ($n eq 'PostgreSQL') {
 	return ('PG:dbname=<database>[ user=<username>][ password=<password>][ host=<host>][ port=<port>][ tables=<tables>][ schemas=<schemas>][ active_schema=<active_schema>]',
 		"tables is a comma separated list of [schema.]table[(geometry_column)]");
+    } elsif ($n eq 'WFS') {
+	return ('WFS:<URL>[@<username>:][<password>]','');
     } else {
 	return ('<filename>','');
     }

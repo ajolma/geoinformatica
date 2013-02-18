@@ -19,17 +19,20 @@ sub open {
 	($self, $gui, 'open_dialog', "Open vector layer",
 	 {
 	     open_dialog => [delete_event => \&cancel_open_vector, $self],
-	     open_vector_delete_datasource_button => [clicked => \&delete_data_source, $self],
-	     open_vector_connect_datasource_button => [clicked => \&connect_data_source, $self],
+	     open_vector_build_connection_button => [clicked => \&build_datasource, $self],
+	     open_vector_datasource_combobox => [changed => \&datasource_changed, $self],
+	     open_vector_edit_datasource_button => [clicked => \&edit_datasource, $self],
+	     open_vector_delete_datasource_button => [clicked => \&delete_datasource, $self],
+	     open_vector_layer_treeview => [cursor_changed => \&layer_cursor_changed, $self],
 	     open_vector_remove_button => [clicked => \&remove_layer, $self],
-	     open_vector_schema_button => [clicked => \&show_schema, $self],
+	     open_vector_describe_button => [clicked => \&describe_layer, $self],
 	     open_vector_cancel_button => [clicked => \&cancel_open_vector, $self],
 	     open_vector_ok_button => [clicked => \&open_vector, $self],
-	     open_vector_auto_update_schema_checkbutton => [toggled => \&show_schema, $self],
+	     open_vector_auto_update_schema_checkbutton => [toggled => \&describe_layer, $self],
 	 },
 	 [
 	  'open_vector_driver_combobox',
-	  'filesystem_driver_combobox',
+	  'open_vector_filesystem_driver_combobox',
 	  'open_vector_datasource_combobox'
 	 ]
 	);
@@ -45,7 +48,7 @@ sub open {
 	}
 	$combo->set_active(0);
 	
-	$combo = $dialog->get_widget('filesystem_driver_combobox');
+	$combo = $dialog->get_widget('open_vector_filesystem_driver_combobox');
 	$model = $combo->get_model();
 	$model->set($model->append, 0, 'auto');
 	for my $driver (Geo::OGR::Drivers()) {
@@ -54,13 +57,7 @@ sub open {
 	}
 	$combo->set_active(0);
 	
-	$dialog->get_widget('open_vector_datasource_combobox')
-	    ->signal_connect(changed => sub { empty_layer_data($_[1]) }, $self);
-	
-	$dialog->get_widget('open_vector_build_connection_button')
-	    ->signal_connect(clicked => \&build_data_source, $self);
-	
-	fill_named_data_sources_combobox($self);
+	fill_datasource_combobox($self);
     
 	my $treeview = $dialog->get_widget('open_vector_directory_treeview');
 	$treeview->set_model(Gtk2::TreeStore->new('Glib::String'));
@@ -83,21 +80,10 @@ sub open {
 		return 0;
 	    }, $self);
 	
-	$treeview = $dialog->get_widget('open_vector_layer_treeview');
+	$treeview = $dialog->get_widget('open_vector_metadata_treeview');
 	$treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
-	$treeview->get_selection->set_mode('multiple');
 	my $i = 0;
-	for my $column ('layer', 'geometry') {
-	    my $cell = Gtk2::CellRendererText->new;	    
-	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
-	    $treeview->append_column($col);
-	}
-	$treeview->signal_connect(cursor_changed => \&on_layer_treeview_cursor_changed, $self);
-	
-	$treeview = $dialog->get_widget('open_vector_property_treeview');
-	$treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
-	$i = 0;
-	foreach my $column ('property', 'value') {
+	foreach my $column ('Key', 'Value') {
 	    my $cell = Gtk2::CellRendererText->new;
 	    if ($column eq 'value') {
 		$cell->set(wrap_width => 400);
@@ -110,7 +96,7 @@ sub open {
 	$treeview = $dialog->get_widget('open_vector_schema_treeview');
 	$treeview->set_model(Gtk2::TreeStore->new(qw/Glib::String Glib::String/));
 	$i = 0;
-	foreach my $column ('field', 'type') {
+	foreach my $column ('Field', 'Type') {
 	    my $cell = Gtk2::CellRendererText->new;
 	    my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
 	    $treeview->append_column($col);
@@ -143,17 +129,35 @@ sub open {
 
 }
 
+sub datasource_changed {
+    my(undef, $self) = @_;
+    my $datasource = get_value_from_combo($self->{open_dialog}, 'open_vector_datasource_combobox');
+    my($driver,undef) = @{$self->{gui}{resources}{datasources}{$datasource}} unless $datasource eq 'Filesystem';
+    for my $widget (qw/filesystem_driver_label filesystem_driver_combobox directory_treeview directory_toolbar/) {
+	$self->{open_dialog}->get_widget('open_vector_'.$widget)->set_sensitive($datasource eq 'Filesystem');
+    }
+    for my $widget (qw/edit_datasource_button delete_datasource_button/) {
+	$self->{open_dialog}->get_widget('open_vector_'.$widget)->set_sensitive($datasource ne 'Filesystem');
+    }
+    my $notWFS = !($driver and $driver eq 'WFS');
+    for my $widget (qw/label entry/) {
+	$self->{open_dialog}->get_widget('open_vector_SQL_'.$widget)->set_sensitive($notWFS);
+    }
+    $self->{open_dialog}->get_widget('open_vector_update_checkbutton')->set_sensitive($notWFS);
+    $self->{open_dialog}->get_widget('open_vector_remove_button')->set_sensitive($notWFS);
+    fill_layer_treeview($self);
+}
+
 ## @ignore
-sub fill_named_data_sources_combobox {
+sub fill_datasource_combobox {
     my($self, $default) = @_;
-    $default = '' unless $default;
     my $model = Gtk2::ListStore->new('Glib::String');
-    $model->set($model->append, 0, '');
+    $model->set($model->append, 0, 'Filesystem');
     my $i = 1;
     my $active = 0;
-    for my $data_source (sort keys %{$self->{gui}{resources}{datasources}}) {
-	$model->set($model->append, 0, $data_source);
-	$active = $i if $data_source eq $default;
+    for my $datasource (sort keys %{$self->{gui}{resources}{datasources}}) {
+	$model->set($model->append, 0, $datasource);
+	$active = $i if $default and $datasource eq $default;
 	$i++;
     }
     my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
@@ -162,24 +166,16 @@ sub fill_named_data_sources_combobox {
 }
 
 ## @ignore
-sub get_data_source {
+sub get_driver_and_datasource {
     my $self = shift;
-    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
-    my $active = $combo->get_active();
-    my $data_source = $self->{path};
-    return ('', $data_source) if $active < 0;
-    my $model = $combo->get_model;
-    my $iter = $model->get_iter_from_string($active);
-    my $driver = $model->get($iter, 0);
-    if ($driver eq '') {
-	my $d = get_value_from_combo($self->{open_dialog}, 'filesystem_driver_combobox');
-	$driver = $d unless $d eq 'auto';
-	#if ($driver eq 'GeoJSON') { # hack
-	#    $data_source = "file:/$data_source";
-	#}
-	return ($driver, $data_source);
+    my $datasource = get_value_from_combo($self->{open_dialog}, 'open_vector_datasource_combobox');
+    if ($datasource eq 'Filesystem') {
+	my $driver = get_value_from_combo($self->{open_dialog}, 'open_vector_filesystem_driver_combobox');
+	$driver = undef if $driver eq 'auto';
+	return ($driver, $self->{path});
+    } else {
+	return @{$self->{gui}{resources}{datasources}{$datasource}};
     }
-    return @{$self->{gui}{resources}{datasources}{$driver}};
 }
 
 ##@ignore
@@ -189,46 +185,51 @@ sub open_vector {
     my $dialog = $self->{open_dialog};
     $self->{gui}->{folder} = $self->{path};
 
-    my($driver, $data_source) = get_data_source($self);
+    my($driver, $datasource) = get_driver_and_datasource($self);
 
-    $driver = get_value_from_combo($dialog, 'filesystem_driver_combobox') unless $driver;    
     my $sql = $dialog->get_widget('open_vector_SQL_entry')->get_text;
     my $wish = $dialog->get_widget('open_vector_layer_name_entry')->get_text;
     my $update = $dialog->get_widget('open_vector_update_checkbutton')->get_active;
     my $hidden = $dialog->get_widget('open_vector_open_hidden_button')->get_active;
 
     my $layers = get_selected_from_selection($dialog->get_widget('open_vector_layer_treeview')->get_selection);
-	
+
+    my %params = (data_source => $datasource);
     my $ok = 1;
     my @o = keys %$layers;
+    for (@o) {
+	for my $l (@{$self->{layers}}) { # convert title to name
+	    if ($l->{Title} and $_ eq $l->{Title}) {
+		$_ = $l->{Name};
+		last;
+	    }
+	}
+    }
     if ($sql) {
 	$sql =~ s/^\s+//;
 	$sql =~ s/\s+$//;
 	$self->{gui}{history}->editing($sql);
 	$self->{gui}{history}->enter();
 	$dialog->get_widget('open_vector_SQL_entry')->set_text('');
-	$ok = add_layer($self, 
-			data_source => $data_source,
-			sql         => $sql,
-			layer_name  => $wish );
+	$params{sql} = $sql;
+	$params{layer_name} = $wish;
+	$ok = add_layer($self, %params);
     } elsif (@o == 1) {
-	$ok = add_layer($self,
-			driver      => $driver,
-			data_source => $data_source,
-			open        => $o[0],
-			update      => $update,
-			layer_name  => $wish );
+	$params{driver} = $driver if $driver;
+	$params{open} = $o[0];
+	$params{update} = $update;
+	$params{layer_name} = $wish;
+	$ok = add_layer($self, %params);
     } else {
+	$params{driver} = $driver if $driver;
+	$params{update} = $update;
 	for my $name (@o) {
-	    my $k = add_layer($self, 
-			      driver      => $driver,
-			      data_source => $data_source,
-			      open        => $name,
-			      update      => $update );
+	    $params{open} = $name;
+	    my $k = add_layer($self, %params);
 	    $ok = $k if !$k;
 	}
     }
-
+    
     $self->{gui}{tree_view}->set_cursor(Gtk2::TreePath->new(0));
     $self->{gui}{overlay}->render;
     return unless $ok;
@@ -240,7 +241,6 @@ sub open_vector {
 sub add_layer {
     my($self, %arg) = @_;
     my $layer_name = delete $arg{layer_name};
-    delete $arg{driver} if exists $arg{driver} and $arg{driver} eq 'auto';
     my $layer;
     eval {
 	$layer = Geo::Vector::Layer->new(%arg);
@@ -272,11 +272,11 @@ sub cancel_open_vector {
 ##@ignore
 sub remove_layer {
     my($button, $self) = @_;
-    my($driver, $data_source) = get_data_source($self);
+    my($driver, $datasource) = get_driver_and_datasource($self);
     my $layers = get_selected_from_selection(
 	$self->{open_dialog}->get_widget('open_vector_layer_treeview')->get_selection);
     eval {
-	my $ds = Geo::OGR::Open($data_source, 1);
+	my $ds = Geo::OGR::Open($datasource, 1);
 	for my $i (0..$ds->GetLayerCount-1) {
 	    my $l = $ds->GetLayerByIndex($i);
 	    $ds->DeleteLayer($i) if $layers->{$l->GetName()};
@@ -423,58 +423,61 @@ sub fill_directory_treeview {
 }
 
 ## @ignore
-sub empty_layer_data {
-    my($self) = @_;
-    my $model = $self->{open_dialog}->get_widget('open_vector_layer_treeview')->get_model;
-    $model->clear if $model;
-    $model = $self->{open_dialog}->get_widget('open_vector_property_treeview')->get_model;
-    $model->clear if $model;
-    $model = $self->{open_dialog}->get_widget('open_vector_schema_treeview')->get_model;
-    $model->clear if $model;
-}
-
-## @ignore
 sub fill_layer_treeview {
     my($self) = @_;
 
-    empty_layer_data($self);
-
-    my $treeview = $self->{open_dialog}->get_widget('open_vector_layer_treeview');
-    my $model = $treeview->get_model;
-
-    my($driver, $data_source) = get_data_source($self);
-    return unless $data_source;
-
-    $self->{_open_data_source} = $data_source;
-    my $layers;
-    eval {
-	$driver = '' unless $driver;
-        $layers = Geo::Vector::layers($driver, $data_source);
-    };
-    my @layers = sort {$b cmp $a} keys %$layers;
-    if (@layers) {
-        for my $name (@layers) {
-            my $iter = $model->insert (undef, 0);
-	    my $u;
-	    eval {
-		$u = Glib->filename_to_unicode($name);
-	    };
-	    next if $@;
-            $model->set($iter, 0, $u, 1, $layers->{$name});
-        }
-        $treeview->set_cursor(Gtk2::TreePath->new(0));
-    } else {
-        my $iter = $model->insert (undef, 0);
-        $model->set($iter, 0, "no layers found", 1, "");
-        unless ($@ =~ /no reason given/) {
-            $@ =~ s/RuntimeError\s+//;
-            $@ =~ s/FATAL:\s+(\w)/uc($1)/e;
-            $@ =~ s/\s+at\s+\w+\.\w+\s+line\s+\d+\s+//;
-            $model->set($model->append(undef), 0, $@, 1, "");
-        }
+    my $treeview;
+    my $model;
+    for my $widget (qw/metadata schema layer/) {
+	$treeview = $self->{open_dialog}->get_widget('open_vector_'.$widget.'_treeview');
+	$model = $treeview->get_model;
+	$model->clear if $model;
     }
-    on_layer_treeview_cursor_changed($treeview, $self);
-    return @layers > 0;
+    # layer treeview remains
+    
+    ($self->{driver}, $self->{datasource}) = get_driver_and_datasource($self);
+    $self->{layers} = Geo::Vector::layers($self->{driver}, $self->{datasource});
+
+    my @columns;
+    my $layer = $self->{layers}->[0];
+    if ($layer->{Title}) { # Title is preferred for humans
+	push @columns, 'Title';
+    } elsif ($layer->{Name}) { # Name is required for software
+	push @columns, 'Name';
+    }
+    push @columns, 'Geometry type' if $layer->{'Geometry type'};
+
+    while (my $col = $treeview->get_column(0)) {
+	$treeview->remove_column($col);
+    }
+    my @t;
+    for (@columns) {
+	push @t, 'Glib::String';
+    }
+    return unless @t;
+
+    $model = Gtk2::TreeStore->new(@t);
+    $treeview->set_model($model);
+    $treeview->get_selection->set_mode('multiple');
+    my $i = 0;
+    for my $column (@columns) {
+	my $cell = Gtk2::CellRendererText->new;	    
+	my $col = Gtk2::TreeViewColumn->new_with_attributes($column, $cell, text => $i++);
+	$treeview->append_column($col);
+    }
+    for my $layer (reverse @{$self->{layers}}) {
+	my $iter = $model->insert(undef, 0);
+	my @row;
+	my $i = 0;
+	for my $column (@columns) {
+	    my $v = $layer->{$column};
+	    $v = Glib->filename_to_unicode($v);
+	    push @row, $i++;
+	    push @row, $v;
+	}
+	$model->set($iter, @row);
+    }
+    layer_cursor_changed($treeview, $self);
 }
 
 ## @ignore
@@ -487,7 +490,7 @@ sub on_SQL_entry_changed {
 }
 
 ## @ignore
-sub on_layer_treeview_cursor_changed {
+sub layer_cursor_changed {
     my($treeview, $self) = @_;
     my($path, $focus_column) = $treeview->get_cursor;
     if ($path) {
@@ -497,10 +500,12 @@ sub on_layer_treeview_cursor_changed {
 	$self->{open_dialog}->get_widget('open_vector_layer_name_entry')->set_text($layer_name);
     }
     if ($self->{open_dialog}->get_widget('open_vector_auto_update_schema_checkbutton')->get_active()) {
-	show_schema(undef, $self);
+	describe_layer(undef, $self);
     } else {
-	$self->{open_dialog}->get_widget('open_vector_property_treeview')->get_model->clear;
-	$self->{open_dialog}->get_widget('open_vector_schema_treeview')->get_model->clear;
+	for my $widget (qw/metadata schema/) {
+	    my $model = $self->{open_dialog}->get_widget('open_vector_'.$widget.'_treeview')->get_model;
+	    $model->clear if $model;
+	}
 	$self->{open_dialog}->get_widget('open_vector_schema_label')->set_label('');
     }
     $self->{gui}{history}->editing('');
@@ -508,7 +513,7 @@ sub on_layer_treeview_cursor_changed {
 }
 
 ## @ignore
-sub build_data_source {
+sub build_datasource {
     my($button, $self) = @_;
     my $combo = $self->{open_dialog}->get_widget('open_vector_driver_combobox');
     my $index = $combo->get_active;
@@ -527,10 +532,9 @@ sub build_data_source {
 	last;
     }
     my @template = split(/[\[\]]/, $template);
-    #print STDERR "build $code data source, t = $template\n";
 
     # ask from user the name for the new data source, and things defined by the template
-    my $data_source_name;
+    my $datasource_name;
     my %input;
     my @ask;
     $i = 0;
@@ -558,7 +562,7 @@ sub build_data_source {
     my $table = Gtk2::Table->new(1+@ask, 2, TRUE);
     $table->attach(Gtk2::Label->new("Unique name for the data source*:"), 0, 1, 0, 1, 'fill', 'fill', 0, 0);
     my $e = Gtk2::Entry->new();
-    $e->set_name('data_source_name');
+    $e->set_name('datasource_name');
     $table->attach($e, 1, 2, 0, 1, 'fill', 'fill', 0, 0);
     $i = 1;
     for my $a (@ask) {
@@ -566,6 +570,7 @@ sub build_data_source {
 	$l->set_justify('left');
 	$table->attach($l, 0, 1, $i, $i+1, 'expand', 'fill', 0, 0);
 	$e = Gtk2::Entry->new();
+	$e->set_visibility(0) if $a eq 'password';
 	$a =~ s/\*$//;
 	$e->set_name($a);
 	$table->attach($e, 1, 2, $i, $i+1, 'fill', 'fill', 0, 0);
@@ -582,7 +587,7 @@ sub build_data_source {
 
     $dialog->get_content_area()->add($vbox);
  
-    $dialog->signal_connect(response => \&add_data_source, [$self, $template, $code]);
+    $dialog->signal_connect(response => \&add_datasource, [$self, $template, $code]);
     $dialog->show_all;
 }
 
@@ -601,7 +606,7 @@ sub get_entries {
 }
 
 ## @ignore
-sub add_data_source {
+sub add_datasource {
     my($dialog, $response, $x) = @_;
 
     unless ($response eq 'ok') {
@@ -639,16 +644,25 @@ sub add_data_source {
 	$i++;
     }
 
-    #print STDERR "connection string: $connection_string\n";
-    $self->{gui}{resources}{datasources}{$input{data_source_name}} = [$driver, $connection_string];
-    fill_named_data_sources_combobox($self, $input{data_source_name});
+    # check if authentication has been given for the URL
+    # if, then change the URL into CURL style protocol://username:password@server
+    if ($template =~ /<URL>/ and $connection_string =~ /\@(.*)/) {
+	my $auth = $1;
+	$connection_string =~ s/\@.*//;
+	my($protocol) = $connection_string =~ /(https?:\/\/)/;
+	$connection_string =~ s/$protocol/$protocol$auth\@/;
+    }
+
+    #print STDERR "tmpl=$template, driver=$driver, conn=$connection_string\n";
+    $self->{gui}{resources}{datasources}{$input{datasource_name}} = [$driver, $connection_string];
+    fill_datasource_combobox($self, $input{datasource_name});
 
     # Ensure that the dialog box is destroyed when the user responds.
     $dialog->destroy;
 }
 
 ## @ignore
-sub delete_data_source {
+sub edit_datasource {
     my($button, $self) = @_;
     my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
     my $active = $combo->get_active();
@@ -658,18 +672,23 @@ sub delete_data_source {
     my $iter = $model->get_iter_from_string($active);
     my $name = $model->get($iter, 0);
     return if $name eq '';
+    return if $name eq 'Filesystem';
 
-    $model->remove($iter);
-    delete $self->{gui}{resources}{datasources}{$name};
+    print STDERR "edit $name\n";
 }
 
 ## @ignore
-sub connect_data_source {
+sub delete_datasource {
     my($button, $self) = @_;
-    unless (fill_layer_treeview($self)) {
-	# No layers found in data source
-	fill_directory_treeview($self);
-    }
+    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
+    my $model = $combo->get_model;
+    my $active = $combo->get_active();
+    my $iter = $model->get_iter_from_string($active);
+    my $datasource = $model->get($iter, 0);
+    return if $datasource eq 'Filesystem';
+    $combo->set_active(0);
+    $model->remove($iter);
+    delete $self->{gui}{resources}{datasources}{$datasource};
 }
 
 ## @ignore
@@ -712,94 +731,58 @@ sub select_directory {
 }
 
 ## @ignore
-sub show_schema {
+sub describe_layer {
     my($button, $self) = @_ == 2 ? @_ : (undef, $_[0]);
-    
-    my $property_model = $self->{open_dialog}->get_widget('open_vector_property_treeview')->get_model;
-    $property_model->clear;
-    my $schema_model = $self->{open_dialog}->get_widget('open_vector_schema_treeview')->get_model;
-    $schema_model->clear;
-    my $label = '';
+    my $schema_title = '';
+    my %attr = ( driver => $self->{driver}, data_source => $self->{datasource} );
     my $sql = $self->{open_dialog}->get_widget('open_vector_SQL_entry')->get_text;
-
-    my $vector;
+    my $layer;
     if ($sql) {
-
-	eval {
-	    $vector = Geo::Vector->new( data_source => $self->{_open_data_source}, 
-					sql => $sql );
-	};
-	croak("$@ Is the SQL statement correct?") if $@;
-	$label = 'Schema of the SQL query';
-	
+	$attr{SQL} = $sql;
+	$schema_title = 'Schema of the SQL query';
     } else {
-
 	my $treeview = $self->{open_dialog}->get_widget('open_vector_layer_treeview');
 	my($path, $focus_column) = $treeview->get_cursor;
 	return unless $path;
 	my $model = $treeview->get_model;
 	my $iter = $model->get_iter($path);
 	my $name = $model->get($iter, 0);
-	if (defined $name) {
-	    $vector = Geo::Vector->new( data_source => $self->{_open_data_source}, 
-					open => $name );
-	    $label = "Schema of $name";
+	return unless defined $name;
+	$schema_title = "Schema of $name";
+	for my $l (@{$self->{layers}}) { # convert title to name
+	    if ($l->{Title} and $name eq $l->{Title}) {
+		$layer = $l;
+		$name = $l->{Name};
+		last;
+	    } elsif ($name eq $l->{Name}) {
+		$layer = $l;
+	    }
 	}
-
+	$attr{layer} = $name;
     }
 
-    $self->{open_dialog}->get_widget('open_vector_schema_label')->set_label($label);
-    
-    my $iter = $property_model->insert (undef, 0);
-    $property_model->set($iter,
-			  0, 'Features',
-			  1, $vector->feature_count()
-			  );
-
-    eval {
-	my @world = $vector->world;
-	@world = ('undef','undef','undef','undef') unless @world;
-	$iter = $property_model->insert (undef, 0);
-	$property_model->set($iter,
-			      0, 'Bounding box',
-			      1, "minX = $world[0]\nminY = $world[1]\nmaxX = $world[2]\nmaxY = $world[3]"
-	    );
-    };
-    
-    $iter = $property_model->insert (undef, 0);
-    my $srs = $vector->srs(format=>'Wkt');
-    $srs = 'undefined' unless $srs;
-    # pretty print $srs
-    {
-	my @a = split(/(\w+\[)/, $srs);
-	my @b;
-	for (my $i = 1; $i < @a; $i+=2) {
-	    push @b, $a[$i].$a[$i+1];
+    my($metadata, $schema) = Geo::Vector::describe_layer(%attr);
+    if ($layer) {
+	for my $key (sort keys %$layer) {
+	    next if $key eq 'Name';
+	    next if $key eq 'Title';
+	    next if $key eq 'Geometry type';
+	    push @$metadata, [ 0 => $key, 1 => $layer->{$key} ];
 	}
-	$srs = '';
-	my $in = 0;
-	for (@b) {
-	    $srs .= "   " for (1..$in);
-	    $srs .= "$_\n";
-	    $in++ while ($_ =~ m/\[/g);
-	    $in-- while ($_ =~ m/\]/g);
-	}
-	$srs =~ s/\n$//;
     }
-    $property_model->set($iter,
-			  0, 'SpatialRef',
-			  1, $srs
-			  );
-    
-    my $schema = $vector->schema();
-    for my $field (@{$schema->{Fields}}) {
-	my $iter = $schema_model->insert(undef, 0);
-	$schema_model->set($iter,
-			    0, $field->{Name},
-			    1, $field->{Type}
-	    );
+    my $model = $self->{open_dialog}->get_widget('open_vector_metadata_treeview')->get_model;
+    $model->clear;
+    for my $m (reverse @$metadata) {
+	my $iter = $model->insert(undef, 0);
+	$model->set($iter, @$m);
     }
-    
+    $self->{open_dialog}->get_widget('open_vector_schema_label')->set_label($schema_title);
+    $model = $self->{open_dialog}->get_widget('open_vector_schema_treeview')->get_model;
+    $model->clear;
+    for my $s (reverse @$schema) {
+	my $iter = $model->insert(undef, 0);
+	$model->set($iter, @$s);
+    }
 }
 
 1;
