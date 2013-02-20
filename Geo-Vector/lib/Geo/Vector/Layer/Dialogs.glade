@@ -2444,7 +2444,7 @@
 	      <child>
 		<widget class="GtkLabel" id="label6">
 		  <property name="visible">True</property>
-		  <property name="label" translatable="yes">Select the data source or build a new one.</property>
+		  <property name="label" translatable="yes">Select the data source or add a new one.</property>
 		  <property name="use_underline">False</property>
 		  <property name="use_markup">False</property>
 		  <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -2486,12 +2486,12 @@
 		  </child>
 
 		  <child>
-		    <widget class="GtkButton" id="open_vector_build_connection_button">
+		    <widget class="GtkButton" id="open_vector_add_datasource_button">
 		      <property name="visible">True</property>
 		      <property name="tooltip" translatable="yes">Build a non-file data source connection</property>
 		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">Build</property>
-		      <property name="use_underline">True</property>
+		      <property name="label">gtk-add</property>
+		      <property name="use_stock">True</property>
 		      <property name="relief">GTK_RELIEF_NORMAL</property>
 		      <property name="focus_on_click">True</property>
 		    </widget>

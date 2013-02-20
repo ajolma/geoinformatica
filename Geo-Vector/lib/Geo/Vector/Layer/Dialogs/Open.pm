@@ -18,16 +18,17 @@ sub open {
     my($dialog, $boot) = Gtk2::Ex::Geo::Layer::bootstrap_dialog
 	($self, $gui, 'open_dialog', "Open vector layer",
 	 {
-	     open_dialog => [delete_event => \&cancel_open_vector, $self],
-	     open_vector_build_connection_button => [clicked => \&build_datasource, $self],
+	     open_dialog => [delete_event => \&cancel, $self],
+	     open_vector_add_datasource_button => [clicked => \&edit_datasource, $self],
 	     open_vector_datasource_combobox => [changed => \&datasource_changed, $self],
+	     open_vector_filesystem_driver_combobox => [changed => \&fill_layer_treeview, $self],
 	     open_vector_edit_datasource_button => [clicked => \&edit_datasource, $self],
 	     open_vector_delete_datasource_button => [clicked => \&delete_datasource, $self],
 	     open_vector_layer_treeview => [cursor_changed => \&layer_cursor_changed, $self],
 	     open_vector_remove_button => [clicked => \&remove_layer, $self],
 	     open_vector_describe_button => [clicked => \&describe_layer, $self],
-	     open_vector_cancel_button => [clicked => \&cancel_open_vector, $self],
-	     open_vector_ok_button => [clicked => \&open_vector, $self],
+	     open_vector_cancel_button => [clicked => \&cancel, $self],
+	     open_vector_ok_button => [clicked => \&ok, $self],
 	     open_vector_auto_update_schema_checkbutton => [toggled => \&describe_layer, $self],
 	 },
 	 [
@@ -129,6 +130,24 @@ sub open {
 
 }
 
+## @ignore
+sub fill_datasource_combobox {
+    my($self, $default) = @_;
+    my $model = Gtk2::ListStore->new('Glib::String');
+    $model->set($model->append, 0, 'Filesystem');
+    my $i = 1;
+    my $active = 0;
+    for my $datasource (sort keys %{$self->{gui}{resources}{datasources}}) {
+	$model->set($model->append, 0, $datasource);
+	$active = $i if $default and $datasource eq $default;
+	$i++;
+    }
+    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
+    $combo->set_model($model);
+    $combo->set_active($active);
+}
+
+## @ignore
 sub datasource_changed {
     my(undef, $self) = @_;
     my $datasource = get_value_from_combo($self->{open_dialog}, 'open_vector_datasource_combobox');
@@ -149,43 +168,75 @@ sub datasource_changed {
 }
 
 ## @ignore
-sub fill_datasource_combobox {
-    my($self, $default) = @_;
-    my $model = Gtk2::ListStore->new('Glib::String');
-    $model->set($model->append, 0, 'Filesystem');
-    my $i = 1;
-    my $active = 0;
-    for my $datasource (sort keys %{$self->{gui}{resources}{datasources}}) {
-	$model->set($model->append, 0, $datasource);
-	$active = $i if $default and $datasource eq $default;
-	$i++;
-    }
-    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
-    $combo->set_model($model);
-    $combo->set_active($active);
-}
-
-## @ignore
 sub get_driver_and_datasource {
     my $self = shift;
     my $datasource = get_value_from_combo($self->{open_dialog}, 'open_vector_datasource_combobox');
+    return unless $datasource;
     if ($datasource eq 'Filesystem') {
 	my $driver = get_value_from_combo($self->{open_dialog}, 'open_vector_filesystem_driver_combobox');
 	$driver = undef if $driver eq 'auto';
-	return ($driver, $self->{path});
+	return ($datasource, $driver, $self->{path});
     } else {
-	return @{$self->{gui}{resources}{datasources}{$datasource}};
+	my($driver, $connection) = @{$self->{gui}{resources}{datasources}{$datasource}};
+	my($template) = Geo::OGR::Driver($driver)->DataSourceTemplate;
+	my @template = split(/[\[\]]/, $template);
+	my @kv = split(/ /, $connection);
+	if (@kv) {
+	    my $ok = 1;
+	    my %map;
+	    for my $kv (@kv) {
+		my($k,$v) = $kv =~ /^(\w+)=(\S+)$/;
+		$ok = 0, last unless $k; # old style data source, the connection string
+		$map{$k} = $v;
+	    }
+	    if ($ok) {
+		if ($map{URL} and $map{username} and $map{password}) { # convert to CURL style
+		    my($protocol) = $map{URL} =~ /(https?:\/\/)/;
+		    $protocol = '' unless defined $protocol;
+		    $map{URL} =~ s/$protocol/$protocol$map{username}:$map{password}\@/;
+		    delete $map{username};
+		    delete $map{password};
+		}
+		# put it all together with data from the resources:
+		$connection = '';
+		for my $t (@template) {
+		    next unless $t and $t ne '';
+		    my $a = 0;
+		    for my $k (keys %map) {
+			$a = 1 if $t =~ /\<$k\>/;
+			$t =~ s/\<$k\>/$map{$k}/;
+		    }
+		    $connection .= $t if $a;
+		}
+	    }
+	}
+	#print STDERR "got: $connection\n";
+	return ($datasource, $driver, $connection);
     }
 }
 
+## @ignore
+sub delete_datasource {
+    my($button, $self) = @_;
+    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
+    my $model = $combo->get_model;
+    my $active = $combo->get_active();
+    my $iter = $model->get_iter_from_string($active);
+    my $datasource = $model->get($iter, 0);
+    return if $datasource eq 'Filesystem';
+    $combo->set_active(0);
+    $model->remove($iter);
+    delete $self->{gui}{resources}{datasources}{$datasource};
+}
+
 ##@ignore
-sub open_vector {
+sub ok {
     my($button, $self) = @_;
 
     my $dialog = $self->{open_dialog};
     $self->{gui}->{folder} = $self->{path};
 
-    my($driver, $datasource) = get_driver_and_datasource($self);
+    my($system, $driver, $datasource) = get_driver_and_datasource($self);
 
     my $sql = $dialog->get_widget('open_vector_SQL_entry')->get_text;
     my $wish = $dialog->get_widget('open_vector_layer_name_entry')->get_text;
@@ -205,6 +256,7 @@ sub open_vector {
 	    }
 	}
     }
+    Geo::GDAL::SetConfigOption("OGR_WFS_LOAD_MULTIPLE_LAYER_DEFN","FALSE");
     if ($sql) {
 	$sql =~ s/^\s+//;
 	$sql =~ s/\s+$//;
@@ -263,7 +315,7 @@ sub add_layer {
 }
 
 ##@ignore
-sub cancel_open_vector {
+sub cancel {
     my $self = pop;
     delete $self->{directory_toolbar};
     $self->{open_dialog}->get_widget('open_dialog')->destroy;
@@ -272,7 +324,7 @@ sub cancel_open_vector {
 ##@ignore
 sub remove_layer {
     my($button, $self) = @_;
-    my($driver, $datasource) = get_driver_and_datasource($self);
+    my($system, $driver, $datasource) = get_driver_and_datasource($self);
     my $layers = get_selected_from_selection(
 	$self->{open_dialog}->get_widget('open_vector_layer_treeview')->get_selection);
     eval {
@@ -288,6 +340,7 @@ sub remove_layer {
 ##@ignore
 sub fill_directory_treeview {
     my $self = shift;
+
     my $treeview = $self->{open_dialog}->get_widget('open_vector_directory_treeview');
     my $model = $treeview->get_model;
     $model->clear;
@@ -424,7 +477,7 @@ sub fill_directory_treeview {
 
 ## @ignore
 sub fill_layer_treeview {
-    my($self) = @_;
+    my(undef, $self) = @_ == 2 ? @_ : (undef, $_[0]);
 
     my $treeview;
     my $model;
@@ -435,8 +488,25 @@ sub fill_layer_treeview {
     }
     # layer treeview remains
     
-    ($self->{driver}, $self->{datasource}) = get_driver_and_datasource($self);
-    $self->{layers} = Geo::Vector::layers($self->{driver}, $self->{datasource});
+    ($self->{system}, $self->{driver}, $self->{datasource}) = get_driver_and_datasource($self);
+    delete $self->{layers};
+    eval {
+	$self->{layers} = Geo::Vector::layers($self->{driver}, $self->{datasource});
+    };
+    if ($@ and $self->{system} ne 'Filesystem') {
+	my $dialog = Gtk2::MessageDialog->new(undef, 'destroy-with-parent', 'info', 'close', $@);
+	$dialog->signal_connect(response => sub {
+	    my($dialog) = @_;
+	    $dialog->destroy;
+				});
+	$dialog->show_all;
+    }
+    unless ($self->{layers}) {
+	$self->{open_dialog}->get_widget('open_vector_remove_button')->set_sensitive(0);
+	return;
+    }
+    my $notWFS = !($self->{driver} and $self->{driver} eq 'WFS');
+    $self->{open_dialog}->get_widget('open_vector_remove_button')->set_sensitive($notWFS);
 
     my @columns;
     my $layer = $self->{layers}->[0];
@@ -487,6 +557,8 @@ sub on_SQL_entry_changed {
     $sql =~ s/^\s+//;
     $sql =~ s/\s+$//;
     $self->{open_dialog}->get_widget('open_vector_layer_name_entry')->set_text('SQL') if $sql;
+    $self->{open_dialog}->get_widget('open_vector_layer_treeview')->set_sensitive(!$sql);
+    $self->{open_dialog}->get_widget('open_vector_update_checkbutton')->set_sensitive(!$sql);
 }
 
 ## @ignore
@@ -513,65 +585,87 @@ sub layer_cursor_changed {
 }
 
 ## @ignore
-sub build_datasource {
+sub edit_datasource {
     my($button, $self) = @_;
-    my $combo = $self->{open_dialog}->get_widget('open_vector_driver_combobox');
-    my $index = $combo->get_active;
-    my $code = '';
+    my $title;
+    my $index;
+    my $driver;
     my $format;
-    my $template = '';
-    my $help = '';
+    my $template;
+    my $help;
+    my $datasource;
+    my $old_datasource_name;
+    my $connection = '';
+    if ($button->get_label eq 'gtk-add') {
+	$title = 'Add a data source';
+	my $combo = $self->{open_dialog}->get_widget('open_vector_driver_combobox');
+	$index = $combo->get_active;
+    } elsif ($button->get_label eq 'gtk-edit') {
+	$title = 'Edit a data source';
+	$datasource = get_value_from_combo($self->{open_dialog}, 'open_vector_datasource_combobox');
+	return if !$datasource or $datasource eq 'Filesystem';
+	($driver, $connection) = @{$self->{gui}{resources}{datasources}{$datasource}};
+    } else {
+	return;
+    }
     my $i = -1;
-    for my $driver (Geo::OGR::Drivers()) {
-	($template, $help) = $driver->DataSourceTemplate;
+    for my $d (Geo::OGR::Drivers()) {
+	($template, $help) = $d->DataSourceTemplate;
 	next if $template eq '<filename>';
 	$i++;
-	next unless $i == $index;
-	$code = $driver->GetName;
-	$format = $driver->FormatName;
+	if (defined $index) {
+	    next unless $i == $index;
+	    $driver = $d->GetName;
+	} elsif (defined $driver) {
+	    next unless $d->GetName eq $driver;
+	}
+	$format = $d->FormatName;
 	last;
     }
     my @template = split(/[\[\]]/, $template);
-
-    # ask from user the name for the new data source, and things defined by the template
-    my $datasource_name;
-    my %input;
+    # ask from user the things defined by the template
     my @ask;
-    $i = 0;
-    for my $c (@template) {
-	my @c = $c =~ /\<(\w+)\>/;
-	if ($i % 2 == 1) { # optional
-	} else {
-	    for (@c) {
-		$_ .= '*';
+    my %required;
+    {
+	my @tmp;
+	for my $c (@template) {
+	    next unless ($c and $c ne '');
+	    push @tmp, $c;
+	    my $r = $template =~ /\[\s*$c/;
+	    my @c = $c =~ /\<(\w+)\>/;
+	    push @ask, @c;
+	    unless ($r) {
+		for my $a (@c) {
+		    $required{$a} = 1;
+		}
 	    }
 	}
-	push @ask, @c;
-	$i++;
+	@template = @tmp;
     }
 
-    my $dialog = Gtk2::Dialog->new('Build a non-file data source', 
+    my $dialog = Gtk2::Dialog->new($title, 
 				   $self->{open_dialog}->get_widget('open_dialog'),
 				   'destroy-with-parent',
 				   'gtk-cancel' => 'reject',
 				   'gtk-ok' => 'ok');
     
     my $vbox = Gtk2::VBox->new(FALSE, 0);
-    $vbox->pack_start(Gtk2::Label->new("Define a connection to a $format data source"), FALSE, FALSE, 0);
+    $vbox->pack_start(Gtk2::Label->new("Edit a connection to a $format data source"), FALSE, FALSE, 0);
 
     my $table = Gtk2::Table->new(1+@ask, 2, TRUE);
-    $table->attach(Gtk2::Label->new("Unique name for the data source*:"), 0, 1, 0, 1, 'fill', 'fill', 0, 0);
+    $table->attach(Gtk2::Label->new("Unique name for the data source *:"), 0, 1, 0, 1, 'fill', 'fill', 0, 0);
     my $e = Gtk2::Entry->new();
     $e->set_name('datasource_name');
     $table->attach($e, 1, 2, 0, 1, 'fill', 'fill', 0, 0);
     $i = 1;
     for my $a (@ask) {
-	my $l = Gtk2::Label->new($a.":");
-	$l->set_justify('left');
-	$table->attach($l, 0, 1, $i, $i+1, 'expand', 'fill', 0, 0);
+	my $l = $a;
+	$l .= ' *' if $required{$a};
+	my $label = Gtk2::Label->new($l.":");
+	$label->set_justify('left');
+	$table->attach($label, 0, 1, $i, $i+1, 'expand', 'fill', 0, 0);
 	$e = Gtk2::Entry->new();
 	$e->set_visibility(0) if $a eq 'password';
-	$a =~ s/\*$//;
 	$e->set_name($a);
 	$table->attach($e, 1, 2, $i, $i+1, 'fill', 'fill', 0, 0);
 	$i++;
@@ -586,9 +680,66 @@ sub build_datasource {
     $vbox->pack_start($l, FALSE, TRUE, 0);
 
     $dialog->get_content_area()->add($vbox);
- 
-    $dialog->signal_connect(response => \&add_datasource, [$self, $template, $code]);
     $dialog->show_all;
+ 
+    my %input;
+    if ($button->get_label eq 'gtk-edit') {
+	$old_datasource_name = $datasource;
+	my @kv = split(/ /, $connection);
+	my $old_style = 0;
+	if (@kv) {
+	    for my $kv (@kv) {
+		my($k,$v) = $kv =~ /^(\w+)=(\S+)$/;
+		$old_style = 1, last unless $k;
+		$input{$k} = $v;
+	    }
+	}
+	if ($old_style) {
+	    my $m = Gtk2::MessageDialog->new
+		(undef,'destroy-with-parent','info','ok',
+		 "The connection string is\n$connection\nPlease re-enter the data.");
+	    $m->run;
+	    $m->destroy;
+	    %input = ();
+	}
+	$input{datasource_name} = $datasource;
+	set_entries($dialog, \%input);
+    }
+    while (1) {
+	my $response = $dialog->run;
+	unless ($response eq 'ok') {
+	    $dialog->destroy;
+	    return;
+	}
+	get_entries($dialog, \%input);
+	my $ok = 1;
+	for (sort keys %input) {
+	    if ($required{$_} and not $input{$_}) {
+		$ok = 0;
+		last;
+	    }
+	}
+	if ($ok) {
+	    $dialog->destroy;
+	    last;
+	}
+	my $m = Gtk2::MessageDialog->new
+	    (undef,'destroy-with-parent','info','ok',
+	     "Please give all required data.");
+	$m->run;
+	$m->destroy;
+    }
+
+    delete $self->{gui}{resources}{datasources}{$old_datasource_name} if $old_datasource_name;
+    $datasource = $input{datasource_name};
+    delete $input{datasource_name};
+    my @input;
+    for my $k (keys %input) {
+	push @input, "$k=$input{$k}" if $input{$k} ne '';
+    }
+    $connection = join(' ', @input);
+    $self->{gui}{resources}{datasources}{$datasource} = [$driver, $connection];
+    fill_datasource_combobox($self, $datasource);
 }
 
 ## @ignore
@@ -599,96 +750,20 @@ sub get_entries {
     } elsif ($widget->isa('Gtk2::Entry')) {
 	my $n = $widget->get_name;
 	my $t = $widget->get_text;
-	if ($n and $t) {
-	    $entries->{$n} = $t;
-	}
+	$entries->{$n} = $t if $n;
     }
 }
 
 ## @ignore
-sub add_datasource {
-    my($dialog, $response, $x) = @_;
-
-    unless ($response eq 'ok') {
-	$dialog->destroy;
-	return;
+sub set_entries {
+    my($widget, $entries) = @_;
+    if ($widget->isa('Gtk2::Container')) {
+	$widget->foreach(\&set_entries, $entries);
+    } elsif ($widget->isa('Gtk2::Entry')) {
+	my $n = $widget->get_name;
+	#print STDERR "$n -> $entries->{$n}\n" if $n and $entries->{$n};
+	$widget->set_text($entries->{$n}) if $n and $entries->{$n};
     }
-
-    my($self, $template, $driver) = @$x;
-
-    my %input;
-
-    get_entries($dialog, \%input);
-
-    my @template = split(/[\[\]]/, $template);
-    # build connection string;
-    my $connection_string = '';
-    # at indexes 1,3,.. the contents are optional
-    my $i = 0;
-    for my $c (@template) {
-	my @c = $c =~ /\<(\w+)\>/;
-	my $got_input = 0;
-	for my $k (keys %input) {
-	    for my $p (@c) {
-		$got_input = 1 if $k eq $p;
-	    }
-	    $c =~ s/\<$k\>/$input{$k}/;
-	}
-	if ($i % 2 == 1) { # optional
-	    if ($got_input) {
-		$connection_string .= $c;
-	    }
-	} else {
-	    $connection_string .= $c;
-	}
-	$i++;
-    }
-
-    # check if authentication has been given for the URL
-    # if, then change the URL into CURL style protocol://username:password@server
-    if ($template =~ /<URL>/ and $connection_string =~ /\@(.*)/) {
-	my $auth = $1;
-	$connection_string =~ s/\@.*//;
-	my($protocol) = $connection_string =~ /(https?:\/\/)/;
-	$connection_string =~ s/$protocol/$protocol$auth\@/;
-    }
-
-    #print STDERR "tmpl=$template, driver=$driver, conn=$connection_string\n";
-    $self->{gui}{resources}{datasources}{$input{datasource_name}} = [$driver, $connection_string];
-    fill_datasource_combobox($self, $input{datasource_name});
-
-    # Ensure that the dialog box is destroyed when the user responds.
-    $dialog->destroy;
-}
-
-## @ignore
-sub edit_datasource {
-    my($button, $self) = @_;
-    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
-    my $active = $combo->get_active();
-    return if $active < 0;
-
-    my $model = $combo->get_model;
-    my $iter = $model->get_iter_from_string($active);
-    my $name = $model->get($iter, 0);
-    return if $name eq '';
-    return if $name eq 'Filesystem';
-
-    print STDERR "edit $name\n";
-}
-
-## @ignore
-sub delete_datasource {
-    my($button, $self) = @_;
-    my $combo = $self->{open_dialog}->get_widget('open_vector_datasource_combobox');
-    my $model = $combo->get_model;
-    my $active = $combo->get_active();
-    my $iter = $model->get_iter_from_string($active);
-    my $datasource = $model->get($iter, 0);
-    return if $datasource eq 'Filesystem';
-    $combo->set_active(0);
-    $model->remove($iter);
-    delete $self->{gui}{resources}{datasources}{$datasource};
 }
 
 ## @ignore

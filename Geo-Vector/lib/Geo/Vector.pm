@@ -462,8 +462,7 @@ sub new {
 	}
 	$params{geometry_type} = 'Unknown' unless $params{geometry_type};
 	$params{layer_options} = '' unless $params{layer_options};
-	croak "$self->{OGR}->{Driver}->{name}: $params{data_source}: ".
-	    "Data source does not have the capability to create layers"
+	croak "Driver '$self->{OGR}->{Driver}->{name}' and data source '$params{data_source}' does support creating layers"
 	    unless $self->{OGR}->{DataSource}->TestCapability('CreateLayer');
 	eval {
 	    $self->{OGR}->{Layer} =
@@ -532,26 +531,29 @@ sub open_data_source {
         if ($self->{OGR}->{Driver}->{name} eq 'Memory') {
             $self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource('', {});
         } elsif ($create_options) {
-	    croak "driver $self->{OGR}->{Driver}->{name} does not have the capability to create data sources"
+	    croak "Driver '$self->{OGR}->{Driver}->{name}' does not have the capability to create data sources."
 		unless $self->{OGR}->{Driver}->TestCapability('CreateDataSource');
 	    eval {
 		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->CreateDataSource($data_source, $create_options);
 	    };
 	    $@ = "no reason given" unless $@;
-	    croak "can't open nor create data source '$data_source': $@" unless $self->{OGR}->{DataSource};
+	    $@ =~ s/\n$//;
+	    croak "Can't open nor create data source '$data_source' with driver '$self->{OGR}->{Driver}->{name}': $@." unless $self->{OGR}->{DataSource};
 	} else {
 	    eval {
 		$self->{OGR}->{DataSource} = $self->{OGR}->{Driver}->Open($data_source, $update);
 	    };
 	    $@ = "no reason given" unless $@;
-	    croak "can't open data source '$data_source': $@" unless $self->{OGR}->{DataSource};
+	    $@ =~ s/\n$//;
+	    croak "Can't open data source '$data_source' with driver '$self->{OGR}->{Driver}->{name}': $@." unless $self->{OGR}->{DataSource};
 	}
     } elsif ($data_source) {
 	eval {
 	    $self->{OGR}->{DataSource} = Geo::OGR::Open($data_source, $update);
 	};
         $@ = "no reason given" unless $@;
-	croak "can't open data source '$data_source': $@" unless $self->{OGR}->{DataSource};
+	$@ =~ s/\n$//;
+	croak "Can't open data source '$data_source': $@." unless $self->{OGR}->{DataSource};
 	$self->{OGR}->{Driver} = $self->{OGR}->{DataSource}->GetDriver;
     } else {
 	$self->{OGR}->{Driver} = Geo::OGR::GetDriver('Memory');
@@ -1015,10 +1017,10 @@ sub value_range {
 	return (0, $n) if $field_name eq '.FID';
     } else {
 	my $schema = $self->schema()->field($field_name);
-	croak "value_range: field with name '$field_name' does not exist"
+	confess "Field with name '$field_name' does not exist."
 	    unless defined $schema;
-	croak
-	    "value_range: can't use value from field '$field_name' since its' type is '$schema->{Type}'"
+	confess
+	    "Can't use value from field '$field_name' since it is of type '$schema->{Type}'."
 	    unless $schema->{Type} eq 'Integer'
 	    or $schema->{Type}     eq 'Real';
 	
@@ -1483,11 +1485,11 @@ sub rasterize {
     my $field = -1;
     if ( defined $params{value_field} and $params{value_field} ne '' ) {
 	my $schema = $self->schema()->field($params{value_field});
-	croak "rasterize: field with name '$params{value_field}' does not exist"
+	confess "Field with name '$params{value_field}' does not exist."
 	    unless defined $schema;
-		croak
-		    "rasterize: can't use value from field ".
-		    "'$params{value_field}' since its' type is '$schema->{Type}'"
+		confess
+		    "Can't use value from field ".
+		    "'$params{value_field}' since it is of type '$schema->{Type}'."
 		    unless $schema->{Type} eq 'Integer'
 		    or $schema->{Type}     eq 'Real';
 	$params{datatype} = $schema->{Type};
