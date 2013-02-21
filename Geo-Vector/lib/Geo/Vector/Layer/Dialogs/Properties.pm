@@ -45,6 +45,9 @@ sub open {
     $dialog->get_widget('properties_feature_count_label')->set_text($count);
     
     my $ds = $self->data_source;
+    if ($ds =~ /https?:\/\/\w+:.+?\@/) { # remove authentication
+	$ds =~ s/(https?:\/\/)\w+:.+?\@/$1/;
+    }
     my $driver = $self->driver;
     $dialog->get_widget('properties_driver_label')->set_text($driver ? $driver : 'unknown');
     $dialog->get_widget('properties_data_source_label')->set_text(Glib->filename_to_unicode($ds));

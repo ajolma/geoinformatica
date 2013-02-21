@@ -919,7 +919,7 @@ sub srs {
 sub geometry_type {
     my($self) = @_;
     return 'Unknown' if $self->{features};
-    my $t = $self->{OGR}->{Layer}->GetLayerDefn()->GeometryType;
+    return $self->{OGR}->{Layer}->GeometryType; # GetLayerDefn()->GeometryType;
 }
 
 ## @method hashref schema(hashref schema)

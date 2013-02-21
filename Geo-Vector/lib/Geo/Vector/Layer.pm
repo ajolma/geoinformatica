@@ -324,6 +324,7 @@ sub ohoh {
 sub has_features_with_borders {
     my($self) = @_;
     my $gt = $self->geometry_type;
+    return 1; # What OGR Layer reports is not reliable
     return 1 unless $gt =~ /Point/ or $gt =~ /LineString/;
     return 0;
 }
