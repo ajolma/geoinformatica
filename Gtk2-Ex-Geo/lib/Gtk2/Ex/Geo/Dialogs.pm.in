@@ -58,8 +58,13 @@ sub progress {
 
 ## @ignore
 sub get_value_from_combo {
-    my($dialog, $name_of_combo) = @_;
-    my $combo = $dialog->get_widget($name_of_combo);
+    my $combo;
+    if (@_ == 2) {
+	my($dialog, $name_of_combo) = @_;
+	$combo = $dialog->get_widget($name_of_combo);
+    } else {
+	$combo = shift;
+    }
     my $model = $combo->get_model;
     return unless $model;
     my $a = $combo->get_active();

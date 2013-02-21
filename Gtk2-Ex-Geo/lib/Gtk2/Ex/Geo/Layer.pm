@@ -24,6 +24,7 @@ use Scalar::Util qw(blessed);
 use Carp;
 use Glib qw /TRUE FALSE/;
 use Gtk2::Ex::Geo::Dialogs;
+use Gtk2::Ex::Geo::Dialogs::Rules;
 use Gtk2::Ex::Geo::Dialogs::Symbols;
 use Gtk2::Ex::Geo::Dialogs::Colors;
 use Gtk2::Ex::Geo::Dialogs::Labeling;
@@ -385,6 +386,10 @@ sub menu_items {
 	    $gui->{overlay}->update_image;
 	    $self->open_features_dialog($gui, 1);
 	},
+	'_Rules...' => sub {
+	    my($self, $gui) = @{$_[1]};
+	    $self->open_rules_dialog($gui);
+	},
 	'_Symbol...' => sub {
 	    my($self, $gui) = @{$_[1]};
 	    $self->open_symbols_dialog($gui);
@@ -409,6 +414,9 @@ sub menu_items {
     return @items;
 }
 
+sub open_rules_dialog {
+    Gtk2::Ex::Geo::Dialogs::Rules::open(@_);
+}
 sub open_symbols_dialog {
     Gtk2::Ex::Geo::Dialogs::Symbols::open(@_);
 }
