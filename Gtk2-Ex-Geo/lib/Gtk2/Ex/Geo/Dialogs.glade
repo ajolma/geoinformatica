@@ -1812,7 +1812,7 @@ another layer.</property>
 	  <property name="layout_style">GTK_BUTTONBOX_END</property>
 
 	  <child>
-	    <widget class="GtkButton" id="cancelbutton4">
+	    <widget class="GtkButton" id="rules_cancel_button">
 	      <property name="visible">True</property>
 	      <property name="can_default">True</property>
 	      <property name="can_focus">True</property>
@@ -1825,7 +1825,7 @@ another layer.</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkButton" id="okbutton5">
+	    <widget class="GtkButton" id="rules_ok_button">
 	      <property name="visible">True</property>
 	      <property name="can_default">True</property>
 	      <property name="can_focus">True</property>
@@ -1853,6 +1853,8 @@ another layer.</property>
 
 	  <child>
 	    <widget class="GtkScrolledWindow" id="scrolledwindow3">
+	      <property name="width_request">550</property>
+	      <property name="height_request">350</property>
 	      <property name="visible">True</property>
 	      <property name="can_focus">True</property>
 	      <property name="hscrollbar_policy">GTK_POLICY_ALWAYS</property>
@@ -1890,7 +1892,7 @@ another layer.</property>
 	      <child>
 		<widget class="GtkLabel" id="label78">
 		  <property name="visible">True</property>
-		  <property name="label" translatable="yes">Add or delete rules:</property>
+		  <property name="label" translatable="yes">Edit rules:</property>
 		  <property name="use_underline">False</property>
 		  <property name="use_markup">False</property>
 		  <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -1942,6 +1944,14 @@ another layer.</property>
 		  <property name="expand">False</property>
 		  <property name="fill">False</property>
 		</packing>
+	      </child>
+
+	      <child>
+		<placeholder/>
+	      </child>
+
+	      <child>
+		<placeholder/>
 	      </child>
 
 	      <child>

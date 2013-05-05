@@ -28,33 +28,6 @@
    REAL grid into an INTEGER (functionally a boolean) grid.
 */
 
-#define RAL_MSG_BUF_SIZE 1024
-
-#define RAL_MALLOC(type) (type*)malloc(sizeof(type))
-#define RAL_CALLOC(count, type) (type*)calloc((count), sizeof(type))
-#define RAL_REALLOC(pointer, count, type) (type*)realloc((pointer), (count)*sizeof(type))
-#define RAL_FREE(pointer) { if(pointer){ free(pointer); pointer = NULL; } }
-
-/**
-   check if an exception has happened which has created a message already
-*/
-#define RAL_CHECK(test) { if (!(test)) { goto fail; } }
-
-/**
-   generate an exception with a message
-*/
-#ifdef MSVC
-#define RAL_CHECKM(test, msg) { if (!(test)) { \
-    ral_set_msg(msg); \
-    goto fail; } }
-#else
-#define RAL_CHECKM(test, msg) { if (!(test)) { \
-    char tmp[RAL_MSG_BUF_SIZE]; \
-    snprintf(tmp, RAL_MSG_BUF_SIZE-1, "%s: %s", __PRETTY_FUNCTION__, msg); \
-    ral_set_msg(tmp); \
-    goto fail; } }
-#endif
-
 #ifdef RAL_HAVE_GDAL
 /** a function that can be installed as a CPLErrorHandler and that reports GDAL errors as ral msg's */
 void CPL_DLL CPL_STDCALL ral_cpl_error(CPLErr eclass, int code, const char *msg);
@@ -71,28 +44,6 @@ int RAL_CALL ral_has_msg();
 
 /** get the message and clear the exception flag, if exception flag is not on, returns NULL */
 string_handle RAL_CALL ral_get_msg();
-
-#define AND &&
-#define OR ||
-
-#define SQRT2 1.414213562
-
-#define RAL_EPSILON 1.0E-6
-
-#define EVEN(a) ((a) % 2 == 0)
-#undef ODD
-#define ODD(n) ((n) & 1)
-
-#undef max
-#define max(x, y) ((x)>(y) ? (x) : (y))
-#undef min
-#define min(x, y) ((x)<(y) ? (x) : (y))
-
-#define swap(a, b, temp) \
-    {(temp) = (a);(a) = (b);(b) = (temp);}
-
-#define round(x) \
-    ((x)<0 ? ((long)((x)-0.5)) : ((long)((x)+0.5)))
 
 /** data type constants,
     INTEGER, INTEGER_MIN, INTEGER_MAX, and REAL are defined in ral_config.h
@@ -141,47 +92,14 @@ typedef struct {
 #define RAL_FLAT_AREA -1
 #define RAL_PIT_CELL 0
 
-#define RAL_DIRECTIONS(dir) \
-    for ((dir) = 1; (dir) < 9; (dir)++)
-
-#define RAL_DISTANCE_UNIT(dir) \
-    (EVEN((dir)) ? SQRT2 : 1)
-
 /** 1 up, 2 up-right, 3 right, 4 down-right, etc */
 ral_cell RAL_CALL ral_cell_move(ral_cell c, int dir); 
 
 /** 1: b is straigt up from a, ... */
 int RAL_CALL ral_cell_dir(ral_cell a, ral_cell b); 
 
-#define RAL_NEXT_DIR(d) \
-    ((d) > 7 ? 1 : (d) + 1)
-
-#define RAL_PREV_DIR(d) \
-    ((d) > 1 ? (d) - 1 : 8)
-
-#define RAL_INV_DIR(d) \
-    ((d) > 4 ? (d) - 4 : (d) + 4)
-
 /**\brief rectangular grid of integer or real values for geospatial data */
-typedef struct ral_grid {
-    /** this is assumed always to be a valid type */
-    int datatype;
-    /** height or rows */
-    int M;
-    /** width or columns */
-    int N;
-    /** cell width == cell height */
-    double cell_size;
-    /** min.x is the left edge of first cell in line,
-       max.x is the right edge of the last cell in a line */
-    ral_rectangle world;
-    /** null or a pointer to RAL_INTEGER or RAL_REAL */
-    void *nodata_value;
-    /** may be NULL only if M == N == 0 */
-    void *data;
-    /** masks only a part of the grid for operations */
-    struct ral_grid *mask;
-} ral_grid;
+typedef struct _ral_grid ral_grid;
 
 typedef ral_grid *ral_grid_handle;
 
@@ -211,6 +129,10 @@ void RAL_CALL ral_grid_destroy(ral_grid **gd);
 */
 ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int band, ral_rectangle clip_region, double cell_size);
 #endif
+
+long ral_grid_get_data_pointer(ral_grid *gd);
+
+void RAL_CALL ral_grid_iterate(ral_grid *gd, int (*callback)(ral_grid *gd, ral_cell c, void *), void *data);
 
 /** write the contents of the raster into a binary file, does _not_ create a header file
  */
@@ -244,77 +166,6 @@ void RAL_CALL ral_grid_clear_mask(ral_grid *gd);
 
 void RAL_CALL ral_grid_flip_horizontal(ral_grid *gd);
 void RAL_CALL ral_grid_flip_vertical(ral_grid *gd);
-
-#define RAL_FOR(c, gd) \
-    for((c).i=0;(c).i<(gd)->M;(c).i++) for((c).j=0;(c).j<(gd)->N;(c).j++) \
-    if (!(gd)->mask OR (RAL_GRID_CELL_IN((gd)->mask, (c)) AND RAL_INTEGER_GRID_CELL((gd)->mask, (c))))
-
-#define RAL_GRID_INDEX(i, j, N) (j)+(N)*(i)
-
-#define RAL_INTEGER_GRID_AT(gd, i, j) \
-    (((RAL_INTEGER *)((gd)->data))[RAL_GRID_INDEX((i),(j),((gd)->N))])
-
-#define RAL_REAL_GRID_AT(gd, i, j) \
-    (((RAL_REAL *)((gd)->data))[RAL_GRID_INDEX((i),(j),((gd)->N))])
-
-#define RAL_INTEGER_GRID_CELL(gd, c) \
-    (((RAL_INTEGER *)((gd)->data))[RAL_GRID_INDEX(((c).i),((c).j),((gd)->N))])
-
-#define RAL_REAL_GRID_CELL(gd, c) \
-    (((RAL_REAL *)((gd)->data))[RAL_GRID_INDEX(((c).i),((c).j),((gd)->N))])
-
-#define RAL_GRID_CELL(gd, c) \
-    ((gd)->datatype == RAL_INTEGER_GRID ? RAL_INTEGER_GRID_CELL(gd, c) : RAL_REAL_GRID_CELL(gd, c))
-
-#define RAL_GRID_CELL_IN(gd, c) \
-    ((c).i >= 0 AND (c).j >= 0 AND (c).i < (gd)->M AND (c).j < (gd)->N)
-
-#define RAL_GRID_CELL_OUT(gd, c) \
-    ((c).i < 0 OR (c).j < 0 OR (c).i >= (gd)->M OR (c).j >= (gd)->N)
-
-#define RAL_INTEGER_GRID_NODATA_VALUE(gd) ((gd)->nodata_value ? *((RAL_INTEGER *)((gd)->nodata_value)) : 0)
-
-#define RAL_REAL_GRID_NODATA_VALUE(gd) ((gd)->nodata_value ? *((RAL_REAL *)((gd)->nodata_value)) : 0)
-
-#define RAL_GRID_NODATA_VALUE(gd) \
-    ((gd)->datatype == RAL_INTEGER_GRID ? RAL_INTEGER_GRID_NODATA_VALUE(gd) : RAL_REAL_GRID_NODATA_VALUE(gd))
-
-#define RAL_INTEGER_GRID_DATACELL(gd, c) \
-    ((gd)->nodata_value ? (RAL_INTEGER_GRID_CELL((gd), (c)) != RAL_INTEGER_GRID_NODATA_VALUE(gd)) : TRUE)
-
-#define RAL_REAL_GRID_DATACELL(gd, c) \
-    ((gd)->nodata_value ? (RAL_REAL_GRID_CELL((gd), (c)) != RAL_REAL_GRID_NODATA_VALUE(gd)) : TRUE)
-
-#define RAL_GRID_DATACELL(gd, c) \
-    ((gd)->nodata_value ? \
-        ((gd)->datatype == RAL_INTEGER_GRID ? \
-            (RAL_INTEGER_GRID_CELL((gd), (c)) != RAL_INTEGER_GRID_NODATA_VALUE(gd)) : \
-            (RAL_REAL_GRID_CELL((gd), (c)) != RAL_REAL_GRID_NODATA_VALUE(gd))) : TRUE)
-
-#define RAL_GRID_NODATACELL(gd, c) \
-    ((gd)->nodata_value ? \
-        ((gd)->datatype == RAL_INTEGER_GRID ? RAL_INTEGER_GRID_NODATACELL(gd, c) : \
-            RAL_REAL_GRID_NODATACELL(gd, c)) : FALSE)
-
-#define RAL_INTEGER_GRID_NODATACELL(gd, c) (!(RAL_INTEGER_GRID_DATACELL(gd, c)))
-
-#define RAL_REAL_GRID_NODATACELL(gd, c) (!(RAL_REAL_GRID_DATACELL(gd, c)))
-
-#define RAL_GRID_POINT_IN(gd, p) \
-    ((p).x >= (gd)->world.min.x AND (p).y >= (gd)->world.min.y AND \
-     (p).x <= (gd)->world.max.x AND (p).y <= (gd)->world.max.y)
-
-#define RAL_GRID_POINT_OUT(gd, p) \
-    ((p).x < (gd)->world.min.x OR (p).y < (gd)->world.min.y OR \
-     (p).x > (gd)->world.max.x OR (p).y > (gd)->world.max.y)
-
-/** result is misleading unless gd->nodata_value! should assert.. */
-#define RAL_INTEGER_GRID_SETNODATACELL(gd, c) \
-    (RAL_INTEGER_GRID_CELL((gd), (c)) = (gd)->nodata_value ? *((RAL_INTEGER *)((gd)->nodata_value)) : 0)
-
-/** result is misleading unless gd->nodata_value! should assert.. */
-#define RAL_REAL_GRID_SETNODATACELL(gd, c) \
-    (RAL_REAL_GRID_CELL((gd), (c)) = (gd)->nodata_value ? *((RAL_REAL *)((gd)->nodata_value)) : 0)
 
 /** coerces the grid into a new data_type */
 int RAL_CALL ral_grid_coerce(ral_grid *gd, int data_type);
@@ -637,124 +488,6 @@ void RAL_CALL ral_real_grid_filled_rect(ral_grid *gd, ral_cell c1, ral_cell c2, 
 
 /** drawing methods, these DO NOT check the datatype */
 void RAL_CALL ral_integer_grid_filled_rect(ral_grid *gd, ral_cell c1, ral_cell c2, RAL_INTEGER pen);
-
-/** Bresenham as presented in Foley & Van Dam */
-#define RAL_LINE(grid, cell1, cell2, pen, assignment)	\
-    {						        \
-	ral_cell c;					\
-	int di, dj, incr1, incr2, d,			\
-	    iend, jend, idirflag, jdirflag;		\
-	cell1.i = max(min(cell1.i,grid->M-1),0);	\
-	cell1.j = max(min(cell1.j,grid->N-1),0);	\
-	cell2.i = max(min(cell2.i,grid->M-1),0);	\
-	cell2.j = max(min(cell2.j,grid->N-1),0);	\
-	di = abs(cell2.i-cell1.i);			\
-	dj = abs(cell2.j-cell1.j);			\
-	if (dj <= di) {					\
-	    d = 2*dj - di;				\
-	    incr1 = 2*dj;				\
-	    incr2 = 2 * (dj - di);			\
-	    if (cell1.i > cell2.i) {			\
-		c.i = cell2.i;				\
-		c.j = cell2.j;				\
-		jdirflag = (-1);			\
-		iend = cell1.i;				\
-	    } else {					\
-		c.i = cell1.i;				\
-		c.j = cell1.j;				\
-		jdirflag = 1;				\
-		iend = cell2.i;				\
-	    }						\
-	    assignment(grid, c, pen);			\
-	    if (((cell2.j - cell1.j) * jdirflag) > 0) {	\
-		while (c.i < iend) {			\
-		    c.i++;				\
-		    if (d <0) {				\
-			d+=incr1;			\
-		    } else {				\
-			c.j++;				\
-			d+=incr2;			\
-		    }					\
-		    assignment(grid, c, pen);		\
-		}					\
-	    } else {					\
-		while (c.i < iend) {			\
-		    c.i++;				\
-		    if (d <0) {				\
-			d+=incr1;			\
-		    } else {				\
-			c.j--;				\
-			d+=incr2;			\
-		    }					\
-		    assignment(grid, c, pen);		\
-		}					\
-	    }						\
-	} else {					\
-	    d = 2*di - dj;				\
-	    incr1 = 2*di;				\
-	    incr2 = 2 * (di - dj);			\
-	    if (cell1.j > cell2.j) {			\
-		c.j = cell2.j;				\
-		c.i = cell2.i;				\
-		jend = cell1.j;				\
-		idirflag = (-1);			\
-	    } else {					\
-		c.j = cell1.j;				\
-		c.i = cell1.i;				\
-		jend = cell2.j;				\
-		idirflag = 1;				\
-	    }						\
-	    assignment(grid, c, pen);			\
-	    if (((cell2.i - cell1.i) * idirflag) > 0) {	\
-		while (c.j < jend) {			\
-		    c.j++;				\
-		    if (d <0) {				\
-			d+=incr1;			\
-		    } else {				\
-			c.i++;				\
-			d+=incr2;			\
-		    }					\
-		    assignment(grid, c, pen);		\
-		}					\
-	    } else {					\
-		while (c.j < jend) {			\
-		    c.j++;				\
-		    if (d <0) {				\
-			d+=incr1;			\
-		    } else {				\
-			c.i--;				\
-			d+=incr2;			\
-		    }					\
-		    assignment(grid, c, pen);		\
-		}					\
-	    }						\
-	}						\
-    }
-
-/** from somewhere in the net, does not look very good if r is small(?) */
-#define RAL_FILLED_CIRCLE(grid, cell, r, pen, assignment)	\
-    {								\
-	int a, b, di, dj, r2 = r*r;				\
-	di = max(-r, -cell.i);					\
-	a = r2 - di*di;						\
-	while (1) {						\
-	    dj = max(-r, -cell.j);				\
-	    b = dj*dj;						\
-	    while (1) {						\
-		ral_cell d;					\
-		d.i = cell.i+di;				\
-		d.j = cell.j+dj;				\
-		if (d.j >= (grid)->N) break;			\
-		if (b < a) assignment(grid, d, pen);		\
-		dj++;						\
-		if (dj > r) break;				\
-		b += 2*dj - 1;					\
-	    }							\
-	    di++;						\
-	    if (di > r OR cell.i+di >= (grid)->M) break;	\
-	    a -= 2*di - 1;					\
-	}							\
-    }
 
 #define RAL_REAL_GRID_SET_CELL(grid, cell, value) RAL_REAL_GRID_CELL((grid), (cell)) = (value)
 

@@ -1,6 +1,42 @@
 #include "config.h"
 #include "msg.h"
 #include "ral/ral.h"
+#include "private/ral.h"
+
+ral_point *RAL_CALL ral_point_create()
+{
+    ral_point *p;
+    RAL_CHECKM(p = RAL_MALLOC(ral_point), RAL_ERRSTR_OOM);
+    return p;
+ fail:
+    return NULL;
+}
+
+void RAL_CALL ral_point_destroy(ral_point **p)
+{
+    free(*p);
+    *p = NULL;
+}
+
+void ral_point_set_x(ral_point *p, double x)
+{
+    p->x = x;
+}
+
+void ral_point_set_y(ral_point *p, double y)
+{
+    p->y = y;
+}
+
+double ral_point_get_x(ral_point *p)
+{
+    return p->x;
+}
+
+double ral_point_get_y(ral_point *p)
+{
+    return p->y;
+}
 
 /* counterclockwise from Sedgewick: Algorithms in C */
 int ral_ccw(ral_point p0, ral_point p1, ral_point p2)
@@ -24,68 +60,71 @@ int ral_intersect(ral_line l1, ral_line l2)
 	     *ral_ccw(l2.begin, l2.end, l1.end)) <= 0);
 }
 
-
-int ral_clip_line_to_rect(ral_line *l, ral_rectangle r)
+int ral_clip_line_to_rect(ral_line *l, ral_rectangle *r)
 {
-    if (RAL_POINT_IN_RECTANGLE(l->begin,r) AND RAL_POINT_IN_RECTANGLE(l->end,r))
+    if (RAL_POINT_IN_RECTANGLE(l->begin,*r) AND RAL_POINT_IN_RECTANGLE(l->end,*r))
 	return 1;
-    if (((l->begin.x <= r.min.x) AND (l->end.x <= r.min.x)) OR
-	((l->begin.x >= r.max.x) AND (l->end.x >= r.max.x)) OR
-	((l->begin.y <= r.min.y) AND (l->end.y <= r.min.y)) OR
-	((l->begin.y >= r.max.y) AND (l->end.y >= r.max.y)))
+    if (((l->begin.x <= r->min.x) AND (l->end.x <= r->min.x)) OR
+	((l->begin.x >= r->max.x) AND (l->end.x >= r->max.x)) OR
+	((l->begin.y <= r->min.y) AND (l->end.y <= r->min.y)) OR
+	((l->begin.y >= r->max.y) AND (l->end.y >= r->max.y)))
 	return 0;
     /* scissors */
     if (l->begin.x != l->end.x) {
 	double k = (l->end.y - l->begin.y)/(l->end.x - l->begin.x);
-	if (l->begin.x <= r.min.x) {
-	    l->begin.y = l->begin.y + k*(r.min.x - l->begin.x);
-	    l->begin.x = r.min.x;
-	} else if (l->end.x <= r.min.x) {
-	    l->end.y = l->begin.y + k*(r.min.x - l->begin.x);
-	    l->end.x = r.min.x;
-	} if (l->begin.x >= r.max.x) {
-	    l->begin.y = l->begin.y + k*(r.max.x - l->begin.x);
-	    l->begin.x = r.max.x;
-	} if (l->end.x >= r.max.x) {
-	    l->end.y = l->begin.y + k*(r.max.x - l->begin.x);
-	    l->end.x = r.max.x;
+	if (l->begin.x <= r->min.x) {
+	    l->begin.y = l->begin.y + k*(r->min.x - l->begin.x);
+	    l->begin.x = r->min.x;
+	} else if (l->end.x <= r->min.x) {
+	    l->end.y = l->begin.y + k*(r->min.x - l->begin.x);
+	    l->end.x = r->min.x;
+	} if (l->begin.x >= r->max.x) {
+	    l->begin.y = l->begin.y + k*(r->max.x - l->begin.x);
+	    l->begin.x = r->max.x;
+	} if (l->end.x >= r->max.x) {
+	    l->end.y = l->begin.y + k*(r->max.x - l->begin.x);
+	    l->end.x = r->max.x;
 	}
-	if (l->begin.y <= r.min.y) {
-	    l->begin.x = l->begin.x + (r.min.y - l->begin.y)/k;
-	    l->begin.y = r.min.y;
-	} else if (l->end.y <= r.min.y) {
-	    l->end.x = l->begin.x + (r.min.y - l->begin.y)/k;
-	    l->end.y = r.min.y;
-	} if (l->begin.y >= r.max.y) {
-	    l->begin.x = l->end.x + (r.max.y - l->end.y)/k;
-	    l->begin.y = r.max.y;
-	} if (l->end.y >= r.max.y) {
-	    l->end.x = l->begin.x + (r.max.y - l->begin.y)/k;
-	    l->end.y = r.max.y;
+	if (l->begin.y <= r->min.y) {
+	    l->begin.x = l->begin.x + (r->min.y - l->begin.y)/k;
+	    l->begin.y = r->min.y;
+	} else if (l->end.y <= r->min.y) {
+	    l->end.x = l->begin.x + (r->min.y - l->begin.y)/k;
+	    l->end.y = r->min.y;
+	} if (l->begin.y >= r->max.y) {
+	    l->begin.x = l->end.x + (r->max.y - l->end.y)/k;
+	    l->begin.y = r->max.y;
+	} if (l->end.y >= r->max.y) {
+	    l->end.x = l->begin.x + (r->max.y - l->begin.y)/k;
+	    l->end.y = r->max.y;
 	}
     } else {
-	l->begin.y = min(max(l->begin.y,r.min.y),r.max.y);
-	l->end.y = min(max(l->end.y,r.min.y),r.max.y);
+	l->begin.y = min(max(l->begin.y,r->min.y),r->max.y);
+	l->end.y = min(max(l->end.y,r->min.y),r->max.y);
     }
     return 1;
 }
 
 
-int ral_polygon_init(ral_polygon p, int n)
+ral_polygon *RAL_CALL ral_polygon_create(int n)
 {
-    p.nodes = NULL;
-    RAL_CHECKM(p.nodes = RAL_CALLOC(n, ral_point), RAL_ERRSTR_OOM);
-    p.n = n;
-    return 1;
+    ral_polygon *p;
+    RAL_CHECKM(p = RAL_MALLOC(ral_polygon), RAL_ERRSTR_OOM);
+    p->nodes = NULL;
+    RAL_CHECKM(p->nodes = RAL_CALLOC(n, ral_point), RAL_ERRSTR_OOM);
+    p->n = n;
+    return p;
  fail:
-    return 0;
+    return NULL;
 }
 
 
-void ral_polygon_free(ral_polygon p)
+void RAL_CALL ral_polygon_destroy(ral_polygon **p)
 {
-    if (p.nodes) free(p.nodes);
-    p.nodes = NULL;
+    if ((*p)->nodes) free((*p)->nodes);
+    (*p)->nodes = NULL;
+    free(*p);
+    *p = NULL;
 }
 
 
@@ -95,15 +134,15 @@ void ral_polygon_free(ral_polygon p)
   points on the boundary. The boundary behavior is complex but
   determined; | in particular, for a partition of a region into
   polygons, each point | is "in" exactly one polygon.
- */
-int ral_pnpoly(ral_point p, ral_polygon P)
+*/
+int ral_pnpoly(ral_point *p, ral_polygon *P)
 {
     int i, j, c = 0;
-    for (i = 0, j = P.n-1; i < P.n; j = i++) {
-	if ((((P.nodes[i].y <= p.y) AND (p.y < P.nodes[j].y)) OR
-	     ((P.nodes[j].y <= p.y) AND (p.y < P.nodes[i].y))) AND
-	    (p.x < (P.nodes[j].x - P.nodes[i].x) * (p.y - P.nodes[i].y) / 
-	     (P.nodes[j].y - P.nodes[i].y) + P.nodes[i].x))
+    for (i = 0, j = P->n-1; i < P->n; j = i++) {
+	if ((((P->nodes[i].y <= p->y) AND (p->y < P->nodes[j].y)) OR
+	     ((P->nodes[j].y <= p->y) AND (p->y < P->nodes[i].y))) AND
+	    (p->x < (P->nodes[j].x - P->nodes[i].x) * (p->y - P->nodes[i].y) / 
+	     (P->nodes[j].y - P->nodes[i].y) + P->nodes[i].x))
 	    c = !c;
     }
     return c;
@@ -118,20 +157,20 @@ int ral_pnpoly(ral_point p, ral_polygon P)
    (does not intersect itself or have holes)
    http://astronomy.swin.edu.au/~pbourke/geometry/clockwise/source1.c
 */
-int ral_convex(ral_polygon p)
+int ral_convex(ral_polygon *p)
 {
     int i,j,k;
     int flag = 0;
     double z;
 
-    if (p.n < 3)
+    if (p->n < 3)
 	return(0);
 
-    for (i=0;i<p.n;i++) {
-	j = (i + 1) % p.n;
-	k = (i + 2) % p.n;
-	z  = (p.nodes[j].x - p.nodes[i].x) * (p.nodes[k].y - p.nodes[j].y);
-	z -= (p.nodes[j].y - p.nodes[i].y) * (p.nodes[k].x - p.nodes[j].x);
+    for (i=0;i<p->n;i++) {
+	j = (i + 1) % p->n;
+	k = (i + 2) % p->n;
+	z  = (p->nodes[j].x - p->nodes[i].x) * (p->nodes[k].y - p->nodes[j].y);
+	z -= (p->nodes[j].y - p->nodes[i].y) * (p->nodes[k].x - p->nodes[j].x);
 	if (z < 0)
 	    flag |= 1;
 	else if (z > 0)
@@ -146,17 +185,17 @@ int ral_convex(ral_polygon p)
 }
 
 /* from the same page */
-double ral_polygon_area(ral_polygon p)
+double ral_polygon_area(ral_polygon *p)
 {
     int i;
     double A = 0;
-    for (i=0;i<p.n-1;i++) {
-	A += p.nodes[i].x * p.nodes[i+1].y - p.nodes[i+1].x * p.nodes[i].y;
+    for (i=0;i<p->n-1;i++) {
+	A += p->nodes[i].x * p->nodes[i+1].y - p->nodes[i+1].x * p->nodes[i].y;
     }
     return A/2;
 }
 
-void ral_sort_nodes(ral_polygon p, int *nodes, int begin, int end)
+void ral_sort_nodes(ral_polygon *p, int *nodes, int begin, int end)
 {
     if (end > begin) {
 	int pivot = nodes[begin];
@@ -164,7 +203,7 @@ void ral_sort_nodes(ral_polygon p, int *nodes, int begin, int end)
 	int r = end;
 	int temp;
 	while (l < r) {
-	    if (p.nodes[nodes[l]].y <= p.nodes[pivot].y) {
+	    if (p->nodes[nodes[l]].y <= p->nodes[pivot].y) {
 		l++;
 	    } else {
 		r--;
@@ -212,29 +251,29 @@ void ral_active_edge_tables_destroy(ral_active_edge_table **aet, int n)
     *aet = NULL;
 }
 
-ral_active_edge_table *ral_get_active_edge_tables(ral_polygon *p, int n)
+ral_active_edge_table *ral_get_active_edge_tables(ral_polygon **p, int n)
 {
     ral_active_edge_table *aet;
     int i;
     RAL_CHECKM(aet = RAL_CALLOC(n, ral_active_edge_table), RAL_ERRSTR_OOM);
     for (i = 0; i < n; i++) {
-	aet[i].p = &(p[i]);
+	aet[i].p = p[i];
 	aet[i].aet_begin = 0;
 	aet[i].scanline_at = 0;
 	aet[i].nodes = NULL;
 	aet[i].active_edges = NULL;
     }
     for (i = 0; i < n; i++) {
-	RAL_CHECKM(aet[i].nodes = RAL_CALLOC(p[i].n-1, int), RAL_ERRSTR_OOM);
-	RAL_CHECKM(aet[i].active_edges = RAL_CALLOC(p[i].n-1, int), RAL_ERRSTR_OOM);
+	RAL_CHECKM(aet[i].nodes = RAL_CALLOC(p[i]->n-1, int), RAL_ERRSTR_OOM);
+	RAL_CHECKM(aet[i].active_edges = RAL_CALLOC(p[i]->n-1, int), RAL_ERRSTR_OOM);
     }
     for (i = 0; i < n; i++) {
 	int j;
-	for (j = 0; j < p[i].n-1; j++) { /* the last node is the same as first, skip that */
+	for (j = 0; j < p[i]->n-1; j++) { /* the last node is the same as first, skip that */
 	    aet[i].nodes[j] = j;
 	    aet[i].active_edges[j] = 0;
 	}
-	ral_sort_nodes(p[i], aet[i].nodes, 0, p[i].n-1); /* smallest to biggest */
+	ral_sort_nodes(p[i], aet[i].nodes, 0, p[i]->n-1); /* smallest to biggest */
     }
     return aet;
  fail:
@@ -389,7 +428,6 @@ int ral_scanline_at(ral_active_edge_table *aet_list, int n, double y, double **x
     return 0;
 }
 
-#ifdef RAL_HAVE_GDAL
 ral_geometry *ral_geometry_create(int n_points, int n_parts)
 {
     ral_geometry *g = NULL;
@@ -408,7 +446,6 @@ ral_geometry *ral_geometry_create(int n_points, int n_parts)
     return NULL;
 }
 
-
 void ral_geometry_destroy(ral_geometry **g)
 {
     if (!(*g)) return;
@@ -419,11 +456,27 @@ void ral_geometry_destroy(ral_geometry **g)
     *g = NULL;
 }
 
+int RAL_CALL ral_geometry_get_n_parts(ral_geometry_handle g)
+{
+    return g->n_parts;
+}
+
+int RAL_CALL ral_geometry_get_n_points(ral_geometry_handle g, int part)
+{
+    return g->parts[part].n;
+}
+
+ral_point_handle RAL_CALL ral_geometry_get_point(ral_geometry_handle g, int part, int point)
+{
+    return &(g->parts[part].nodes[point]);
+}
 
 typedef struct {
     int points;
     int parts;
 } ral_counts;
+
+#ifdef RAL_HAVE_GDAL
 
 ral_counts ral_get_counts(OGRGeometryH geom)
 {
@@ -486,6 +539,7 @@ ral_geometry *ral_geometry_create_from_OGR(OGRGeometryH geom)
     return NULL;
 }
 
+#endif
 
 ral_layer *ral_layer_create(int n_geometries)
 {
@@ -500,10 +554,8 @@ ral_layer *ral_layer_create(int n_geometries)
     return NULL;
 }
 
-
 void ral_layer_destroy(ral_layer **l)
 {
     if (*l) free(*l);
     *l = NULL;
 }
-#endif

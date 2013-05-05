@@ -1,6 +1,7 @@
 #include "config.h"
 #include "msg.h"
 #include "ral/ral.h"
+#include "private/ral.h"
 
 #ifdef RAL_HAVE_GDAL
 void CPL_DLL CPL_STDCALL ral_cpl_error(CPLErr eclass, int code, const char *msg)

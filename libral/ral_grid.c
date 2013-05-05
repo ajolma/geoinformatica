@@ -1,6 +1,7 @@
 #include "config.h"
 #include "msg.h"
 #include "ral/ral.h"
+#include "private/ral.h"
 
 /* grid routines */
 
@@ -194,6 +195,19 @@ void ral_grid_destroy(ral_grid **gd)
     }
 }
 
+
+long ral_grid_get_data_pointer(ral_grid *gd)
+{
+    return (long)(gd->data);
+}
+
+
+void RAL_CALL ral_grid_iterate(ral_grid *gd, int (*callback)(ral_grid *gd, ral_cell c, void *), void *data)
+{
+    ral_cell c;
+    RAL_FOR(c, gd)
+	if (!callback(gd, c, data)) return;
+}
 
 int ral_grid_get_height(ral_grid *gd) 
 {
@@ -4082,7 +4096,7 @@ ral_grid *ral_grid_transform(ral_grid *gd, double tr[], int M, int N, int pick, 
 			ral_point q;
 			q.x = p.j;
 			q.y = p.i;
-			if (RAL_INTEGER_GRID_DATACELL(gd,p) AND ral_pnpoly(q, P)) {
+			if (RAL_INTEGER_GRID_DATACELL(gd,p) AND ral_pnpoly(&q, &P)) {
 			    switch (pick) {
 			    case 1:{ 
 				n++;
@@ -4150,7 +4164,7 @@ ral_grid *ral_grid_transform(ral_grid *gd, double tr[], int M, int N, int pick, 
 			ral_point q;
 			q.x = p.j;
 			q.y = p.i;
-			if (RAL_REAL_GRID_DATACELL(gd,p) AND ral_pnpoly(q, P)) {
+			if (RAL_REAL_GRID_DATACELL(gd,p) AND ral_pnpoly(&q, &P)) {
 			    switch (pick) {
 			    case 1:{ 
 				n++;
@@ -4252,7 +4266,7 @@ int ral_grid_filled_polygon(ral_grid *gd, ral_geometry *g, RAL_INTEGER pen_integ
     ral_active_edge_table *aet_list = NULL;
     ral_cell c;
     double y = gd->world.min.y + 0.5*gd->cell_size;
-    RAL_CHECK(aet_list = ral_get_active_edge_tables(g->parts, g->n_parts));
+    RAL_CHECK(aet_list = ral_get_active_edge_tables(&(g->parts), g->n_parts));
     switch (gd->datatype) {
     case RAL_INTEGER_GRID:
 	for (c.i = gd->M - 1; c.i >= 0; c.i--) {
@@ -4385,7 +4399,7 @@ int ral_grid_rasterize_feature(ral_grid *gd, OGRFeatureH f, int value_field, OGR
 		ral_line l;
 		l.begin = g->parts[i].nodes[j];
 		l.end = g->parts[i].nodes[j+1];
-		if (ral_clip_line_to_rect(&l,gd->world)) {
+		if (ral_clip_line_to_rect(&l,&(gd->world))) {
 		    ral_cell c1 = ral_grid_point2cell(gd, l.begin);
 		    ral_cell c2 = ral_grid_point2cell(gd, l.end);
 		    gd->datatype == RAL_INTEGER_GRID ? 

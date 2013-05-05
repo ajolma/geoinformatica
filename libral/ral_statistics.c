@@ -1,6 +1,7 @@
 #include "config.h"
 #include "msg.h"
 #include "ral/ral.h"
+#include "private/ral.h"
 
 ral_variogram_handle RAL_CALL ral_variogram_create(int size)
 {

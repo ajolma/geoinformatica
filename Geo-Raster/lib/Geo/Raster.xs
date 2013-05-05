@@ -52,7 +52,7 @@ char *
 ral_data_element_type(gd)
 	ral_grid *gd
 	CODE:
-		switch(gd->datatype) {
+		switch(ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID: RETVAL = RAL_INTEGER_TYPE_NAME;
 		break;
 		case RAL_REAL_GRID: RETVAL = RAL_REAL_TYPE_NAME;
@@ -67,7 +67,7 @@ int
 ral_sizeof_data_element(gd)
 	ral_grid *gd
 	CODE:
-		switch(gd->datatype) {
+		switch(ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID: RETVAL = sizeof(RAL_INTEGER)*CHAR_BIT;
 		break;
 		case RAL_REAL_GRID: RETVAL = sizeof(RAL_REAL)*CHAR_BIT;
@@ -82,7 +82,7 @@ long
 ral_pointer_to_data(gd)
 	ral_grid *gd
 	CODE:
-		RETVAL = (long)(gd->data);
+		RETVAL = ral_grid_get_data_pointer(gd);
 	OUTPUT:
 		RETVAL
 
@@ -99,17 +99,21 @@ void
 pdl2grid(SV *datasv, int datatype, ral_grid *gd)
 	CODE:
 		void *x = SvPV_nolen(SvRV(datasv));
+		int M = ral_grid_get_height(gd);
+		int N = ral_grid_get_width(gd);
 		int i,j;
-		if (gd->datatype == RAL_INTEGER_GRID) {
-		for (i = 0; i < gd->M; i++) for (j = 0; j < gd->N; j++) {
-		    int ii = j+gd->N*i;
-		    int pi = j+gd->N*(gd->M-i-1);
-		    ((RAL_INTEGER*)(gd->data))[ii] = int_from_pdl(x, datatype, pi);
+		if (ral_grid_get_datatype(gd) == RAL_INTEGER_GRID) {
+		RAL_INTEGER* data = (RAL_INTEGER*)ral_grid_get_data_pointer(gd);
+		for (i = 0; i < M; i++) for (j = 0; j < N; j++) {
+		    int ii = j+N*i;
+		    int pi = j+N*(M-i-1);
+		    data[ii] = int_from_pdl(x, datatype, pi);
 		}} else {
-		for (i = 0; i < gd->M; i++) for (j = 0; j < gd->N; j++) {
-		    int ii = j+gd->N*i;
-		    int pi = j+gd->N*(gd->M-i-1);
-		    ((RAL_REAL*)(gd->data))[ii] = real_from_pdl(x, datatype, pi);
+		RAL_REAL* data = (RAL_REAL*)ral_grid_get_data_pointer(gd);
+		for (i = 0; i < M; i++) for (j = 0; j < N; j++) {
+		    int ii = j+N*i;
+		    int pi = j+N*(M-i-1);
+		    data[ii] = real_from_pdl(x, datatype, pi);
 		}}
 
 void
@@ -208,7 +212,7 @@ ral_grid_get_nodata_value(gd)
 	{
 		SV *sv = &PL_sv_undef;
 		if (gd->nodata_value) {
-			switch (gd->datatype) {
+			switch (ral_grid_get_datatype(gd)) {
 			case RAL_INTEGER_GRID:
 				sv = newSViv(RAL_INTEGER_GRID_NODATA_VALUE(gd));
 				break;
@@ -230,7 +234,7 @@ ral_grid_set_nodata_value(gd, x)
 	ral_grid *gd
 	SV *x
 	CODE:
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			{
 				IV i = SvIV(x);
@@ -400,7 +404,7 @@ ral_grid_get(gd, ci, cj)
 		ral_cell c = {ci,cj};
 		SV *sv;		
 		if (gd->data AND RAL_GRID_CELL_IN(gd, c)) {
-			if (gd->datatype == RAL_REAL_GRID) {
+			if (ral_grid_get_datatype(gd) == RAL_REAL_GRID) {
 				RAL_REAL x = RAL_REAL_GRID_CELL(gd, c);
 				if ((gd->nodata_value) AND (x == RAL_REAL_GRID_NODATA_VALUE(gd)))
 					/*sv = newSVpv("nodata",6);*/
@@ -432,7 +436,7 @@ ral_grid_set(gd, ci, cj, x)
 	CODE:
 	{
 		ral_cell c = {ci,cj};
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			{
 				IV i = SvIV(x);
@@ -473,7 +477,7 @@ ral_grid_get_value_range(gd)
 	{
 		AV *av = newAV();
 		sv_2mortal((SV*)av);
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID: {
 			ral_integer_range range;
 			if (ral_integer_grid_get_value_range(gd, &range)) {
@@ -501,7 +505,7 @@ ral_grid_set_all(gd, x)
 	ral_grid *gd
 	SV *x
 	CODE:
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			{
 				IV i = SvIV(x);
@@ -540,7 +544,7 @@ ral_grid_set_focal(gd, ci, cj, focal)
 		int d, M;
 		RAL_CHECK(mask = focal2mask(focal, &d, 1));
 		M = 2*d+1;
-		if (gd->datatype == RAL_INTEGER_GRID) {
+		if (ral_grid_get_datatype(gd) == RAL_INTEGER_GRID) {
 			RAL_CHECKM(x = (RAL_INTEGER *)calloc(M*M, sizeof(RAL_INTEGER)), RAL_ERRSTR_OOM);
 			int i, j, ix = 0;
 			for (i = 0; i < M; i++) {
@@ -603,7 +607,7 @@ ral_grid_get_focal(gd, ci, cj, distance)
 		int M = 2*d+1;
 		RAL_CHECK(av);
 		sv_2mortal((SV*)av);
-		if (gd->datatype == RAL_INTEGER_GRID) {
+		if (ral_grid_get_datatype(gd) == RAL_INTEGER_GRID) {
 			RAL_INTEGER *x = (RAL_INTEGER *)ral_grid_get_focal(gd, c, d);
 			RAL_CHECK(x);
 			int ix = 0, i, j;
@@ -650,7 +654,7 @@ ral_grid_focal_sum(gd, ci, cj, focal)
 		int d;
 		SV *sv;
 		RAL_CHECK(mask = focal2mask(focal, &d, 0));
-		if (gd->datatype == RAL_INTEGER_GRID) {
+		if (ral_grid_get_datatype(gd) == RAL_INTEGER_GRID) {
 			int sum;
 			ral_integer_grid_focal_sum(gd, c, mask, d, &sum);
 			sv = newSViv(sum);
@@ -786,7 +790,7 @@ ral_grid_focal_range(gd, ci, cj, focal)
 		AV *av = newAV();
 		sv_2mortal((SV*)av);
 		RAL_CHECK(mask = focal2mask(focal, &d, 0));
-		if (gd->datatype == RAL_INTEGER_GRID) {
+		if (ral_grid_get_datatype(gd) == RAL_INTEGER_GRID) {
 			ral_integer_range r;
 			int count = ral_integer_grid_focal_range(gd, c, mask, d, &r);
 			if (count) {
@@ -1618,7 +1622,7 @@ ral_ca_step(gd, k)
 	ral_grid *gd
 	AV* k
 	CODE:
-		if (gd->datatype == RAL_INTEGER_GRID) {
+		if (ral_grid_get_datatype(gd) == RAL_INTEGER_GRID) {
 			RAL_INTEGER a[9];
 			int i;
 			for (i = 0; i < 9; i++) {
@@ -1811,7 +1815,7 @@ ral_grid_line(gd, i1, j1, i2, j2, pen)
 	{	
 		ral_cell c1 = {i1, j1};
 		ral_cell c2 = {i2, j2};
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			ral_integer_grid_line(gd, c1, c2, SvIV(pen));
 			break;
@@ -1836,7 +1840,7 @@ ral_grid_filled_rect(gd, i1, j1, i2, j2, pen)
 	{	
 		ral_cell c1 = {i1, j1};
 		ral_cell c2 = {i2, j2};
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			ral_integer_grid_filled_rect(gd, c1, c2, SvIV(pen));
 			break;
@@ -1859,7 +1863,7 @@ ral_grid_filled_circle(gd, i, j, r, pen)
 	CODE:
 	{	
 		ral_cell c = {i, j};
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			RAL_FILLED_CIRCLE(gd, c, r, SvIV(pen), RAL_INTEGER_GRID_SET_CELL);
 			break;
@@ -1897,7 +1901,7 @@ ral_grid_get_line(gd, i1, j1, i2, j2)
 		ral_cell c2 = {i2, j2};
 		av = newAV();
 		sv_2mortal((SV*)av);
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 		{
 			ral_cell_integer_values *data  = NULL;
@@ -1952,7 +1956,7 @@ ral_grid_get_rect(gd, i1, j1, i2, j2)
 		ral_cell c2 = {i2, j2};
 		av = newAV();
 		sv_2mortal((SV*)av);
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 		{
 			ral_cell_integer_values *data  = NULL;
@@ -2005,7 +2009,7 @@ ral_grid_get_circle(gd, i, j, r)
 		ral_cell c = {i, j};
 		av = newAV();
 		sv_2mortal((SV*)av);
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 		{
 			ral_cell_integer_values *data  = NULL;
@@ -2056,7 +2060,7 @@ ral_grid_floodfill(gd, i, j, pen, connectivity)
 	CODE:
 	{	
 		ral_cell c = {i, j};
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID:
 			ral_integer_grid_floodfill(gd, NULL, c, SvIV(pen), connectivity);
 			break;
@@ -2096,7 +2100,7 @@ ral_grid2list(gd)
 		RAL_REAL *rvalue = NULL;
 		av = newAV();
 		sv_2mortal((SV*)av);
-		switch (gd->datatype) {
+		switch (ral_grid_get_datatype(gd)) {
 		case RAL_INTEGER_GRID: {
 			size_t size;
 			if (ral_integer_grid2list(gd, &c, &ivalue, &size)) {
@@ -3213,7 +3217,20 @@ ral_render_igrid(pb, gd, layer)
 	ral_integer_grid_layer *layer
 	CODE:
 		ral_pixbuf rpb;
-		gtk2_ex_geo_pixbuf_2_ral_pixbuf(pb, &rpb);
+		ral_pixbuf_copy(&rpb, 
+		    pb->image, 
+		    pb->image_rowstride, 
+		    pb->pixbuf, 
+		    pb->destroy_fn,
+		    pb->colorspace, 
+		    pb->has_alpha, 
+		    pb->rowstride, 
+		    pb->bits_per_sample,
+		    pb->width, 
+		    pb->height, 
+		    pb->world_min_x, 
+		    pb->world_max_y, 
+		    pb->pixel_size);
 		layer->gd = gd;
 		ral_render_integer_grid(&rpb, layer);
 	POSTCALL:
@@ -3228,7 +3245,20 @@ ral_render_rgrid(pb, gd, layer)
 	ral_real_grid_layer *layer
 	CODE:
 		ral_pixbuf rpb;
-		gtk2_ex_geo_pixbuf_2_ral_pixbuf(pb, &rpb);
+		ral_pixbuf_copy(&rpb, 
+		    pb->image, 
+		    pb->image_rowstride, 
+		    pb->pixbuf, 
+		    pb->destroy_fn,
+		    pb->colorspace, 
+		    pb->has_alpha, 
+		    pb->rowstride, 
+		    pb->bits_per_sample,
+		    pb->width, 
+		    pb->height, 
+		    pb->world_min_x, 
+		    pb->world_max_y, 
+		    pb->pixel_size);
 		layer->gd = gd;
 		ral_render_real_grid(&rpb, layer);
 	POSTCALL:

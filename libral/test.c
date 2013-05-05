@@ -4,14 +4,25 @@ OGRCoordinateTransformationH CPL_STDCALL
 OCTNewCoordinateTransformation(
     OGRSpatialReferenceH hSourceSRS, OGRSpatialReferenceH hTargetSRS );
 
+int callback(ral_grid *gd, ral_cell c, void *data) {
+    ral_grid_set_integer(gd, c, c.i*c.j);
+    return 1;
+}
+
 int main() {
+
+    ral_point_handle p = ral_point_create();
+    ral_point_set_x(p, 123.456);
+    double x = ral_point_get_x(p);
+    fprintf(stderr, "%f\n", x);
+    ral_point_destroy(&p);
     
     ral_grid *gd = ral_grid_create(RAL_INTEGER_GRID, 10, 10);
     ral_cell c;
     ral_hash *table = NULL;
     int i;
 
-    RAL_FOR(c, gd) RAL_INTEGER_GRID_CELL(gd, c) = c.i*c.j;
+    ral_grid_iterate(gd, callback, NULL);
 
     if ((table = ral_grid_contents(gd)))
 	for (i = 0; i < table->size; i++) {
@@ -25,7 +36,7 @@ int main() {
     ral_cell_integer_values *data  = NULL;
     c.i = 4;
     c.j = 5;
-    RAL_CHECK(data = ral_integer_grid_get_circle(gd, c, 2));
+    if (data != ral_integer_grid_get_circle(gd, c, 2)) goto fail;
     printf("rac: %i\n",data->size);
     for (i = 0; i < data->size; i++) {
 	printf("%i %i %i\n",data->cells[i].i,data->cells[i].j,data->values[i]);

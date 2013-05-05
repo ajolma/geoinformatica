@@ -1,6 +1,7 @@
 #include "config.h"
 #include "msg.h"
 #include "ral/ral.h"
+#include "private/ral.h"
 
 #ifdef RAL_HAVE_GDAL
 #ifdef RAL_HAVE_GDK_PIXBUF
@@ -243,6 +244,38 @@ GdkPixbuf *ral_gdk_pixbuf(ral_pixbuf *pb)
 				     pb->rowstride,
 				     pb->destroy_fn,
 				     NULL);
+}
+
+void ral_pixbuf_copy(ral_pixbuf *pb,
+		     unsigned char *image,
+		     int image_rowstride,
+		     guchar *pixbuf,
+		     GdkPixbufDestroyNotify destroy_fn,
+		     GdkColorspace colorspace,
+		     gboolean has_alpha,
+		     int rowstride,
+		     int bits_per_sample,
+		     int width,
+		     int height,
+		     double world_min_x,
+		     double world_max_y,
+		     double pixel_size)
+{
+    pb->image = image;
+    pb->image_rowstride = image_rowstride;
+    pb->pixbuf = pixbuf;
+    pb->destroy_fn = destroy_fn;
+    pb->colorspace = colorspace;
+    pb->has_alpha = has_alpha;
+    pb->rowstride = rowstride;
+    pb->bits_per_sample = bits_per_sample;
+    pb->N = width;
+    pb->M = height;
+    pb->world.min.x = world_min_x;
+    pb->world.min.y = world_max_y-height*pixel_size;
+    pb->world.max.x = world_min_x+width*pixel_size;
+    pb->world.max.y = world_max_y;
+    pb->pixel_size = pixel_size;
 }
 
 int ral_render_default_integer_grid(ral_pixbuf *pb, ral_integer_grid_layer *layer, ral_interpolator io);
@@ -1085,7 +1118,7 @@ int ral_render_crosses(ral_pixbuf *pb, ral_geometry *g, int symbol_size, GDALCol
     return 1;
 }
 
-int ral_render_wind_roses(ral_pixbuf *pb, ral_feature *feature, ral_visual *visualization)
+int ral_render_wind_roses(ral_pixbuf *pb, ral_feature *feature, visual *visualization)
 {
     int a, b;
     static char *suunnat[8] = {"N","NE","E","SE","S","SW","W","NW"};
@@ -1107,7 +1140,7 @@ int ral_render_wind_roses(ral_pixbuf *pb, ral_feature *feature, ral_visual *visu
 		    if (index >= 0) {
 			int c, size;
 			double val = OGR_F_GetFieldAsDouble(feature->feature, index);
-			val = RAL_INTERPOLATE(feature->nv2ss, val);
+			val = RAL_INTERPOLATE(visualization->nv2ss, val);
 			if (k % 2) val /= 1.141593;
 			size = floor(val);
 			switch(k) {
@@ -1161,7 +1194,7 @@ int ral_render_polylines(ral_pixbuf *pb, ral_geometry *g, GDALColorEntry color)
 	    ral_line l;
 	    l.begin = g->parts[i].nodes[j];
 	    l.end = g->parts[i].nodes[j+1];
-	    if (ral_clip_line_to_rect(&l,pb->world)) {
+	    if (ral_clip_line_to_rect(&l,&(pb->world))) {
 		ral_cell cell1, cell2;
 		cell1.i = floor((pb->world.max.y - l.begin.y)/pb->pixel_size);
 		cell1.j = floor((l.begin.x - pb->world.min.x)/pb->pixel_size);
@@ -1176,7 +1209,7 @@ int ral_render_polylines(ral_pixbuf *pb, ral_geometry *g, GDALColorEntry color)
 int ral_render_polygons(ral_pixbuf *pb, ral_geometry *g, GDALColorEntry color)
 {
     if (g->n_points == 0) return 1;
-    ral_active_edge_table *aet_list = ral_get_active_edge_tables(g->parts, g->n_parts);
+    ral_active_edge_table *aet_list = ral_get_active_edge_tables(&(g->parts), g->n_parts);
     RAL_CHECK(aet_list);
     ral_cell c;
     double y = pb->world.min.y + 0.5*pb->pixel_size;
@@ -1212,23 +1245,23 @@ int ral_render_polygons(ral_pixbuf *pb, ral_geometry *g, GDALColorEntry color)
     return 0;
 }
 
-int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn, ral_feature *feature)
+int ral_setup_color_interpolator(visual *visualization, OGRFeatureDefnH defn)
 {
 
-    if (visualization.color_field >= 0) {
-	RAL_CHECK(ral_get_field_type(defn, visualization.color_field, &(feature->color_field_type))); 
-    } else if (visualization.color_field == RAL_FIELD_FID)
-	feature->color_field_type = OFTInteger;
-    else if (visualization.color_field == RAL_FIELD_Z)
-	feature->color_field_type = OFTReal;
+    if (visualization->color_field >= 0) {
+	RAL_CHECK(ral_get_field_type(defn, visualization->color_field, &(visualization->color_field_type))); 
+    } else if (visualization->color_field == RAL_FIELD_FID)
+	visualization->color_field_type = OFTInteger;
+    else if (visualization->color_field == RAL_FIELD_Z)
+	visualization->color_field_type = OFTReal;
 
-    switch (visualization.palette_type) {
+    switch (visualization->palette_type) {
     case RAL_PALETTE_SINGLE_COLOR:
 	break;					
     case RAL_PALETTE_GRAYSCALE: {
 	ral_double_range y;
 	y.min = 0;
-	switch(visualization.scale) {
+	switch(visualization->scale) {
 	case RAL_SCALE_GRAY:
 	case RAL_SCALE_OPACITY:
 	    y.max = 255.999;
@@ -1243,110 +1276,110 @@ int ral_setup_color_interpolator(ral_visual visualization, OGRFeatureDefnH defn,
 	default:
 	    y.max = 0;
 	}
-	switch (feature->color_field_type) {
+	switch (visualization->color_field_type) {
 	case OFTInteger:					
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_int, y);
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2c, visualization->color_scale_int, y);
 	    break;							
 	case OFTReal:							
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_double, y);   
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2c, visualization->color_scale_double, y);   
 	    break;							
 	default:							
-	    RAL_CHECKM(0, ral_msg("Invalid field type for grayscale palette: %i.", feature->color_field_type));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for grayscale palette: %i.", visualization->color_field_type));
 	}
 	break;
     }					
     case RAL_PALETTE_RAINBOW: {
-	ral_int_range r = visualization.hue_at;
+	ral_int_range r = visualization->hue_at;
 	r.min = max(min(r.min, 360), 0);
 	r.max = max(min(r.max, 360), 0);
-	if (visualization.invert == RAL_RGB_HUE) {
+	if (visualization->invert == RAL_RGB_HUE) {
 	    if (r.max < r.min) r.max += 360;
 	} else {
 	    if (r.max > r.min) r.max -= 360;
 	}
-	switch (feature->color_field_type) {					
+	switch (visualization->color_field_type) {					
 	case OFTInteger:						
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_int, r); 
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2c, visualization->color_scale_int, r); 
 	    break;							
 	case OFTReal:							
-	    RAL_INTERPOLATOR_SETUP(feature->nv2c, visualization.color_scale_double, r); 
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2c, visualization->color_scale_double, r); 
 	    break;							
 	case OFTString:							
 	    break;							
 	default:							
-	    RAL_CHECKM(0, ral_msg("Invalid field type for rainbow palette: %i.", feature->color_field_type));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for rainbow palette: %i.", visualization->color_field_type));
 	}								
 	break;			
     }
     case RAL_PALETTE_COLOR_TABLE:					
-	switch (feature->color_field_type) {					
+	switch (visualization->color_field_type) {					
 	case OFTString:							
 	case OFTInteger:						
 	    break;							
 	default:							
-	    RAL_CHECKM(0, ral_msg("Invalid field type for color table palette: %i.", feature->color_field_type));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for color table palette: %i.", visualization->color_field_type));
 	}								
 	break;								
     case RAL_PALETTE_COLOR_BINS:					
-	switch (feature->color_field_type) {
+	switch (visualization->color_field_type) {
 	case OFTInteger:
 	case OFTReal:
 	    break;
 	default:
-	    RAL_CHECKM(0, ral_msg("Invalid field type for color bins palette: %i.", feature->color_field_type));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for color bins palette: %i.", visualization->color_field_type));
 	}
 	break;
     default:
-	RAL_CHECKM(0, ral_msg("Invalid palette type for visual: %i.", visualization.palette_type));
+	RAL_CHECKM(0, ral_msg("Invalid palette type for visual: %i.", visualization->palette_type));
     }
     return 1;
  fail:
     return 0;
 }
 
-void ral_set_color(ral_visual *visual, ral_feature *feature)
+void ral_set_color(visual *visualization, ral_feature *feature)
 {
-    switch (visual->palette_type) 
+    switch (visualization->palette_type) 
     {
     case RAL_PALETTE_SINGLE_COLOR:
-	feature->color = visual->single_color;
-	feature->color.c4 = (feature->color.c4*visual->alpha)/255;
+	feature->color = visualization->single_color;
+	feature->color.c4 = (feature->color.c4*visualization->alpha)/255;
 	break;
     case RAL_PALETTE_GRAYSCALE:
     {
 	short c = 0;
-	switch (feature->color_field_type)
+	switch (visualization->color_field_type)
 	{
 	case OFTInteger:
-	    if (visual->color_field == RAL_FIELD_FID) {
+	    if (visualization->color_field == RAL_FIELD_FID) {
 		double key = OGR_F_GetFID(feature->feature);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, key));
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) { 
-		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field); 
-		c = floor(RAL_INTERPOLATE(feature->nv2c, field->Integer)); 
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, key));
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) { 
+		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field); 
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, field->Integer)); 
 	    }
 	    break;
 	case OFTReal:
-	    if (visual->color_field == RAL_FIELD_Z) {
+	    if (visualization->color_field == RAL_FIELD_Z) {
 		OGRGeometryH g = feature->geometry;
 		int k = OGR_G_GetGeometryCount(g);
 		if (k)
 		    g = OGR_G_GetGeometryRef(g, 0);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, OGR_G_GetZ(g, 0)));
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, field->Real));
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, OGR_G_GetZ(g, 0)));
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, field->Real));
 	    }
 	    break;
 	default:
 	    break;
 	}
-	if (visual->scale == RAL_SCALE_GRAY) {
+	if (visualization->scale == RAL_SCALE_GRAY) {
 	    feature->color.c1 = feature->color.c2 = feature->color.c3 = c;
-	    feature->color.c4 = visual->alpha;
+	    feature->color.c4 = visualization->alpha;
 	} else {
-	    feature->color = ral_rgb2hsv(visual->grayscale_base_color);
-	    switch(visual->scale) {
+	    feature->color = ral_rgb2hsv(visualization->grayscale_base_color);
+	    switch(visualization->scale) {
 	    case RAL_SCALE_HUE:
 		feature->color.c1 = c;
 		break;
@@ -1367,25 +1400,25 @@ void ral_set_color(ral_visual *visual, ral_feature *feature)
     case RAL_PALETTE_RAINBOW:
     {
 	short c = 0;
-	switch (feature->color_field_type) {
+	switch (visualization->color_field_type) {
 	case OFTInteger:
-	    if (visual->color_field == RAL_FIELD_FID) {
+	    if (visualization->color_field == RAL_FIELD_FID) {
 		double key = OGR_F_GetFID(feature->feature);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, key));
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, field->Integer));
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, key));
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, field->Integer));
 	    }
 	    break;
 	case OFTReal:
-	    if (visual->color_field == RAL_FIELD_Z) {
+	    if (visualization->color_field == RAL_FIELD_Z) {
 		OGRGeometryH g = feature->geometry;
 		while (OGR_G_GetGeometryCount(g))
 		    g = OGR_G_GetGeometryRef(g, 0);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, OGR_G_GetZ(g, 0)));
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
-		c = floor(RAL_INTERPOLATE(feature->nv2c, field->Real));
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, OGR_G_GetZ(g, 0)));
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
+		c = floor(RAL_INTERPOLATE(visualization->nv2c, field->Real));
 	    }
 	    break;
 	default:
@@ -1396,69 +1429,68 @@ void ral_set_color(ral_visual *visual, ral_feature *feature)
 	if ((feature->color.c1) < 0) feature->color.c1 += 360;
 	feature->color.c2 = feature->color.c3 = 100;
 	feature->color = ral_hsv2rgb(feature->color);
-	feature->color.c4 = visual->alpha;
+	feature->color.c4 = visualization->alpha;
 	break;
     }
     case RAL_PALETTE_COLOR_TABLE:
     {
-	switch(feature->color_field_type){
+	switch(visualization->color_field_type){
 	case OFTInteger:
-	    if (visual->color_field == RAL_FIELD_FID){
+	    if (visualization->color_field == RAL_FIELD_FID){
 		long key = OGR_F_GetFID(feature->feature);
-		RAL_COLOR_TABLE_GET(visual->color_table, key, feature->color);
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
+		RAL_COLOR_TABLE_GET(visualization->color_table, key, feature->color);
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
                 /*fprintf(stderr, "value %i\n", field->Integer);*/
-		RAL_COLOR_TABLE_GET(visual->color_table, field->Integer, feature->color);
+		RAL_COLOR_TABLE_GET(visualization->color_table, field->Integer, feature->color);
                 /*fprintf(stderr, "color %i %i %i\n", feature->color.c1, feature->color.c2, feature->color.c3);*/
 	    }
 	    break;
 	case OFTString:
-	    if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
-		RAL_STRING_COLOR_TABLE_GET(visual->string_color_table, field->String, feature->color);
+	    if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
+		RAL_STRING_COLOR_TABLE_GET(visualization->string_color_table, field->String, feature->color);
 	    }
 	    break;
 	default:
 	    break;
 	}
-	feature->color.c4 = (feature->color.c4*visual->alpha)/255;
+	feature->color.c4 = (feature->color.c4*visualization->alpha)/255;
 	break;
     }
     case RAL_PALETTE_COLOR_BINS:
-	switch(feature->color_field_type) {
+	switch(visualization->color_field_type) {
 	case OFTInteger:
-	    if (visual->color_field == RAL_FIELD_FID) {
+	    if (visualization->color_field == RAL_FIELD_FID) {
 		long key = OGR_F_GetFID(feature->feature);
-		RAL_COLOR_BINS_GET(visual->int_bins, key, feature->color);
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
-		RAL_COLOR_BINS_GET(visual->int_bins, field->Integer, feature->color);
+		RAL_COLOR_BINS_GET(visualization->int_bins, key, feature->color);
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
+		RAL_COLOR_BINS_GET(visualization->int_bins, field->Integer, feature->color);
 	    }
 	    break;
 	case OFTReal:
-	    if (visual->color_field == RAL_FIELD_Z) {
+	    if (visualization->color_field == RAL_FIELD_Z) {
 		OGRGeometryH g = feature->geometry;
 		int k = OGR_G_GetGeometryCount(g);
 		if (k)
 		    g = OGR_G_GetGeometryRef(g, 0);
-		RAL_COLOR_BINS_GET(visual->double_bins, OGR_G_GetZ(g, 0), feature->color);
-	    } else if ((visual->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->color_field)) {
-		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visual->color_field);
-		RAL_COLOR_BINS_GET(visual->double_bins, field->Real, feature->color);
+		RAL_COLOR_BINS_GET(visualization->double_bins, OGR_G_GetZ(g, 0), feature->color);
+	    } else if ((visualization->color_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->color_field)) {
+		OGRField*field = OGR_F_GetRawFieldRef(feature->feature, visualization->color_field);
+		RAL_COLOR_BINS_GET(visualization->double_bins, field->Real, feature->color);
 	    }
 	    break;
 	default:
 	    break;
 	}
-	feature->color.c4 = (feature->color.c4*visual->alpha)/255;
+	feature->color.c4 = (feature->color.c4*visualization->alpha)/255;
     }
 }
 
-int ral_render_feature(ral_pixbuf *pb, ral_feature *feature, ral_visual *visual)
+int ral_render_feature(ral_pixbuf *pb, ral_feature *feature, visual *visualization)
 {
-    if (visual->symbol AND (feature->render_as & RAL_RENDER_AS_POLYGONS) AND
-	((feature->geometry_type == wkbPolygon) OR (feature->geometry_type == wkbMultiPolygon))) {
+    if (visualization->symbol AND ((feature->geometry_type == wkbPolygon) OR (feature->geometry_type == wkbMultiPolygon))) {
 
 /* this may be very slow in some cases, maybe an option to use the extent could be added? */ 
 
@@ -1489,36 +1521,35 @@ int ral_render_feature(ral_pixbuf *pb, ral_feature *feature, ral_visual *visual)
 	RAL_CHECK(OGR_G_Centroid(g, centroid) != OGRERR_FAILURE);
 	if (feature->destroy_geometry) OGR_G_DestroyGeometry(feature->geometry);
 	feature->geometry = centroid;
-	feature->render_as = RAL_RENDER_AS_POINTS;
 	feature->destroy_geometry = 1;
     }
 
     RAL_CHECK(feature->ral_geom = ral_geometry_create_from_OGR(feature->geometry));
     
-    if (feature->render_as & RAL_RENDER_AS_POINTS) {
+    if (visualization->symbol) {
 	int size = 0;
-	switch (feature->symbol_size_field_type) {
+	switch (visualization->symbol_size_field_type) {
 	case OFTInteger:
-	    if (visual->symbol_field >= 0) {
-		if (OGR_F_IsFieldSet(feature->feature, visual->symbol_field)) {
-		    OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visual->symbol_field); 
-		    size = floor(RAL_INTERPOLATE(feature->nv2ss, field->Integer));
+	    if (visualization->symbol_size_field >= 0) {
+		if (OGR_F_IsFieldSet(feature->feature, visualization->symbol_size_field)) {
+		    OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visualization->symbol_size_field); 
+		    size = floor(RAL_INTERPOLATE(visualization->nv2ss, field->Integer));
 		}
-	    } else if (visual->symbol_field == RAL_FIELD_FID)
-		size = floor(RAL_INTERPOLATE(feature->nv2ss, OGR_F_GetFID(feature->feature)));
-	    else if (visual->symbol_field == RAL_FIELD_FIXED_SIZE)
-		size = visual->symbol_pixel_size;
+	    } else if (visualization->symbol_size_field == RAL_FIELD_FID)
+		size = floor(RAL_INTERPOLATE(visualization->nv2ss, OGR_F_GetFID(feature->feature)));
+	    else if (visualization->symbol_size_field == RAL_FIELD_FIXED_SIZE)
+		size = visualization->symbol_size;
 	    break;
 	case OFTReal:
-	    if ((visual->symbol_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visual->symbol_field)) {
-		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visual->symbol_field);
-		size = floor(RAL_INTERPOLATE(feature->nv2ss, field->Real));
+	    if ((visualization->symbol_size_field >= 0) AND OGR_F_IsFieldSet(feature->feature, visualization->symbol_size_field)) {
+		OGRField *field = OGR_F_GetRawFieldRef(feature->feature, visualization->symbol_size_field);
+		size = floor(RAL_INTERPOLATE(visualization->nv2ss, field->Real));
 	    }
 	    break;
 	default:
 	    break;
 	}
-	switch (visual->symbol) {
+	switch (visualization->symbol) {
 	case RAL_SYMBOL_SQUARE:
 	    if (size > 0)
 		ral_render_squares(pb, feature->ral_geom, size, feature->color);
@@ -1532,20 +1563,18 @@ int ral_render_feature(ral_pixbuf *pb, ral_feature *feature, ral_visual *visual)
 		ral_render_crosses(pb, feature->ral_geom, size, feature->color);
 	    break;
 	case RAL_SYMBOL_WIND_ROSE:
-	    ral_render_wind_roses(pb, feature, visual);
+	    ral_render_wind_roses(pb, feature, visualization);
 	    break;
 	default:
 	    if (size > 0)
 		ral_render_crosses(pb, feature->ral_geom, size, feature->color);
 	    break;
 	}
-    }
-
-    if (feature->render_as & RAL_RENDER_AS_LINES)
+    } else if (feature->geometry_type == wkbLineString OR feature->geometry_type == wkbMultiLineString) {
 	RAL_CHECK(ral_render_polylines(pb, feature->ral_geom, feature->color));
-		
-    if (feature->render_as & RAL_RENDER_AS_POLYGONS)
+    } else {
 	RAL_CHECK(ral_render_polygons(pb, feature->ral_geom, feature->color));
+    }
 		
     ral_geometry_destroy(&(feature->ral_geom));
     if (feature->destroy_geometry) {
@@ -1561,48 +1590,54 @@ fail:
     return 0;
 }
 
+visual *ral_get_visualization(ral_visual *visual, OGRFeatureH feature)
+{
+    return &(visual->visuals[0]);
+}
+
 int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 {
     ral_feature feature;
-    ral_double_range y;
     int ret = 1;
     OGRFeatureDefnH defn = OGR_L_GetLayerDefn(layer->layer);
     
     feature.feature = NULL;
-    feature.symbol_size_field_type = 0;
-    feature.color_field_type = 0;
-    
+
     CPLPushErrorHandler(ral_cpl_error);
 
-    if (layer->visualization.symbol_field >= 0) {
-	RAL_CHECK(ral_get_field_type(defn, layer->visualization.symbol_field, &feature.symbol_size_field_type));
-    } else if (layer->visualization.symbol_field == RAL_FIELD_FID)
-	feature.symbol_size_field_type = OFTInteger;
-    else if (layer->visualization.symbol_field == RAL_FIELD_FIXED_SIZE)
-	feature.symbol_size_field_type = OFTInteger;
+    /* set up interpolators in all visualizations */
 
-    y.min = 0;
-    y.max = layer->visualization.symbol_pixel_size+1;
-    switch (feature.symbol_size_field_type) {
-    case OFTInteger:
-	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_scale_int, y);
-	break;
-    case OFTReal:
-	RAL_INTERPOLATOR_SETUP(feature.nv2ss, layer->visualization.symbol_size_scale_double, y);
-	break;
-    default:
-	RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", feature.symbol_size_field_type));
+    for (int i = 0; i < layer->visualization->n; i++) {
+	visual *visualization = &(layer->visualization->visuals[i]);
+	ral_double_range y;
+
+	y.min = 0;
+	y.max = visualization->symbol_size+1;
+	
+	if (visualization->symbol_size_field >= 0) {
+	    RAL_CHECK(ral_get_field_type(defn, visualization->symbol_size_field, &visualization->symbol_size_field_type));
+	} else if (visualization->symbol_size_field == RAL_FIELD_FID)
+	    visualization->symbol_size_field_type = OFTInteger;
+	else if (visualization->symbol_size_field == RAL_FIELD_FIXED_SIZE)
+	    visualization->symbol_size_field_type = OFTInteger;
+	else
+	    visualization->symbol_size_field_type = 0;
+
+	switch (visualization->symbol_size_field_type) {
+	case OFTInteger:
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2ss, visualization->symbol_size_scale_int, y);
+	    break;
+	case OFTReal:
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2ss, visualization->symbol_size_scale_double, y);
+	    break;
+	default:
+	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", visualization->symbol_size_field_type));
+	}
+
+	visualization->color_field_type = 0;
+	RAL_CHECK(ral_setup_color_interpolator(visualization, defn));
+    
     }
-
-    RAL_CHECK(ral_setup_color_interpolator(layer->visualization, defn, &feature));
-
-    /*
-    if (layer->visualization.color_table) for (int i = 0; i < layer->visualization.color_table->n; i++) {
-            int k = layer->visualization.color_table->keys[i];
-            GDALColorEntry c = layer->visualization.color_table->colors[i];
-            fprintf(stderr, "key %i color %i %i %i\n", k, c.c1, c.c2, c.c3);
-        }
-    */
 
     OGR_L_SetSpatialFilterRect(layer->layer, pb->world.min.x, pb->world.min.y, pb->world.max.x, pb->world.max.y);
     
@@ -1618,8 +1653,9 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 	    break;
 	}
 
+	visual *visualization = ral_get_visualization(layer->visualization, feature.feature);
+
 	feature.destroy_geometry = 0;
-	feature.render_as = 0;
 
 	if (wkbFlatten(OGR_G_GetGeometryType(geometry)) == wkbGeometryCollection) {
 	    n = OGR_G_GetGeometryCount(geometry);
@@ -1636,49 +1672,12 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 		feature.geometry = OGR_G_GetGeometryRef(geometry, i);
 
 	    feature.geometry_type = wkbFlatten(OGR_G_GetGeometryType(feature.geometry));
-	    
-	    if (layer->visualization.render_as)
 
-		feature.render_as = layer->visualization.render_as;
-
-	    else {
-		
-		switch (feature.geometry_type) { /* below we support several RENDER_AS options... */
-		case wkbPoint:
-		case wkbMultiPoint:
-		    feature.render_as = RAL_RENDER_AS_POINTS;
-		    break;
-		case wkbLineString:
-		case wkbMultiLineString:
-		    feature.render_as = RAL_RENDER_AS_LINES;
-		    break;
-		case wkbPolygon:
-		case wkbMultiPolygon:
-		    feature.render_as = RAL_RENDER_AS_POLYGONS;
-		    break;
-		default: /* should not happen */
-		    break;
-		}
-
-	    }
-
-	    if (!(feature.render_as & RAL_RENDER_AS_POINTS)) {
+	    if (!visualization->symbol) {
 		OGREnvelope e;
 		OGR_G_GetEnvelope( feature.geometry, &e );
-		/* if smaller than one pixel, do not draw anything */
+		/* if smaller than one pixel, do not draw lines or areas */
 		if (((e.MaxX-e.MinX) < pb->pixel_size) AND ((e.MaxY-e.MinY) < pb->pixel_size)) {
-		    /* drawing anything needs the color which we do not have at this point 
-		       ral_point p;
-		       p.x = e.MinX;
-		       p.y = e.MinY;
-		       if (RAL_POINT_IN_RECTANGLE(p, pb->world)) {
-		       int i, j;
-		       i = floor((pb->world.max.y - p.y)/pb->pixel_size);
-		       j = floor((p.x - pb->world.min.x)/pb->pixel_size);
-		       RAL_PIXBUF_SET_PIXEL_COLOR(pb, i, j, c);
-		       continue;
-		       }
-		    */
 		    if (feature.destroy_geometry) OGR_G_DestroyGeometry(feature.geometry);
 		    continue;
 		}
@@ -1686,10 +1685,10 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 	    
 	    RAL_FEATURE_SET_COLOR(feature, 0, 0, 0, 0); /* by default nothing is shown */
 	    
-	    ral_set_color(&(layer->visualization), &feature);
+	    ral_set_color(visualization, &feature);
 	    
-	    if (feature.color.c4 > 0 AND feature.render_as)
-		ral_render_feature(pb, &feature, &(layer->visualization));
+	    if (feature.color.c4 > 0)
+		ral_render_feature(pb, &feature, visualization);
 
 	    if (feature.destroy_geometry) {
 		OGR_G_DestroyGeometry(feature.geometry);
@@ -1720,48 +1719,72 @@ int ral_render_visual_layer(ral_pixbuf *pb, ral_visual_layer *layer)
 int ral_render_visual_feature_table(ral_pixbuf *pb, ral_visual_feature_table *t)
 {
     ral_feature feature;
-    ral_double_range y;
     int ret = 1;
-    int i ,j, n;
+    int j, n;
 
-    feature.feature = NULL;
-    feature.symbol_size_field_type = 0;
-    feature.color_field_type = 0;
+    CPLPushErrorHandler(ral_cpl_error);
     
-    for (i = 0; i < t->size; i++) {
+    for (int i = 0; i < t->size; i++) {
 
 	OGRGeometryH geometry;
 	OGRFeatureDefnH defn;
 
 	feature.destroy_geometry = 0; /* the geom after it has been rendered */
 
-	defn = OGR_F_GetDefnRef(t->features[i].feature);
+	defn = OGR_F_GetDefnRef(t->features[i]);
 
-	CPLPushErrorHandler(ral_cpl_error);
+	visual *visualization = ral_get_visualization(t->visualization, t->features[i]);
 
-	if (t->features[i].visualization.symbol_field >= 0) {
-	    RAL_CHECK(ral_get_field_type(defn, t->features[i].visualization.symbol_field, &feature.symbol_size_field_type));
-	} else if (t->features[i].visualization.symbol_field == RAL_FIELD_FID)
-	    feature.symbol_size_field_type = OFTInteger;
+	ral_double_range y;
 
 	y.min = 0;
-	y.max = t->features[i].visualization.symbol_pixel_size+1;
-	switch (feature.symbol_size_field_type) {
+	y.max = visualization->symbol_size+1;
+	
+	if (visualization->symbol_size_field >= 0) {
+	    RAL_CHECK(ral_get_field_type(defn, visualization->symbol_size_field, &visualization->symbol_size_field_type));
+	} else if (visualization->symbol_size_field == RAL_FIELD_FID)
+	    visualization->symbol_size_field_type = OFTInteger;
+	else if (visualization->symbol_size_field == RAL_FIELD_FIXED_SIZE)
+	    visualization->symbol_size_field_type = OFTInteger;
+	else
+	    visualization->symbol_size_field_type = 0;
+
+	switch (visualization->symbol_size_field_type) {
 	case OFTInteger:
-	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_scale_int, y);
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2ss, visualization->symbol_size_scale_int, y);
 	    break;
 	case OFTReal:
-	    RAL_INTERPOLATOR_SETUP(feature.nv2ss, t->features[i].visualization.symbol_size_scale_double, y);
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2ss, visualization->symbol_size_scale_double, y);
 	    break;
 	default:
-	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", feature.symbol_size_field_type));
+	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", visualization->symbol_size_field_type));
 	}
 
-	RAL_CHECK(ral_setup_color_interpolator(t->features[i].visualization, defn, &feature));
-	
-	feature.feature = t->features[i].feature;
+	visualization->color_field_type = 0;
+	RAL_CHECK(ral_setup_color_interpolator(visualization, defn));
 
-	feature.render_as = 0;
+	if (visualization->symbol_size_field >= 0) {
+	    RAL_CHECK(ral_get_field_type(defn, visualization->symbol_size_field, &(visualization->symbol_size_field_type)));
+	} else if (visualization->symbol_size_field == RAL_FIELD_FID)
+	    visualization->symbol_size_field_type = OFTInteger;
+
+	y.min = 0;
+	y.max = visualization->symbol_size+1;
+	switch (visualization->symbol_size_field_type) {
+	case OFTInteger:
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2ss, visualization->symbol_size_scale_int, y);
+	    break;
+	case OFTReal:
+	    RAL_INTERPOLATOR_SETUP(visualization->nv2ss, visualization->symbol_size_scale_double, y);
+	    break;
+	default:
+	    RAL_CHECKM(0, ral_msg("Invalid field type for symbol size: %i.", visualization->symbol_size_field_type));
+	}
+
+	RAL_CHECK(ral_setup_color_interpolator(visualization, defn));
+	
+	feature.feature = t->features[i];
+
 	geometry = OGR_F_GetGeometryRef(feature.feature);
 
 	if (!geometry) {
@@ -1784,59 +1807,22 @@ int ral_render_visual_feature_table(ral_pixbuf *pb, ral_visual_feature_table *t)
 		feature.geometry = OGR_G_GetGeometryRef(geometry, j);
 
 	    feature.geometry_type = wkbFlatten(OGR_G_GetGeometryType(feature.geometry));
-
-	    if (t->features[i].visualization.render_as)
-
-		feature.render_as = t->features[i].visualization.render_as;
-
-	    else {
-		
-		switch (feature.geometry_type) { /* below we support several RENDER_AS options... */
-		case wkbPoint:
-		case wkbMultiPoint:
-		    feature.render_as = RAL_RENDER_AS_POINTS;
-		    break;
-		case wkbLineString:
-		case wkbMultiLineString:
-		    feature.render_as = RAL_RENDER_AS_LINES;
-		    break;
-		case wkbPolygon:
-		case wkbMultiPolygon:
-		    feature.render_as = RAL_RENDER_AS_POLYGONS;
-		    break;
-		default: /* should not happen */
-		    break;
-		}
-		
-	    }
 	    
-	    if (!(feature.render_as & RAL_RENDER_AS_POINTS)) {
+	    if (visualization->symbol) {
 		OGREnvelope e;
 		OGR_G_GetEnvelope( feature.geometry, &e );
 		/* if smaller than one pixel, do not draw anything */
 		if (((e.MaxX-e.MinX) < pb->pixel_size) AND ((e.MaxY-e.MinY) < pb->pixel_size)) {
-		    /* drawing anything needs the color which we do not have at this point 
-		       ral_point p;
-		       p.x = e.MinX;
-		       p.y = e.MinY;
-		       if (RAL_POINT_IN_RECTANGLE(p, pb->world)) {
-		       int i, j;
-		       i = floor((pb->world.max.y - p.y)/pb->pixel_size);
-		       j = floor((p.x - pb->world.min.x)/pb->pixel_size);
-		       RAL_PIXBUF_SET_PIXEL_COLOR(pb, i, j, c);
-		       continue;
-		       }
-		    */
 		    continue;
 		}
 	    }
 	    
 	    RAL_FEATURE_SET_COLOR(feature, 0, 0, 0, 0); /* by default nothing is shown */
 
-	    ral_set_color(&(t->features[i].visualization), &feature);
+	    ral_set_color(visualization, &feature);
 
-	    if (feature.color.c4 > 0 AND feature.render_as)
-		ral_render_feature(pb, &feature, &(t->features[i].visualization));
+	    if (feature.color.c4 > 0)
+		ral_render_feature(pb, &feature, visualization);
 
 	}
 
