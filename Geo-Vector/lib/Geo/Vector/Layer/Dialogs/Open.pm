@@ -803,7 +803,8 @@ sub select_directory {
 
     my $combo = $self->widget('driver_combobox');
     $combo->set_active(0) if $combo->get_active;
-    $self->widget('layer_treeview')->get_model->clear;
+    my $model = $self->widget('layer_treeview')->get_model;
+    $model->clear if $model;
 
     my($path, $focus_column) = $treeview->get_cursor;
     my $index = $path->to_string if $path;
