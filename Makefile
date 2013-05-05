@@ -17,7 +17,14 @@ all:
 perl:
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
-		perl Makefile.PL; \
+		perl Makefile.PL; make; \
+		cd ..; \
+	done;
+
+install-perl:
+	for m in ${PERL_MODULES}; do \
+		cd $$m; \
+		make install; \
 		cd ..; \
 	done;
 
