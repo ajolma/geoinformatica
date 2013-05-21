@@ -39,7 +39,7 @@ use Geo::Vector::Feature;
 use Geo::Vector::Layer;
 use JSON;
 use Gtk2;
-use LWP::UserAgent;
+use WWW::Curl::Easy;
 
 use vars qw( @ISA %RENDER_AS );
 
@@ -146,18 +146,37 @@ sub render_as_modes {
 ##@ignore
 sub WFS_layers {
     my($url) = @_; # 'WFS:' + CURL style
+
     $url =~ s/^WFS://;
-    my($protocol,$username,$password) = $url =~ /(https?:\/\/)(\w+):(.+?)\@/;
-    $url =~ s/$username:$password\@// if $username;
-    my $ua = LWP::UserAgent->new;
     $url .= '?service=WFS&version=1.1.0&request=GetCapabilities';
-    my $req = HTTP::Request->new(GET => $url);
-    $req->authorization_basic($username, $password) if $username;
-    my $res = $ua->request($req);
-    unless ($res->is_success) {
-	croak $res->status_line;
+    my $curl = WWW::Curl::Easy->new;
+    $curl->setopt(CURLOPT_HEADER,1);
+    $curl->setopt(CURLOPT_URL, $url);
+    my $xml;
+    $curl->setopt(CURLOPT_WRITEDATA, \$xml);
+    my $retcode = $curl->perform;
+    
+    my $msg;
+    if ($retcode == 0) {
+	my %defs = ( 
+	    200 => 'OK',
+	    301 => 'Moved Permanently',
+	    400 => 'Bad Request',
+	    401 => 'Unauthorized',
+	    402 => 'Payment Required',
+	    403 => 'Forbidden',
+	    404 => 'Not Found',
+	    500 => 'Internal Server Error',
+	    501 => 'Not Implemented',
+	    503 => 'Service Unavailable',
+	    505 => 'HTTP Version Not Supported'
+	    );
+	$msg = $defs{$curl->getinfo($curl->CURLINFO_HTTP_CODE)};
+    } else {
+	$msg = "Error in transfer: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
     }
-    my $xml = $res->as_string;
+    croak $msg unless $msg eq 'OK';
+    
     my @xml = split /\n/, $xml;
     while (not $xml[0] =~ /^<\w+:WFS_Capabilities/) {
 	shift @xml;
@@ -234,18 +253,36 @@ sub delete_layer {
 ##@ignore
 sub describe_WFS_layer {
     my($url, $layer) = @_; # 'WFS:' + CURL style
+
     $url =~ s/^WFS://;
-    my($protocol,$username,$password) = $url =~ /(https?:\/\/)(\w+):(.+?)\@/;
-    $url =~ s/$username:$password\@// if $username;
-    my $ua = LWP::UserAgent->new;
     $url .= '?service=WFS&version=1.1.0&request=DescribeFeatureType&typename='.$layer;
-    my $req = HTTP::Request->new(GET => $url);
-    $req->authorization_basic($username, $password) if $username;
-    my $res = $ua->request($req);
-    unless ($res->is_success) {
-	croak $res->status_line;
+    my $curl = WWW::Curl::Easy->new;
+    $curl->setopt(CURLOPT_HEADER,1);
+    $curl->setopt(CURLOPT_URL, $url);
+    my $xml;
+    $curl->setopt(CURLOPT_WRITEDATA, \$xml);
+    my $msg;
+    my $retcode = $curl->perform;   
+    if ($retcode == 0) {
+	my %defs = ( 
+	    200 => 'OK',
+	    301 => 'Moved Permanently',
+	    400 => 'Bad Request',
+	    401 => 'Unauthorized',
+	    402 => 'Payment Required',
+	    403 => 'Forbidden',
+	    404 => 'Not Found',
+	    500 => 'Internal Server Error',
+	    501 => 'Not Implemented',
+	    503 => 'Service Unavailable',
+	    505 => 'HTTP Version Not Supported'
+	    );
+	$msg = $defs{$curl->getinfo($curl->CURLINFO_HTTP_CODE)};
+    } else {
+	$msg = "Error in transfer: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
     }
-    my $xml = $res->as_string;
+    croak $msg unless $msg eq 'OK';
+
     my @xml = split /\n/, $xml;
     while (not $xml[0] =~ /^<schema/) {
 	shift @xml;

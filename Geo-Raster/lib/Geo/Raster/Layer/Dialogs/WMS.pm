@@ -80,13 +80,42 @@ sub connect {
     my $self = pop;
     my $name = connection($self);
     my $connection = $self->{gui}{resources}{WMS}{$name};
-    my $ua = LWP::UserAgent->new;
+
+    my $curl = WWW::Curl::Easy->new;
+    $curl->setopt($curl->CURLOPT_HEADER, 1);
     my $url = $connection->[0].'?service=WMS&version=1.1.1&request=GetCapabilities';
-    my $req = HTTP::Request->new(GET => $url);
-    $req->authorization_basic($connection->[1], $connection->[2]) if $connection->[1];
-    my $res = $ua->request($req);
-    unless ($res->is_success) {
-	my $msg = $res->status_line;
+    if ($connection->[1]) {
+	# http(s)://username:password@domain.ext
+	my($protocol) = $url =~ /^(https?:\/\/)/;
+	$url =~ s/^(https?:\/\/)//;
+	$url = $protocol.$connection->[1].':'.$connection->[2].'@'.$url;
+    }
+    $curl->setopt($curl->CURLOPT_URL, $url);
+    my $xml;
+    $curl->setopt($curl->CURLOPT_WRITEDATA, \$xml);
+    my $retcode = $curl->perform;
+    
+    my $msg;
+    if ($retcode != 0) {
+	$msg = "Error in transfer: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
+    } else {
+	my %defs = ( 
+	    200 => 'OK',
+	    301 => 'Moved Permanently',
+	    400 => 'Bad Request',
+	    401 => 'Unauthorized',
+	    402 => 'Payment Required',
+	    403 => 'Forbidden',
+	    404 => 'Not Found',
+	    500 => 'Internal Server Error',
+	    501 => 'Not Implemented',
+	    503 => 'Service Unavailable',
+	    505 => 'HTTP Version Not Supported'
+	    );
+	$msg = $defs{$curl->getinfo($curl->CURLINFO_HTTP_CODE)};
+	$msg = '' if $msg eq 'OK';
+    }
+    if ($msg) {
 	my $msgbox = Gtk2::MessageDialog->new(undef,
 					      'destroy-with-parent',
 					      'info',
@@ -96,7 +125,7 @@ sub connect {
 	$msgbox->destroy;
 	return;
     }
-    my $xml = $res->as_string;
+
     my @xml = split /\n/, $xml;
     while (not $xml[0] =~ /^<WMT_MS_Capabilities/) {
 	shift @xml;
@@ -217,6 +246,7 @@ sub apply {
     my $tree_store = $tree_view->get_model;
     my $selection = $tree_view->get_selection;
     my @rows = $selection->get_selected_rows;
+    return unless @rows;
     my @titles;
     for my $row (@rows) {
 	my $iter = $tree_store->get_iter_from_string($row->to_string);
