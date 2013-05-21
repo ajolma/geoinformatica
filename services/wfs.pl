@@ -178,6 +178,8 @@ sub GetFeature {
     print($q->header(-type => $config->{MIME}, -charset=>'utf-8'));
     STDOUT->flush;
     my $vsi = '/vsistdout/';
+
+    # should use options to set prefix and namespace
     my $gml = Geo::OGR::Driver('GML')->Create($vsi);
 
     my $datasource = Geo::OGR::Open($type->{Datasource});
@@ -214,9 +216,9 @@ sub GetFeature {
 	$layer->SetSpatialFilterRect(@bbox);
     }    
 
-    #$gml->CopyLayer($layer, $type->{Title});
+    #$gml->CopyLayer($layer, $type->{Name});
 
-    my $l2 = $gml->CreateLayer($type->{Title});
+    my $l2 = $gml->CreateLayer($type->{Name});
     my $d = $layer->GetLayerDefn;
     for (0..$d->GetFieldCount-1) {
 	my $f = $d->GetFieldDefn($_);
