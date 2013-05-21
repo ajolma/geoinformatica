@@ -139,7 +139,13 @@ sub page {
             if ($e->{PropertyIsEqualTo}) {
                 $e = $e->{PropertyIsEqualTo};
                 $params{filter} = $e->{PropertyName}."='".$e->{Literal}."'";
-            }
+            } else {
+		for my $key (keys %$e) {
+		    next if $key =~ /^xmlns/;
+		    print STDERR "warning: discarding $key filter\n";
+		}
+		$params{filter} = '';
+	    }
         } else {
             $params{filter} = '';
         }
