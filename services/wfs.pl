@@ -184,9 +184,8 @@ sub GetFeature {
     print($q->header(-type => $config->{MIME}, -charset=>'utf-8'));
     STDOUT->flush;
     my $vsi = '/vsistdout/';
-
-    # should use options to set prefix and namespace
-    my $gml = Geo::OGR::Driver('GML')->Create($vsi);
+    my $gml = Geo::OGR::Driver('GML')->Create($vsi, { 
+	TARGET_NAMESPACE => 'http://www.opengis.net/wfs', PREFIX => 'wfs' });
 
     my $datasource = Geo::OGR::Open($type->{Datasource});
     my $layer;
@@ -279,6 +278,8 @@ sub DescribeFeatureType {
 		$c =~ s/ /_/g; # field name adjustments as GDAL does them
 		$c =~ s/ä/a/g; # extra name adjustments, needed by QGIS
                 $c =~ s/ö/o/g;
+		# GDAL will use geometryProperty for geometry elements when producing GML:
+		$c = 'geometryProperty' if $t eq 'gml:GeometryPropertyType';
 		push @elements, ['element', { name => $c,
 					      type => $t,
 					      minOccurs => "0",
