@@ -178,9 +178,14 @@ sub WFS_layers {
     croak $msg unless $msg eq 'OK';
     
     my @xml = split /\n/, $xml;
-    while (not $xml[0] =~ /^<\w+:WFS_Capabilities/) {
+    while (@xml and not $xml[0] =~ /^<\w+:WFS_Capabilities/) {
 	shift @xml;
     }
+
+    unless (@xml) {
+	croak "The server did not return WFS Capabilities document. The reply was: $xml";
+    }
+
     my $capabilities = XML::LibXML->load_xml(string => "<xml>@xml</xml>");
     my $xpc = XML::LibXML::XPathContext->new($capabilities);
     $xpc->registerNs('x', 'http://www.opengis.net/wfs');

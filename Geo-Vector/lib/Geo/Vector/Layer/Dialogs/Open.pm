@@ -726,11 +726,46 @@ sub edit_datasource {
 	    $connection = join(' ', @input);
 	    $connection = connection_string($format, $connection);
 
-	    eval {
-		Geo::Vector::layers($format, $connection);
-	    };
+	    # todo: need only HEAD, not GET
+	    my($url, $username, $password);
+	    for my $kv (split(/\s+/, $connection)) {
+		if ($kv =~ /(\w+)=(.*)/) {
+		    $url = $2 if $1 eq 'URL';
+		    $username = $2 if $1 eq 'username';
+		    $password = $2 if $1 eq 'password';
+		}
+	    }
+	    my $curl = WWW::Curl::Easy->new;
+	    $curl->setopt($curl->CURLOPT_HEADER, 1);
+	    if ($username) {
+		# http(s)://username:password@domain.ext
+		my($protocol) = $url =~ /^(https?:\/\/)/;
+		$url =~ s/^(https?:\/\/)//;
+		$url = $protocol.$username.':'.$password.'@'.$url;
+	    }
+	    $curl->setopt($curl->CURLOPT_URL, $url);
+	    my $msg;
+	    $curl->setopt($curl->CURLOPT_WRITEDATA, \$msg);
+	    my $retcode = $curl->perform;
 	    
-	    my $msg = $@ ? $@ : 'The connection seems fine.';
+	    if ($retcode == 0) {
+		my %defs = ( 
+		    200 => 'OK',
+		    301 => 'Moved Permanently',
+		    400 => 'Bad Request',
+		    401 => 'Unauthorized',
+		    402 => 'Payment Required',
+		    403 => 'Forbidden',
+		    404 => 'Not Found',
+		    500 => 'Internal Server Error',
+		    501 => 'Not Implemented',
+		    503 => 'Service Unavailable',
+		    505 => 'HTTP Version Not Supported'
+		    );
+		$msg = $defs{$curl->getinfo($curl->CURLINFO_HTTP_CODE)};
+	    } else {
+		$msg = "Error in transfer: $retcode ".$curl->strerror($retcode)." ".$curl->errbuf."\n";
+	    }
 	    
 	    my $m = Gtk2::MessageDialog->new(undef,'destroy-with-parent','info','ok',$msg);
 	    $m->run;
