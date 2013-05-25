@@ -263,7 +263,8 @@ sub ok {
 	    }
 	}
     }
-    Geo::GDAL::SetConfigOption("OGR_WFS_LOAD_MULTIPLE_LAYER_DEFN","FALSE");
+    Geo::GDAL::SetConfigOption("OGR_WFS_USE_STREAMING","NO"); # forces local caching of data
+    Geo::GDAL::SetConfigOption("OGR_WFS_LOAD_MULTIPLE_LAYER_DEFN","FALSE"); # we do not need all layers' info
     if ($sql) {
 	$sql =~ s/^\s+//;
 	$sql =~ s/\s+$//;
