@@ -12,6 +12,7 @@ $missing_modules{chk_module('Geo::Raster', 0.62)} = 1;
 $missing_modules{chk_module('Geo::OGC::Geometry', 0.04)} = 1;
 $missing_modules{chk_module('Gtk2::GladeXML')} = 1;
 $missing_modules{chk_module('Gtk2::Ex::Geo', 0.62)} = 1;
+$missing_modules{chk_module('WWW::Curl::Easy')} = 1;
 
 $missing_modules{chk_module('Win32::OLE')} = 1 if $^O eq 'MSWin32';
 
