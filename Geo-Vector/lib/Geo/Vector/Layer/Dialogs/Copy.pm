@@ -163,8 +163,12 @@ sub do_copy {
 	eval {
 	    $layers = Geo::Vector::layers($params{driver}, $params{data_source});
 	};
-	croak "Data source '$params{data_source}' already contains a layer with name '$params{create}'."
-	    if ($layers and $layers->{$params{create}});
+	if ($layers) {
+	    for my $l (@$layers) {
+		croak "Data source '$params{data_source}' already contains a layer with name '$params{create}'."
+		    if ($l->{Name} eq $layers->{$params{create}});
+	    }
+	}
     }
 
     my $from = $1 if $dialog->get_widget('from_EPSG_entry')->get_text =~ /\[(\d+)\]/;
