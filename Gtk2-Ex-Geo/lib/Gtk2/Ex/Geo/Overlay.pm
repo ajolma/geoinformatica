@@ -148,14 +148,10 @@ sub my_inits {
 # Always zooms to the first layer added.
 sub add_layer {
     my($self, $layer, $do_not_zoom_to) = @_;
-
     return unless blessed($layer) and $layer->isa('Gtk2::Ex::Geo::Layer');
-
     push @{$self->{layers}}, $layer;
-
     # MUST zoom to if this is the first layer
     $do_not_zoom_to = 0 unless $self->{first_added};
-
     $self->my_inits unless $self->{inited};
     unless ($do_not_zoom_to) {
 	$self->zoom_to($layer) if $self->{viewport_size};

@@ -1410,7 +1410,9 @@ sub features {
 # its features.
 #
 # @param[in] FID ID or IDs of the features to take into account.
-# @return Returns the bounding box (minX, minY, maxX, maxY) as an array.
+# @return Returns the bounding box (minX, minY, maxX, maxY) as an
+# array or undef if the layer contains no features or no feature
+# matches the given ids.
 sub world {
     my $self = shift;
     my %fids;
@@ -1427,11 +1429,12 @@ sub world {
     my $extent;
     if (%fids) {
 	for my $fid (keys %fids) {
-	    my $e = $self->feature($fid)->Geometry->GetEnvelope();
+            my $f = $self->feature($fid);
+            next unless $f;
+	    my $e = $f->Geometry->GetEnvelope();
 	    unless ($extent) {
 		@$extent = @$e;
-	    }
-	    else {
+	    } else {
 		$extent->[0] = MIN( $extent->[0], $e->[0] );
 		$extent->[2] = MIN( $extent->[2], $e->[2] );
 		$extent->[1] = MAX( $extent->[1], $e->[1] );
@@ -1443,8 +1446,7 @@ sub world {
 	    my $e = $feature->Geometry->GetEnvelope();
 	    unless ($extent) {
 		@$extent = @$e;
-	    }
-	    else {
+	    } else {
 		$extent->[0] = MIN( $extent->[0], $e->[0] );
 		$extent->[2] = MIN( $extent->[2], $e->[2] );
 		$extent->[1] = MAX( $extent->[1], $e->[1] );
@@ -1454,9 +1456,9 @@ sub world {
     } elsif ($self->{OGR}->{Layer}->GetFeatureCount() > 0) {
 	eval { $extent = $self->{OGR}->{Layer}->GetExtent(); };
 	croak "GetExtent failed: $@" if $@;
+    } else {
+        return;
     }
-    
-    return unless $extent;
     $extent->[1] = $extent->[0] + 1 if $extent->[1] <= $extent->[0];
     $extent->[3] = $extent->[2] + 1 if $extent->[3] <= $extent->[2];
     return ( $extent->[0], $extent->[2], $extent->[1], $extent->[3] );
