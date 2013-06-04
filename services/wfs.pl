@@ -390,7 +390,7 @@ sub FeatureTypeList  {
                                 ['Title', $l->{Title}],
                                 ['Abstract', $l->{Abstract}],
                                 ['DefaultSRS', $l->{DefaultSRS}],
-                                ['SRS', 'EPSG:3587'],
+                                ['SRS', 'EPSG:3857'],
                                 ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
                             ]);
 	    }
