@@ -23,7 +23,7 @@ my $q = CGI->new;
 my $header = 0;
 my %names = ();
 my %params = ();
-my $debug = 1;
+my $debug = 0;
 
 eval {
     $config = WXS::config();
@@ -115,6 +115,14 @@ sub page {
 		    $params{bbox} = get_bbox($h->{'ogc:BBOX'});
 		}
 
+            } elsif ($k eq 'wfs:Transaction') {
+		my $h = $post->{$k};
+                $params{service} = $h->{'service'};
+		$params{version} = $h->{'version'};
+		$params{request} = 'Transaction';
+                if ($h->{'wfs:Insert'}) {
+                    $params{Insert} = $h->{'wfs:Insert'};
+                }
 	    } elsif ($k eq 'x') {
 	    }
 	}
@@ -168,9 +176,81 @@ sub page {
 	DescribeFeatureType();
     } elsif ($params{request} eq 'GetFeature') {
 	GetFeature();
+    } elsif ($params{request} eq 'Transaction' and $params{Insert}) {
+	Insert();
     } else {
 	croak('Unrecognized request: '.$params{request});
     }
+}
+
+sub Insert {
+    for my $insert_type (keys %{$params{Insert}}) {
+        my $h = $params{Insert}{$insert_type};
+        $insert_type =~ s/^wfs://;
+        $insert_type =~ s/^feature://;
+        my $type = feature($insert_type);
+        croak "No such feature type: $insert_type" unless $type;
+        croak "The datasource is not PostGIS" unless $type->{Table};
+        my $datasource = Geo::OGR::Open($type->{Datasource});
+        my @cols;
+        my @vals;
+        for my $f (keys %$h) {
+            my $v = $h->{$f};
+            $f =~ s/^wfs://;
+            $f =~ s/^feature://;
+            my $val;
+            if ($f eq 'geometryProperty') {
+
+                $val = WKT($v);
+                $f = $type->{GeometryColumn};
+
+            }  else {
+            
+                $f = '' unless exists $type->{Schema}{$f};
+
+            }
+            
+            next unless $f;
+
+            push @cols, "\"$f\"";
+            push @vals, $val;
+
+        }
+	my $sql = "insert into $type->{Table} (".join(',',@cols).") values (".join(',',@vals).")";
+        my($connect, $user, $pass) = split / /, $type->{dbi};
+	my $dbh = DBI->connect($connect, $user, $pass) or croak('no db');
+        $dbh->{pg_enable_utf8} = 1;
+        $dbh->do($sql) or croak $dbh->errstr;;
+    }
+    print($q->header());
+}
+
+sub WKT {
+    my($geom) = @_;
+    my $wkt;
+    my $e;
+    if ($e = $geom->{'gml:Point'}) {
+        my $pos = $e->{'gml:pos'};
+        $wkt = "POINT ($pos)";
+    } elsif ($e = $geom->{'gml:LineString'}) {
+        my @tmp = split / /, $e->{'gml:posList'};
+        my @pos;
+        for (my $i = 0; $i < @tmp; $i+=2) {
+            push @pos, $tmp[$i].' '.$tmp[$i+1];
+        }
+        $wkt = "LINESTRING (".join(', ',@pos).")";
+    } elsif ($e = $geom->{'gml:Polygon'}) {
+        my @tmp = split / /, $e->{'gml:exterior'}{'gml:LinearRing'}{'gml:posList'};
+        my @pos;
+        for (my $i = 0; $i < @tmp; $i+=2) {
+            push @pos, $tmp[$i].' '.$tmp[$i+1];
+        }
+        $wkt = "POLYGON ((".join(', ',@pos)."))";
+    } 
+    print STDERR "$wkt\n";
+    my $srid = $e->{'srsName'};
+    ($srid) = $srid =~ /EPSG:(\d+)/;
+    return "ST_GeometryFromText('$wkt',$srid)";
 }
 
 sub GetFeature {
@@ -179,13 +259,17 @@ sub GetFeature {
 
     my $maxfeatures = $q->param($names{MAXFEATURES});
     ($maxfeatures) = $maxfeatures =~ /(\d+)/ if defined $maxfeatures;
+
+    # note that OpenLayers seem not to like the default ones, at least with outputFormat: "GML2"
+    # use "TARGET_NAMESPACE": "http://ogr.maptools.org/", "PREFIX": "ogr", in config or type section
+    my $ns = $config->{TARGET_NAMESPACE} || $type->{TARGET_NAMESPACE} || '"http://www.opengis.net/wfs';
+    my $prefix = $config->{PREFIX} || $type->{PREFIX} || 'wfs';
     
     # feed the copy directly to stdout
     print($q->header(-type => $config->{MIME}, -charset=>'utf-8'));
     STDOUT->flush;
     my $vsi = '/vsistdout/';
-    my $gml = Geo::OGR::Driver('GML')->Create($vsi, { 
-	TARGET_NAMESPACE => 'http://www.opengis.net/wfs', PREFIX => 'wfs' });
+    my $gml = Geo::OGR::Driver('GML')->Create($vsi, { TARGET_NAMESPACE => $ns, PREFIX => $prefix });
 
     my $datasource = Geo::OGR::Open($type->{Datasource});
     my $layer;
@@ -237,7 +321,6 @@ sub GetFeature {
 	last if defined $maxfeatures and $i >= $maxfeatures;
     }
     print STDERR "$i features\n" if $debug;
-
 }
 
 sub DescribeFeatureType {
