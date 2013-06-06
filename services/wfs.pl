@@ -23,7 +23,21 @@ my $q = CGI->new;
 my $header = 0;
 my %names = ();
 my %params = ();
-my $debug = 0;
+my $debug = 1;
+
+for my $k (sort keys %ENV) {
+    #print STDERR "$k => $ENV{$k}\n";
+}
+
+if ($ENV{REQUEST_METHOD} eq 'OPTIONS') {
+    print "Access-Control-Allow-Origin: *\n";
+    print "Access-Control-Allow-Methods: POST, GET, OPTIONS\n";
+    print "Access-Control-Allow-Headers: X-REQUESTED-WITH\n";
+    print "Access-Control-Max-Age: 1728000\n";
+    print "Content-type: text/plain\n";
+    print "Content-length: 0\n\n";
+    exit;
+}
 
 eval {
     $config = WXS::config();
@@ -446,40 +460,53 @@ sub OperationsMetadata  {
 	      [{outputFormat => ['XMLSCHEMA','text/xml; subtype=gml/2.1.2','text/xml; subtype=gml/3.1.1']}]);
     Operation($config, 'GetFeature',
 	      [{resultType => ['results']}, {outputFormat => ['text/xml; subtype=gml/3.1.1']}]);
+    Operation($config, 'Transaction',
+	      [{inputFormat => ['text/xml; subtype=gml/3.1.1']}, 
+	       {idgen => ['GenerateNew','UseExisting','ReplaceDuplicate']},
+	       {releaseAction => ['ALL','SOME']}
+	      ]);
     xml_element('/ows:OperationsMetadata', '>');
 }
 
 sub FeatureTypeList  {
-    xml_element('FeatureTypeList', '<');
-    xml_element('Operations', ['Operation', 'Query']);
+    xml_element('wfs:FeatureTypeList', '<');
+    my @operations = (['wfs:Operation', 'Query']);
+    if ($config->{Transaction}) {
+	my @t = split /\s*,\s*/, $config->{Transaction};
+	for my $t (@t) {
+	    push @operations, ['wfs:Operation', $t];
+	}
+    }
+    xml_element('wfs:Operations', \@operations);
     for my $type (@{$config->{FeatureTypeList}}) {
 	if ($type->{Layer}) {
-	    xml_element('FeatureType', [
-					['Name', $type->{Name}],
-					['Title', $type->{Title}],
-					['Abstract', $type->{Abstract}],
-					['DefaultSRS', $type->{DefaultSRS}],
-					['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']],
-					['ows:WGS84BoundingBox', {dimensions=>2}, 
-					 [['ows:LowerCorner',$type->{LowerCorner}],
-					  ['ows:UpperCorner',$type->{UpperCorner}]]]
-					]);
+	    xml_element('wfs:FeatureType', [
+			    ['wfs:Name', $type->{Name}],
+			    ['wfs:Title', $type->{Title}],
+			    ['wfs:Abstract', $type->{Abstract}],
+			    ['wfs:DefaultSRS', $type->{DefaultSRS}],
+			    ['wfs:OutputFormats', ['wfs:Format', 'text/xml; subtype=gml/3.1.1']],
+			    ['ows:WGS84BoundingBox', {dimensions=>2}, 
+			     [['ows:LowerCorner',$type->{LowerCorner}],
+			      ['ows:UpperCorner',$type->{UpperCorner}]]]
+			]);
 	} else {
 	    # restrict now to postgis databases
 	    my @layers = layers($type->{dbi}, $type->{prefix});
 	    for my $l (@layers) {
-		xml_element('FeatureType', [
-                                ['Name', $l->{Name}],
-                                ['Title', $l->{Title}],
-                                ['Abstract', $l->{Abstract}],
-                                ['DefaultSRS', $l->{DefaultSRS}],
-                                ['SRS', 'EPSG:3857'],
-                                ['OutputFormats', ['Format', 'text/xml; subtype=gml/3.1.1']]
+		xml_element('wfs:FeatureType', [
+                                ['wfs:Name', $l->{Name}],
+                                ['wfs:Title', $l->{Title}],
+                                ['wfs:Abstract', $l->{Abstract}],
+                                ['wfs:DefaultSRS', $l->{DefaultSRS}],
+                                ['wfs:OtherSRS', 'EPSG:3857'],
+                                ['wfs:OutputFormats', ['wfs:Format', 'text/xml; subtype=gml/3.1.1']],
+				['wfs:Operations', \@operations]
                             ]);
 	    }
 	}
     }
-    xml_element('/FeatureTypeList', '>');
+    xml_element('/wfs:FeatureTypeList', '>');
 }
 
 sub feature {
