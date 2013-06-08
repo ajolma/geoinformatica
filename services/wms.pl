@@ -13,7 +13,7 @@ use Geo::Vector;
 use JSON;
 use lib '.';
 require WXS;
-WXS->import(qw/config header error serve_document xml_elements xml_element/);
+WXS->import(qw/config error xml_elements xml_element/);
 require Scale;
 
 binmode STDERR, ":utf8";
@@ -22,14 +22,16 @@ my $config;
 my $q = CGI->new;
 my %names = ();
 my %params;
-my $header = 0;
 my $debug = 1;
 
+# strict policy: config and page should *not* print anything 
+# into stdout as long as there is a possibility of an error
 eval {
-    $config = config();
+    $config = WXS::config();
+    $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
     page($q);
 };
-error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
+error($q, $@, -type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) if $@;
 
 sub page {
     my($q) = @_;
@@ -42,7 +44,7 @@ sub page {
     my $version = $q->param($names{WMTVER});
     $version = $q->param($names{VERSION}) if $q->param($names{VERSION});
     $version = '1.1.1' unless $version;
-    croak "Not a supported WMS version.#" unless $version eq $config->{version};
+    croak "Sorry, we do not support WMS version $version.#" unless $version eq $config->{version};
     my $service = $q->param($names{SERVICE});
     $service = 'WMS'unless $service;
 
@@ -105,8 +107,10 @@ sub GetCapabilities {
     xml_element('/WMT_MS_Capabilities', '>');
     select(STDOUT);
     close $out;
-    $header = header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
-    print $var;
+    print 
+        $q->header(-type => $config->{MIME}, 
+                   -Content_length => length(Encode::encode_utf8($var)),
+                   -Access_Control_Allow_Origin=>$config->{CORS}), $var;
 }
 
 sub GetMap {
@@ -131,7 +135,9 @@ sub GetMap {
 
     my $buffer = $pixbuf->save_to_buffer($params{FORMAT} eq 'image/png' ? 'png' : 'jpeg');
     print STDERR "length => ",length($buffer),", type => $params{FORMAT}\n" if $debug;
-    $header = header(cgi => $q, length => length($buffer), type => $params{FORMAT});
+    print $q->header( -type => $params{FORMAT}, 
+                      -Content_length => length($buffer),
+                      -Access_Control_Allow_Origin=>$config->{CORS} );
     binmode STDOUT, ":raw";
     print $buffer;
     STDOUT->flush;
@@ -158,8 +164,9 @@ sub GetFeatureInfo {
 	push @report, $row[0];
     }
 
-    print 
-	$q->header(),
+    print $q->header( -type => 'text/html', 
+                      -charset => 'utf-8', 
+                      -Access_Control_Allow_Origin=>$config->{CORS}),
 	'<meta content="text/html;charset=UTF-8" http-equiv="Content-Type">',
 	$q->start_html,
 	decode('utf8', "Infoa: valitussa kohdassa ($x,$y) val on:<br/>".join('<br/>',@report)), 

@@ -18,15 +18,16 @@ WXS->import(':all');
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
-my $config = config("/var/www/etc/wps.conf");
 my $q = CGI->new;
-my $header = 0;
+my $config;
 my %names = ();
 
 eval {
+    $config = WXS::config();
+    $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
     page();
 };
-error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
+error($q, $@, -type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) if $@;
 
 sub page {
     for ($q->param) {
@@ -61,8 +62,10 @@ sub Execute {
     xml_element('not_implemented');
     select(STDOUT);
     close $out;
-    $header = header(cgi => $q, length => length($var), type => $config->{MIME});
-    print $var;
+    print $q->header( -type => $config->{MIME}, 
+                      -charset=>'utf-8',
+                      -Content_length=>length($var),
+                      -Access_Control_Allow_Origin=>$config->{CORS} ), $var;
 }
 
 sub DescribeProcess {
@@ -147,8 +150,10 @@ sub DescribeProcess {
 
     select(STDOUT);
     close $out;    
-    $header = header(cgi => $q, length => length($var), type => $config->{MIME});
-    print $var;
+    print $q->header( -type => $config->{MIME}, 
+                      -charset=>'utf-8',                      
+                      -Content_length=>length($var),
+                      -Access_Control_Allow_Origin=>$config->{CORS} ), $var;
 }
 
 sub GetCapabilities {
@@ -176,9 +181,11 @@ sub GetCapabilities {
     xml_element('wps:WSDL', { 'xlink:href' => $q->{resource}.'WSDL' });
     xml_element('/wps:Capabilities', '>');
     select(STDOUT);
-    close $out;    
-    $header = header(cgi => $q, length => length($var), type => $config->{MIME});
-    print $var;
+    close $out;
+    print $q->header( -type => $config->{MIME}, 
+                      -charset=>'utf-8',
+                      -Access_Control_Allow_Origin=>$config->{CORS},
+                      -Content_length => length($var) ), $var;
 }
 
 sub ServiceIdentification {

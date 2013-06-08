@@ -20,30 +20,30 @@ binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
 my $config;
 my $q = CGI->new;
-my $header = 0;
 my %names = ();
 my %params = ();
 my $debug = 1;
 
 for my $k (sort keys %ENV) {
-    #print STDERR "$k => $ENV{$k}\n";
-}
-
-if ($ENV{REQUEST_METHOD} eq 'OPTIONS') {
-    print "Access-Control-Allow-Origin: *\n";
-    print "Access-Control-Allow-Methods: POST, GET, OPTIONS\n";
-    print "Access-Control-Allow-Headers: X-REQUESTED-WITH\n";
-    print "Access-Control-Max-Age: 1728000\n";
-    print "Content-type: text/plain\n";
-    print "Content-length: 0\n\n";
-    exit;
+    print STDERR "$k => $ENV{$k}\n";
 }
 
 eval {
     $config = WXS::config();
-    page();
+    $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
+    if ($ENV{REQUEST_METHOD} eq 'OPTIONS') {
+        print $q->header(
+            -type=>"text/plain", 
+            -Access_Control_Allow_Origin=>$config->{CORS},
+            -Access_Control_Allow_Methods=>"GET,POST",
+            -Access_Control_Allow_Headers=>"origin,x-requested-with,content-type",
+            -Access_Control_Max_Age=>60*60*24
+            );
+    } else {
+        page();
+    }
 };
-error(cgi => $q, header => $header, msg => $@, type => $config->{MIME}) if $@;
+error($q, $@, -type => $config->{MIME}, -Access_Control_Allow_Origin => $config->{CORS}) if $@;
 
 sub remove_ns {
     my $hashref = shift;
@@ -110,6 +110,7 @@ sub page {
 		$params{typename} = $h->{typeName};
 		$params{typename} =~ s/^feature://;
                 $params{EPSG} = $1 if $h->{srsName} and $h->{srsName} =~ /EPSG:(\d+)/;
+                $params{maxfeatures} = $h->{maxFeatures} || $h->{count};
 
 		next unless $h->{'ogc:Filter'};
 		$h = $h->{'ogc:Filter'};
@@ -154,6 +155,7 @@ sub page {
 	$params{bbox} = $q->param($names{BBOX}) if $q->param($names{BBOX});
         $params{EPSG} = $1 if $q->param($names{SRSNAME}) and $q->param($names{SRSNAME}) =~ /EPSG:(\d+)/;
 	$params{typename} = decode utf8=>$q->param($names{TYPENAME});
+        $params{maxfeatures} = $q->param($names{MAXFEATURES}) || $q->param($names{COUNT});
         $params{filter} = decode utf8=>$q->param($names{FILTER});
         if ($params{filter} and $params{filter} =~ /^</) {
             my $e = XMLin('<xml>'.$params{filter}.'</xml>');
@@ -174,7 +176,12 @@ sub page {
 
     }
 
+    # adjustments to parameters
+
     $params{EPSG} = 3857 if $params{EPSG} and $params{EPSG} == 900913;
+
+    $params{maxfeatures} = $config->{maxfeatures} unless defined $params{maxfeatures};
+    ($params{maxfeatures}) = $params{maxfeatures} =~ /(\d+)/ if defined $params{maxfeatures};
 
     if ($debug) {
         for (sort keys %params) {
@@ -236,7 +243,7 @@ sub Insert {
         $dbh->{pg_enable_utf8} = 1;
         $dbh->do($sql) or croak $dbh->errstr;;
     }
-    print($q->header());
+    print $q->header(-Access_Control_Allow_Origin=>$config->{CORS});
 }
 
 sub WKT {
@@ -271,20 +278,6 @@ sub GetFeature {
     my $type = feature();
     croak "No such feature type: $params{typename}" unless $type;
 
-    my $maxfeatures = $q->param($names{MAXFEATURES});
-    ($maxfeatures) = $maxfeatures =~ /(\d+)/ if defined $maxfeatures;
-
-    # note that OpenLayers seem not to like the default ones, at least with outputFormat: "GML2"
-    # use "TARGET_NAMESPACE": "http://ogr.maptools.org/", "PREFIX": "ogr", in config or type section
-    my $ns = $config->{TARGET_NAMESPACE} || $type->{TARGET_NAMESPACE} || '"http://www.opengis.net/wfs';
-    my $prefix = $config->{PREFIX} || $type->{PREFIX} || 'wfs';
-    
-    # feed the copy directly to stdout
-    print($q->header(-type => $config->{MIME}, -charset=>'utf-8'));
-    STDOUT->flush;
-    my $vsi = '/vsistdout/';
-    my $gml = Geo::OGR::Driver('GML')->Create($vsi, { TARGET_NAMESPACE => $ns, PREFIX => $prefix });
-
     my $datasource = Geo::OGR::Open($type->{Datasource});
     my $layer;
     if ($type->{Layer}) {
@@ -317,7 +310,21 @@ sub GetFeature {
     if ($params{bbox}) {
 	my @bbox = split /,/, $params{bbox};
 	$layer->SetSpatialFilterRect(@bbox);
-    }    
+    }
+
+    # note that OpenLayers seem not to like the default ones, at least with outputFormat: "GML2"
+    # use "TARGET_NAMESPACE": "http://ogr.maptools.org/", "PREFIX": "ogr", in config or type section
+    my $ns = $config->{TARGET_NAMESPACE} || $type->{TARGET_NAMESPACE} || '"http://www.opengis.net/wfs';
+    my $prefix = $config->{PREFIX} || $type->{PREFIX} || 'wfs';
+
+    # feed the copy directly to stdout
+    print $q->header( -type => $config->{MIME}, 
+                      -charset=>'utf-8',
+                      -Access_Control_Allow_Origin=>$config->{CORS} );
+    
+    STDOUT->flush;
+    my $vsi = '/vsistdout/';
+    my $gml = Geo::OGR::Driver('GML')->Create($vsi, { TARGET_NAMESPACE => $ns, PREFIX => $prefix });
 
     #$gml->CopyLayer($layer, $type->{Name});
 
@@ -332,9 +339,9 @@ sub GetFeature {
     while (my $f = $layer->GetNextFeature) {
 	$l2->CreateFeature($f);
 	$i++;
-	last if defined $maxfeatures and $i >= $maxfeatures;
+	last if defined $params{maxfeatures} and $i >= $params{maxfeatures};
     }
-    print STDERR "$i features\n" if $debug;
+    print STDERR "$i features served, max is ",$params{maxfeatures}||'not set',"\n" if $debug;
 }
 
 sub DescribeFeatureType {
@@ -400,8 +407,11 @@ sub DescribeFeatureType {
 
     xml_element('/schema', '>');
     select(STDOUT);
-    close $out;    
-    $header = WXS::header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
+    close $out;
+    print $q->header( -Content_length => length(Encode::encode_utf8($var)), 
+                      -type => $config->{MIME},
+                      -charset => 'utf-8',
+                      -Access_Control_Allow_Origin => $config->{CORS} );
     print $var;
 }
 
@@ -429,8 +439,10 @@ sub GetCapabilities {
     xml_element('/wfs:WFS_Capabilities', '>');
     select(STDOUT);
     close $out;
-    $header = WXS::header(cgi => $q, length => length(Encode::encode_utf8($var)), type => $config->{MIME});
-    print $var;
+    print $q->header( -Content_length => length(Encode::encode_utf8($var)), 
+                      -type => $config->{MIME},
+                      -charset => 'utf-8',
+                      -Access_Control_Allow_Origin => $config->{CORS} ), $var;
 }
 
 sub ServiceIdentification {

@@ -3,7 +3,7 @@ package WXS;
 use Carp;
 require Exporter;
 our @ISA = qw(Exporter);
-our %EXPORT_TAGS = (all  => [ qw/Operation config header error serve_document serve_vsi xml_elements xml_element/ ]);
+our %EXPORT_TAGS = (all  => [ qw/Operation config error serve_document serve_vsi xml_elements xml_element/ ]);
 our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 
 use Encode;
@@ -48,29 +48,16 @@ sub config {
     $config = JSON->new->utf8->decode(encode('UTF-8', "@json"));
 }
 
-sub header {
-    my %arg = @_;
-    if ($arg{length}) {
-	print "Content-type: $arg{type}\n";
-	print "Content-length: $arg{length}\n\n";
-    } else {
-	print($arg{cgi}->header(-type => $arg{type}, -charset=>'utf-8'));
-    }
-    STDOUT->flush;
-    return 1;
-}
-
 sub error {
-    my %arg = @_;
+    my($cgi, $msg, %header_arg) = @_;
     select(STDOUT);
-    header(%arg) unless $arg{header};
-    print('<?xml version="1.0" encoding="UTF-8"?>',"\n");
-    my($error) = ($arg{msg} =~ /(.*?)\.\#/);
+    print $cgi->header(%header_arg, -charset=>'utf-8'), '<?xml version="1.0" encoding="UTF-8"?>',"\n";
+    my($error) = ($msg =~ /(.*?)\.\#/);
     if ($error) {
 	$error =~ s/ $//;
 	$error = { code => $error } if $error eq 'LayerNotDefined';
     } else {
-	$error = 'Unspecified error: '.$arg{msg};
+	$error = 'Unspecified error: '.$msg;
     }
     xml_element('ServiceExceptionReport',['ServiceException', $error]);
     select(STDERR);
@@ -78,11 +65,11 @@ sub error {
 }
 
 sub serve_document {
-    my($doc, $type) = @_;
+    my($cgi, $doc, $type) = @_;
     my $length = (stat($doc))[10];
     croak "Can't stat file to serve" unless $length;    
     open(DOC, '<', $doc) or croak "Couldn't open $doc: $!";
-    header(type => $type, length => $length);
+    print $cgi->header(-type => $type, -Content_length => $length, -charset=>'utf-8');
     my $data;
     while( sysread(DOC, $data, 10240) ) {
 	print $data;
@@ -91,8 +78,8 @@ sub serve_document {
 }
 
 sub serve_vsi {
-    my %arg = @_;
-    my $fp = Geo::GDAL::VSIFOpenL($arg{vsi}, 'r');
+    my($cgi, $doc, $type) = @_;
+    my $fp = Geo::GDAL::VSIFOpenL($vsi, 'r');
     my $data;
     while (my $chunk = Geo::GDAL::VSIFReadL(1024,$fp)) {
 	$data .= $chunk;
@@ -100,7 +87,7 @@ sub serve_vsi {
     Geo::GDAL::VSIFCloseL($fp);
     $data = decode('utf8', $data);
     $length = length(Encode::encode_utf8($data));
-    header(length => $length, %arg);
+    print $cgi->header(-type => $type, -Content_length => $length, -charset=>'utf-8');
     print $data;
     STDOUT->flush;
     Geo::GDAL::Unlink($arg{vsi});
