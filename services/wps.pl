@@ -24,10 +24,9 @@ my %names = ();
 
 eval {
     $config = WXS::config();
-    $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
     page();
 };
-error($q, $@, -type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) if $@;
+error($q, $@, $config ? (-type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) : ()) if $@;
 
 sub page {
     for ($q->param) {

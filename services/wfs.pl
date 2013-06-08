@@ -30,7 +30,6 @@ for my $k (sort keys %ENV) {
 
 eval {
     $config = WXS::config();
-    $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
     if ($ENV{REQUEST_METHOD} eq 'OPTIONS') {
         print $q->header(
             -type=>"text/plain", 
@@ -43,7 +42,7 @@ eval {
         page();
     }
 };
-error($q, $@, -type => $config->{MIME}, -Access_Control_Allow_Origin => $config->{CORS}) if $@;
+error($q, $@, $config ? (-type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) : ()) if $@;
 
 sub remove_ns {
     my $hashref = shift;

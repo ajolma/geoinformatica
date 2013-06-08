@@ -46,6 +46,8 @@ sub config {
     my @json = <$fh>;
     close $fh;
     $config = JSON->new->utf8->decode(encode('UTF-8', "@json"));
+    $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
+    return $config;
 }
 
 sub error {
