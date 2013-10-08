@@ -20,10 +20,12 @@ sub gdal_open {
     } else {
 	croak "gdal_open called without a filename or dataset";
     }
-    my $t = $dataset->GetGeoTransform;
-    @$t = (0,1,0,0,0,1) unless $t;
-    croak "The raster is not a strict north up image."
-	unless $t->[2] == $t->[4] and $t->[2] == 0;
+    if (0) {
+        my $t = $dataset->GetGeoTransform;
+        @$t = (0,1,0,0,0,1) unless $t;
+        croak "The raster is not a strict north up image."
+            unless $t->[2] == $t->[4] and $t->[2] == 0;
+    }
     my $band = $params{band} || 1;
     $self->{GDAL}->{dataset} = $dataset;
     $self->{GDAL}->{band} = $band;

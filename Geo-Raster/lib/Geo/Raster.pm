@@ -374,13 +374,40 @@ sub world {
 	}
     } elsif ($self->{GDAL}) {
 	my $dataset = $self->{GDAL}->{dataset};
+
 	my @t = $dataset->GeoTransform();
 	my $h = $dataset->{RasterYSize};
 	my $w = $dataset->{RasterXSize};
-	my $min_x = $t[1] > 0 ? $t[0] : $t[0]+$w*$t[1];
-	my $max_x = $t[1] > 0 ? $t[0]+$w*$t[1] : $t[0];
-	my $min_y = $t[5] > 0 ? $t[3] : $t[3]+$h*$t[5];
-	my $max_y = $t[5] > 0 ? $t[3]+$h*$t[5] : $t[3];
+        {
+            my $min_x = $t[1] > 0 ? $t[0] : $t[0]+$w*$t[1];
+            my $max_x = $t[1] > 0 ? $t[0]+$w*$t[1] : $t[0];
+            my $min_y = $t[5] > 0 ? $t[3] : $t[3]+$h*$t[5];
+            my $max_y = $t[5] > 0 ? $t[3]+$h*$t[5] : $t[3];
+        }
+        
+        my $min_x = $t[0] + $t[1]*0 + $t[2]*0; 
+        my $min_y = $t[3] + $t[4]*0 + $t[5]*0;
+        my $max_x = $min_x;
+        my $max_y = $min_y;
+        my $x = $t[0] + $t[1]*0 + $t[2]*$h; 
+        my $y = $t[3] + $t[4]*0 + $t[5]*$h;
+        $min_x = $x if $x < $min_x;
+        $min_y = $y if $y < $min_y;
+        $max_x = $x if $x > $max_x;
+        $max_y = $y if $y > $max_y;
+        $x = $t[0] + $t[1]*$w + $t[2]*$h; 
+        $y = $t[3] + $t[4]*$w + $t[5]*$h;
+        $min_x = $x if $x < $min_x;
+        $min_y = $y if $y < $min_y;
+        $max_x = $x if $x > $max_x;
+        $max_y = $y if $y > $max_y;
+        $x = $t[0] + $t[1]*$w + $t[2]*0; 
+        $y = $t[3] + $t[4]*$w + $t[5]*0;
+        $min_x = $x if $x < $min_x;
+        $min_y = $y if $y < $min_y;
+        $max_x = $x if $x > $max_x;
+        $max_y = $y if $y > $max_y;
+
 	return ($min_x, $min_y, $max_x, $max_y);
     } elsif (!$self->{GRID}) {
 	return ();
