@@ -319,6 +319,7 @@ sub GetFeature {
     # feed the copy directly to stdout
     print $q->header( -type => $config->{MIME}, 
                       -charset=>'utf-8',
+                      -expires=>$config->{expires} || '+1s',
                       -Access_Control_Allow_Origin=>$config->{CORS} );
     
     STDOUT->flush;
@@ -410,6 +411,7 @@ sub DescribeFeatureType {
     print $q->header( -Content_length => length(Encode::encode_utf8($var)), 
                       -type => $config->{MIME},
                       -charset => 'utf-8',
+                      -expires=>$config->{expires} || '+1s',
                       -Access_Control_Allow_Origin => $config->{CORS} );
     print $var;
 }
@@ -441,6 +443,7 @@ sub GetCapabilities {
     print $q->header( -Content_length => length(Encode::encode_utf8($var)), 
                       -type => $config->{MIME},
                       -charset => 'utf-8',
+                      -expires=>$config->{expires} || '+1s',
                       -Access_Control_Allow_Origin => $config->{CORS} ), $var;
 }
 

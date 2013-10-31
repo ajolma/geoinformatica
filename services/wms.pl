@@ -107,7 +107,8 @@ sub GetCapabilities {
     select(STDOUT);
     close $out;
     print 
-        $q->header(-type => $config->{MIME}, 
+        $q->header(-type => $config->{MIME},
+                   -expires=>$config->{expires} || '+1s',
                    -Content_length => length(Encode::encode_utf8($var)),
                    -Access_Control_Allow_Origin=>$config->{CORS}), $var;
 }
@@ -134,7 +135,8 @@ sub GetMap {
 
     my $buffer = $pixbuf->save_to_buffer($params{FORMAT} eq 'image/png' ? 'png' : 'jpeg');
     print STDERR "length => ",length($buffer),", type => $params{FORMAT}\n" if $debug;
-    print $q->header( -type => $params{FORMAT}, 
+    print $q->header( -type => $params{FORMAT},
+                      -expires=>$config->{expires} || '+1s',
                       -Content_length => length($buffer),
                       -Access_Control_Allow_Origin=>$config->{CORS} );
     binmode STDOUT, ":raw";
@@ -164,12 +166,13 @@ sub GetFeatureInfo {
     }
 
     print $q->header( -type => 'text/html', 
-                      -charset => 'utf-8', 
-                      -Access_Control_Allow_Origin=>$config->{CORS}),
-	'<meta content="text/html;charset=UTF-8" http-equiv="Content-Type">',
-	$q->start_html,
-	decode('utf8', "Infoa: valitussa kohdassa ($x,$y) val on:<br/>".join('<br/>',@report)), 
-	$q->end_html;
+                      -charset => 'utf-8',
+                      -expires=>$config->{expires} || '+1s',
+                      -Access_Control_Allow_Origin=>$config->{CORS} ),
+    '<meta content="text/html;charset=UTF-8" http-equiv="Content-Type">',
+    $q->start_html,
+    decode('utf8', "Infoa: valitussa kohdassa ($x,$y) val on:<br/>".join('<br/>',@report)), 
+    $q->end_html;
 }
 
 sub layer {
