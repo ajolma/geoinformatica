@@ -103,7 +103,7 @@ WriteMakefile1(
 	      @for_windows,
 	      META_MERGE => {
 	          resources => {
-	              repository => 'https://github.com/ajolma/geoinformatica.git/trunk/Gtk2-Ex-Geo',
+	              repository => 'https://github.com/ajolma/geoinformatica/tree/master/Gtk2-Ex-Geo',
 	          },
 	      },
 	      TEST_REQUIRES => {
