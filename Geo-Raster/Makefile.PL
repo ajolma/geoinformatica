@@ -116,7 +116,7 @@ WriteMakefile1(NAME                        => 'Geo::Raster',
                @for_windows,
                META_MERGE => {
                    resources => {
-                       repository => 'https://github.com/ajolma/geoinformatica.git/trunk/Geo-Raster',
+                       repository => 'https://github.com/ajolma/geoinformatica/tree/master/Geo-Raster',
                    },
                },
                TEST_REQUIRES => {
