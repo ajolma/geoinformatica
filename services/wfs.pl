@@ -66,13 +66,107 @@ sub get_bbox {
     return $bbox;
 }
 
-sub get_filter {
-    my $e = shift; # list of or'red constraints
-    my $filter;
-    if ($e->{'ogc:PropertyIsEqualTo'}) {
-	$e = $e->{'ogc:PropertyIsEqualTo'};
-	$filter = $e->{'ogc:PropertyName'}."='".$e->{'ogc:Literal'}."'";
+sub get_predicate {
+    my($key, $hash) = @_;
+    my $property = $hash->{'ogc:PropertyName'};
+    my $literal = $hash->{'ogc:Literal'};
+    $literal = '' if ref($literal);
+    if ($key eq 'ogc:PropertyIsEqualTo') {
+        return "$property = '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsNotEqualTo') {
+        return "$property != '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsLessThan') {
+        return "$property < '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsGreaterThan') {
+        return "$property > '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsLessThanOrEqualTo') {
+        return "$property <= '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsGreaterThanOrEqualTo') {
+        return "$property >= '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsBetween') {
+        my $lb = $hash->{'ogc:LowerBoundary'};
+        my $ub = $hash->{'ogc:UpperBoundary'};
+        return "$property >= '$lb' and $property <= '$ub'";
+    } elsif ($key eq 'ogc:PropertyIsLike') {
+        return "$property ~ '$literal'";
+    } elsif ($key eq 'ogc:PropertyIsNull') {
+        return "$property isnull";
+    } elsif ($key eq 'ogc:BBOX') {
+    } else {
+        print STDERR "unknown element in predicate: $key\n";
     }
+}
+
+sub get_not_filter {
+    my $e = shift; # hash of a constraint, return NOT(A)
+    my @keys = keys %$e;
+    print STDERR "more than one element inside NOT: @keys" if @keys != 1;
+    my $key = $keys[0];
+    my $f;
+    if ($key eq 'ogc:Not') {
+        $f = get_not_filter($e->{$key});
+    } elsif ($key eq 'ogc:Or') {
+        $f = get_or_filter($e->{$key});
+    } elsif ($key eq 'ogc:And') {
+        $f = get_and_filter($e->{$key});
+    } else {
+        $f = get_predicate($key, $e->{$key});
+    }
+    return "NOT($f)";
+}
+
+sub get_or_filter {
+    my $e = shift; # hash of or'red constraints, return ((A) OR ...)
+    my @or;
+    for my $key (keys %$e) {
+        if ($key eq 'ogc:Not') {
+            my $f = get_not_filter($e->{$key});
+            push @or, $f if $f;
+        } elsif ($key eq 'ogc:Or') {
+            my $f = get_or_filter($e->{$key});
+            push @or, $f if $f;
+        } elsif ($key eq 'ogc:And') {
+            my $f = get_and_filter($e->{$key});
+            push @or, $f if $f;
+        } else {
+            if (ref($e->{$key}) eq 'ARRAY') { # XML::Simple puts similar elements into a list
+                for my $a (@{$e->{$key}}) {
+                    push @or, get_predicate($key, $a);
+                }
+            } else {
+                push @or, get_predicate($key, $e->{$key});
+            }
+        }
+    }
+    my $filter = '(('.join(') OR (', @or).'))';
+    return $filter;
+}
+
+sub get_and_filter {
+    my $e = shift; # hash of and'ed constraints, return ((A) and ...)
+    my @and;
+    for my $key (keys %$e) {
+        print "and filter: $key\n";
+        if ($key eq 'ogc:Not') {
+            my $f = get_not_filter($e->{$key});
+            push @and, $f if $f;
+        } elsif ($key eq 'ogc:Or') {
+            my $f = get_or_filter($e->{$key});
+            push @and, $f if $f;
+        } elsif ($key eq 'ogc:And') {
+            my $f = get_and_filter($e->{$key});
+            push @and, $f if $f;
+        } else {
+            if (ref($e->{$key}) eq 'ARRAY') { # XML::Simple puts similar elements into a list
+                for my $a (@{$e->{$key}}) {
+                    push @and, get_predicate($key, $a);
+                }
+            } else {
+                push @and, get_predicate($key, $e->{$key});
+            }
+        }
+    }
+    my $filter = '(('.join(') AND (', @and).'))';
     return $filter;
 }
 
@@ -114,17 +208,18 @@ sub page {
 		next unless $h->{'ogc:Filter'};
 		$h = $h->{'ogc:Filter'};
 
-                if ($h->{'ogc:And'}) {
+                if ($h->{'ogc:Not'}) {
+                    $h = $h->{'ogc:Not'};
+                    $params{filter} = get_not_filter($h);
+                } elsif ($h->{'ogc:Or'}) {
+                    $h = $h->{'ogc:Or'};
+                    $params{filter} = get_or_filter($h);
+                } elsif ($h->{'ogc:And'}) {
 		    $h = $h->{'ogc:And'};
-		    if ($h->{'ogc:Or'}) {
-			$params{filter} = get_filter($h->{'ogc:Or'});
-		    }
-                    if ($h->{'ogc:PropertyIsEqualTo'}) {
-			$params{filter} = get_filter($h);
-		    }
-		    if ($h->{'ogc:BBOX'}) {
+                    if ($h->{'ogc:BBOX'}) {
 			$params{bbox} = get_bbox($h->{'ogc:BBOX'});
 		    }
+                    $params{filter} = get_and_filter($h);
 		} elsif ($h->{'ogc:BBOX'}) {
 		    $params{bbox} = get_bbox($h->{'ogc:BBOX'});
 		}
