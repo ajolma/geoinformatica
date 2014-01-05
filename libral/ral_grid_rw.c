@@ -14,8 +14,10 @@ void CPL_DLL CPL_STDCALL ral_cpl_error(CPLErr eclass, int code, const char *msg)
     return;
 }
 
-#define P2G(xp,yp,t,xg,yg) xg = t[0] + t[1]*xp + t[2]*yp; yg = t[3] + t[4]*xp + t[5]*yp;
-#define G2P(xg,yg,t,xp,yp) xp = floor(t[0] + t[1]*xg + t[2]*yg); yp = floor(t[3] + t[4]*xg + t[5]*yg);
+#define P2G(xp,yp,t,xg,yg) xg = (t[0]) + (t[1])*(xp) + (t[2])*(yp); \
+    yg = (t[3]) + (t[4])*(xp) + (t[5])*(yp);
+#define G2P(xg,yg,t,xp,yp) xp = floor((t[0]) + (t[1])*(xg) + (t[2])*(yg)); \
+    yp = floor((t[3]) + (t[4])*(xg) + (t[5])*(yg));
 
 ral_grid_handle RAL_CALL ral_grid_create_using_GDAL(GDALDatasetH dataset, int band, ral_rectangle clip_region, double cell_size)
 {
