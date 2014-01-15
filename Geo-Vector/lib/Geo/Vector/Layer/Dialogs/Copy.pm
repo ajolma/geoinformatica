@@ -166,7 +166,7 @@ sub do_copy {
 	if ($layers) {
 	    for my $l (@$layers) {
 		croak "Data source '$params{data_source}' already contains a layer with name '$params{create}'."
-		    if ($l->{Name} eq $layers->{$params{create}});
+		    if ($l->{Name} eq $params{create});
 	    }
 	}
     }
