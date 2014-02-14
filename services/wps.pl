@@ -13,8 +13,8 @@ use Geo::GDAL;
 #use Geo::Vector;
 use JSON;
 use lib '.';
-require WXS;
-WXS->import(':all');
+require WxS;
+WxS->import(':all');
 
 binmode STDERR, ":utf8";
 binmode STDOUT, ":utf8";
@@ -23,7 +23,7 @@ my $config;
 my %names = ();
 
 eval {
-    $config = WXS::config();
+    $config = WxS::config();
     page();
 };
 error($q, $@, $config ? (-type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) : ()) if $@;

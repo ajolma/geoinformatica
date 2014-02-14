@@ -12,8 +12,8 @@ use Geo::Raster;
 use Geo::Vector;
 use JSON;
 use lib '.';
-require WXS;
-WXS->import(qw/config error xml_elements xml_element/);
+require WxS;
+WxS->import(qw/config error xml_elements xml_element/);
 require Scale;
 
 binmode STDERR, ":utf8";
@@ -27,7 +27,7 @@ my $debug = 1;
 # strict policy: config and page should *not* print anything 
 # into stdout as long as there is a possibility of an error
 eval {
-    $config = WXS::config();
+    $config = WxS::config();
     page($q);
 };
 error($q, $@, $config ? (-type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) : ()) if $@;
