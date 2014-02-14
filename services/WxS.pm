@@ -14,32 +14,32 @@ sub Operation {
     my($config, $name, $parameters) = @_;
     my @parameters;
     for my $p (@$parameters) {
-	for my $n (keys %$p) {
-	    my @values;
-	    for my $v (@{$p->{$n}}) {
-		push @values, ['ows:Value', $v];
-	    }
-	    push @parameters, ['ows:Parameter', {name=>$n}, \@values];
-	}
+        for my $n (keys %$p) {
+            my @values;
+            for my $v (@{$p->{$n}}) {
+                push @values, ['ows:Value', $v];
+            }
+            push @parameters, ['ows:Parameter', {name=>$n}, \@values];
+        }
     }
     xml_element('ows:Operation', 
-		{name => $name}, 
-		[['ows:DCP', 
-		  ['ows:HTTP', [['ows:Get', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}],
-				['ows:Post', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}]]
-		  ]],@parameters]);
+                {name => $name}, 
+                [['ows:DCP', 
+                  ['ows:HTTP', [['ows:Get', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}],
+                                ['ows:Post', {'xlink:type'=>'simple', 'xlink:href'=>$config->{resource}}]]
+                  ]],@parameters]);
 }
 
 sub config {
     my $conf = shift;
     unless ($conf) {
-	if (open(my $fh, '<', '/var/www/etc/dispatch')) {
-	    while (<$fh>) {
-		chomp;
-		@l = split /\t/;
-		$conf = $l[1] if $l[0] and $l[0] eq $0;
-	    }
-	}
+        if (open(my $fh, '<', '/var/www/etc/dispatch')) {
+            while (<$fh>) {
+                chomp;
+                @l = split /\t/;
+                $conf = $l[1] if $l[0] and $l[0] eq $0;
+            }
+        }
     }
     croak "no configuration file.#" unless $conf;
     open(my $fh, '<', $conf) or croak "can't open configuration file.#";
@@ -57,10 +57,10 @@ sub error {
     print $cgi->header(%header_arg, -charset=>'utf-8'), '<?xml version="1.0" encoding="UTF-8"?>',"\n";
     my($error) = ($msg =~ /(.*?)\.\#/);
     if ($error) {
-	$error =~ s/ $//;
-	$error = { code => $error } if $error eq 'LayerNotDefined';
+        $error =~ s/ $//;
+        $error = { code => $error } if $error eq 'LayerNotDefined';
     } else {
-	$error = 'Unspecified error: '.$msg;
+        $error = 'Unspecified error: '.$msg;
     }
     xml_element('ServiceExceptionReport',['ServiceException', $error]);
     select(STDERR);
@@ -75,7 +75,7 @@ sub serve_document {
     print $cgi->header(-type => $type, -Content_length => $length, -charset=>'utf-8');
     my $data;
     while( sysread(DOC, $data, 10240) ) {
-	print $data;
+        print $data;
     }
     close DOC;
 }
@@ -85,7 +85,7 @@ sub serve_vsi {
     my $fp = Geo::GDAL::VSIFOpenL($vsi, 'r');
     my $data;
     while (my $chunk = Geo::GDAL::VSIFReadL(1024,$fp)) {
-	$data .= $chunk;
+        $data .= $chunk;
     }
     Geo::GDAL::VSIFCloseL($fp);
     $data = decode('utf8', $data);
@@ -108,11 +108,11 @@ sub list2element {
 
 sub xml_elements {
     for my $e (@_) {
-	if (ref($e) eq 'ARRAY') {
-	    xml_element(@$e);
-	} else {
-	    xml_element($e->{element}, $e->{attributes}, $e->{content});
-	}
+        if (ref($e) eq 'ARRAY') {
+            xml_element(@$e);
+        } else {
+            xml_element($e->{element}, $e->{attributes}, $e->{content});
+        }
     }
 }
 
@@ -121,33 +121,33 @@ sub xml_element {
     my $attributes;
     my $content;
     for my $x (@_) {
-	$attributes = $x, next if ref($x) eq 'HASH';
-	$content = $x;
+        $attributes = $x, next if ref($x) eq 'HASH';
+        $content = $x;
     }
     print("<$element");
     if ($attributes) {
-	for my $a (keys %$attributes) {
-	    print(" $a=\"$attributes->{$a}\"");
-	}
+        for my $a (keys %$attributes) {
+            print(" $a=\"$attributes->{$a}\"");
+        }
     }
     unless (defined $content) {
         print("/>");
     } else {
-	if (ref $content) {
-	    print(">");
-	    if (ref $content->[0]) {
-		for my $e (@$content) {
-		    xml_element(@$e);
-		}
-	    } else {
-		xml_element(@$content);
+        if (ref $content) {
+            print(">");
+            if (ref $content->[0]) {
+                for my $e (@$content) {
+                    xml_element(@$e);
+                }
+            } else {
+                xml_element(@$content);
             }
             print("</$element>");
-	} elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
-	    print(">");
-	} else {
-	    print(">$content</$element>");
-	}
+        } elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
+            print(">");
+        } else {
+            print(">$content</$element>");
+        }
     }
 }
 
@@ -298,7 +298,7 @@ sub transaction_sql {
             push @vals, "'".$val."'";
         }
         my $dbi = $type->{dbi};
-	$dbisql{$dbi} .= "INSERT INTO $type->{Table} (".join(',',@cols).") VALUES (".join(',',@vals).");\n";
+        $dbisql{$dbi} .= "INSERT INTO $type->{Table} (".join(',',@cols).") VALUES (".join(',',@vals).");\n";
     }
     for my $dbi (keys %dbisql) {
         $dbisql{$dbi} = "BEGIN;\n".$dbisql{$dbi}."END;\n";
