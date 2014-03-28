@@ -872,9 +872,11 @@ sub put_scale_in_treeview {
 	    $v = 1;
 	}
 	
-	my $pb = Gtk2::Gdk::Pixbuf->new('rgb', 1, 8, $COLOR_CELL_SIZE, $COLOR_CELL_SIZE);
+	#my $pb = Gtk2::Gdk::Pixbuf->new('rgb', 1, 8, $COLOR_CELL_SIZE, $COLOR_CELL_SIZE);
+        my $pb = Gtk2::Gdk::Pixbuf->new('rgb', 0, 8, $COLOR_CELL_SIZE, $COLOR_CELL_SIZE);
 	my @color = hsv2rgb($h, $s, $v);
-	$pb->fill($alpha << 32 | $color[0] << 24 | $color[1] << 16 | $color[2] << 8);
+	#$pb->fill($alpha << 32 | $color[0] << 24 | $color[1] << 16 | $color[2] << 8);
+        $pb->fill($color[0] << 24 | $color[1] << 16 | $color[2] << 8);
 
 	my $j = 0;
 	push @set, ($j++, $pb);

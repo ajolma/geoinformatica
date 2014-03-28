@@ -77,6 +77,9 @@ Gtk2->init;
 	    print STDERR $self->name," was notified of a change in selection: $k=>$params{$k}\n";
 	}
     }
+    sub value_range {
+        return (0, 10);
+    }
 }
 
 my($window, $gis) = setup (classes => [qw/Gtk2::Ex::Geo::Layer/] );
