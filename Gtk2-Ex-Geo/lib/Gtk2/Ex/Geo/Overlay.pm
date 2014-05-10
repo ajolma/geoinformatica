@@ -83,6 +83,8 @@ sub INIT_INSTANCE {
     $self->signal_connect(key_press_event => \&key_press_event, $self);
     $self->signal_connect(key_release_event => \&key_release_event, $self);
 
+    $self->signal_connect(scroll_event => \&scroll_event, $self);
+
     $self->{selecting} = '';
     $self->{rubberband_geometry} = '';
     $self->{rubberband_mode} = '';
@@ -757,6 +759,18 @@ sub key_press_event {
 	$self->{_shift_down} = 1;
     }
     return 0;
+}
+
+sub scroll_event {
+    my($self, $event) = @_;
+    return 0 unless $self->{layers} and @{$self->{layers}};
+    my $dir = $event->direction;
+    #print STDERR "dir=$dir\n";
+    if ($dir eq 'up') {	    
+	$self->zoom_in($event);
+    } elsif ($dir eq 'down') {
+	$self->zoom_out($event);
+    }
 }
 
 ## @ignore
