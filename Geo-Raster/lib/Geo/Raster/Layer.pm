@@ -265,6 +265,25 @@ sub supported_palette_types {
 }
 
 ## @ignore
+# set GDAL color table if this is a GDAL raster
+sub color_table {
+    my($self, $color_table) = @_;
+    my $ct = $self->SUPER::color_table($color_table);
+    return $ct unless defined $color_table;
+    if ($self->{GDAL}) {
+        my $type = $self->palette_type();
+	my $band = $self->band();
+        if ($type and $type eq 'Color table') {
+            $ct = Geo::GDAL::ColorTable->create('RGB');
+            for my $color (@{$self->{COLOR_TABLE}}) {
+                $ct->ColorEntry(@$color);
+            }
+            $band->ColorTable($ct);
+        }
+    }
+}
+
+## @ignore
 sub supported_symbol_types {
     my($self) = @_;
     return ('No symbol') unless $self->{GRID}; # may happen if not cached

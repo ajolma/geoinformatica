@@ -48,6 +48,11 @@ sub open {
 	$combo->pack_start ($renderer, TRUE);
 	$combo->add_attribute ($renderer, text => 0);
 	$combo->signal_connect(changed=>\&copy_driver_selected, [$self, $gui]);    
+
+        $combo = $dialog->get_widget('copy_datatype_combobox');
+	$renderer = Gtk2::CellRendererText->new;
+	$combo->pack_start ($renderer, TRUE);
+	$combo->add_attribute ($renderer, text => 0);
     
 	$combo = $dialog->get_widget('copy_region_combobox');
 	$renderer = Gtk2::CellRendererText->new;
@@ -81,6 +86,13 @@ sub open {
 	$model->set($model->append, 0, $driver);
     }
     my $combo = $dialog->get_widget('copy_driver_combobox');
+    $combo->set_model($model);
+    $combo->set_active(0);
+
+    $model = Gtk2::ListStore->new('Glib::String');
+    $model->set($model->append, 0, 'Default');
+    $model->set($model->append, 0, 'Byte');
+    $combo = $dialog->get_widget('copy_datatype_combobox');
     $combo->set_model($model);
     $combo->set_active(0);
 
@@ -169,18 +181,22 @@ sub do_copy {
     my $combo = $dialog->get_widget('copy_driver_combobox');
     my $iter = $combo->get_active_iter;
     my $driver = $combo->get_model->get($iter);
+
+    $combo = $dialog->get_widget('copy_datatype_combobox');
+    $iter = $combo->get_active_iter;
+    my $datatype = $combo->get_model->get($iter);
+
     $combo = $dialog->get_widget('copy_region_combobox');
     $iter = $combo->get_active_iter;
     my $region = $combo->get_model->get($iter);
 
-    my($new_layer, $src_dataset, $dst_dataset);
+    my($new_raster, $src_dataset, $dst_dataset);
     
-    # src_dataset
     if ($driver eq 'libral' and !$project) {
 	if ($self->{GDAL}) {
-	    $new_layer = $self->cache($minx, $miny, $maxx, $maxy, $cellsize);
+	    $new_raster = $self->cache($minx, $miny, $maxx, $maxy, $cellsize);
 	} else {
-	    $new_layer = $self * 1;
+	    $new_raster = $self * 1;
 	}
     } else {
 	$src_dataset = $self->dataset;
@@ -211,23 +227,37 @@ sub do_copy {
 		return;
 	    }
 	} else {
-	    $dst_dataset = Geo::GDAL::Driver($driver)->Copy($folder.$name, $src_dataset);
+            if ($datatype ne 'Default') {
+                my($ysize, $xsize) = $self->size();
+                $dst_dataset = Geo::GDAL::Driver($driver)->Create($folder.$name, $xsize, $ysize, 1, $datatype);
+                $dst_dataset->GeoTransform($src_dataset->GeoTransform);
+                $dst_dataset->Band(1)->NoDataValue($src_dataset->Band(1)->NoDataValue);
+                $dst_dataset->Band(1)->WriteTile($src_dataset->Band(1)->ReadTile);
+                $dst_dataset->FlushCache;
+            } else {
+                $dst_dataset = Geo::GDAL::Driver($driver)->Copy($folder.$name, $src_dataset);
+            }
 	}
 
-	$new_layer = {};
-	$new_layer->{GDAL}->{dataset} = $dst_dataset;
-	$new_layer->{GDAL}->{band} = 1;
+	$new_raster = {};
+	$new_raster->{GDAL}->{dataset} = $dst_dataset;
+	$new_raster->{GDAL}->{band} = 1;
 	if ($driver eq 'libral') {
-	    Geo::Raster::cache($new_layer);
-	    delete $new_layer->{GDAL};
+	    Geo::Raster::cache($new_raster);
+	    delete $new_raster->{GDAL};
 	}
-	bless $new_layer => 'Geo::Raster';
+	bless $new_raster => 'Geo::Raster';
     }
     
-    $gui->add_layer($new_layer, $name, 1);
-    $gui->set_layer($new_layer);
-    $gui->select_layer($name);
-    $gui->{overlay}->zoom_to($new_layer);
+    my $layer = $gui->add_layer($new_raster, $name, 1);
+    # copy the color palette
+    $layer->palette_type($self->palette_type);
+    $layer->color_table($self->color_table);
+
+    #$gui->set_layer($new_layer);
+    #$gui->select_layer($name);
+    #$gui->{overlay}->zoom_to($new_layer);
+
     $self->hide_dialog('copy_raster_dialog') if $close;
     $gui->{overlay}->render;
 }

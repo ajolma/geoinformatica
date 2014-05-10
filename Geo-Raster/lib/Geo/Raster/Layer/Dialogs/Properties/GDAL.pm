@@ -28,6 +28,8 @@ sub open {
     $dialog->get_widget('gdal_name_entry')->set_text($self->name);
     $dialog->get_widget('gdal_alpha_spinbutton')->set_value($self->alpha);
 
+    my $type = $self->dataset->Band(1)->DataType;
+    $dialog->get_widget('gdal_datatype_label')->set_text($type);
     my @size = $self->size();
     $dialog->get_widget('gdal_size_label')->set_text("@size");
 

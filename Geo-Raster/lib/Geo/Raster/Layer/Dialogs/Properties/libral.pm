@@ -31,6 +31,8 @@ sub open {
     $dialog->get_widget('libral_name_entry')->set_text($self->name);
     $dialog->get_widget('libral_alpha_spinbutton')->set_value($self->alpha);
 
+    my $type = $self->_type_name;
+    $dialog->get_widget('libral_datatype_label')->set_text($type);
     my @size = $self->size();
     $dialog->get_widget('libral_size_label')->set_text("@size");
 

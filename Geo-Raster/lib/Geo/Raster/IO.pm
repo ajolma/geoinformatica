@@ -43,22 +43,23 @@ sub gdal_open {
 # @return the underlying GDAL dataset or, in the case of pure libral
 # raster, create a GDAL memory dataset and return it.
 sub dataset {
-    my $self = shift;
+    my($self) = @_;
     return $self->{GDAL}->{dataset} if $self->{GDAL};
     my @size = $self->size;
     my $datapointer = ral_pointer_to_data($self->{GRID});
     my $datatype = ral_data_element_type($self->{GRID});
     my $size = ral_sizeof_data_element($self->{GRID});
     my %gdal_type = (
-	'short' => 'Int',
-	'float' => 'Float',
-	);
-    my $ds = Geo::GDAL::Open(
-	"MEM:::DATAPOINTER=$datapointer,".
-	"PIXELS=$size[1],LINES=$size[0],DATATYPE=$gdal_type{$datatype}$size");
+        'short' => 'Int',
+        'float' => 'Float',
+        );
+    $datatype = "$gdal_type{$datatype}$size";
+    my $ds = Geo::GDAL::Open("MEM:::DATAPOINTER=$datapointer,PIXELS=$size[1],LINES=$size[0],DATATYPE=$datatype");
     my $world = ral_grid_get_world($self->{GRID});
     my $cell_size = ral_grid_get_cell_size($self->{GRID});
     $ds->SetGeoTransform([$world->[0], $cell_size, 0, $world->[3], 0, -$cell_size]);
+    my $nodata = $self->nodata_value;
+    $ds->Band(1)->NoDataValue($nodata) if defined $nodata;
     return $ds;
 }
 
