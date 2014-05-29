@@ -13,7 +13,7 @@ libral_la_SOURCES = ral_hash.c ral_vd.c ral_visual.c ral_pixbuf.c ral_grid.c ral
 
 libral_la_LDFLAGS = -version-info 1:0:0 -module
 
-EXTRA_DIST = test.c interface.c autogen.sh lesser.txt ral/config.h.in msg.h config.h index.dox Makefile.MinGW Makefile.VC71 libral.pc.in libral.pc
+EXTRA_DIST = test.c interface.c autogen.sh COPYING ral/config.h.in msg.h config.h index.dox Makefile.MinGW Makefile.VC71 libral.pc.in libral.pc
 
 nobase_include_HEADERS = ${libral_la_HEADERFILES}
 
