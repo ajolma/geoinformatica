@@ -4,6 +4,15 @@ use ExtUtils::MakeMaker;
 
 my %missing_modules;
 
+my $v = $];
+$v =~ s/[.0]+/./g;
+for my $a (@ARGV) {
+    if ($a =~ /^PREFIX=(.*)/) {
+        push @INC, $1.'/lib/perl/'.$v;
+        push @INC, $1.'/share/perl/'.$v;
+    }
+}
+
 $missing_modules{chk_module('ExtUtils::Depends')} = 1;
 $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
 $missing_modules{chk_module('JSON')} = 1;
@@ -124,19 +133,15 @@ else {
 sub chk_module {
     my($pkg, $version) = @_;
     print "Checking for $pkg ($version):";
-    eval { 
-	my $p; 
-	($p = $pkg . ".pm") =~ s#::#/#g; 
-	require $p;
-    };
+    eval "require $pkg";
     if ($@) {
-	print " failed\n";
+	print " failed: $@\n";
 	return $pkg;
     } else {
 	my $v = '$v=$'.$pkg.'::VERSION';
 	eval($v);
 	if ($v < $version) {
-	    print " failed\n";
+	    print " failed after version number check\n";
 	    return "$pkg is old version $v";
 	}
 	print " ok\n";
