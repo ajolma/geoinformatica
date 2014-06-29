@@ -393,8 +393,8 @@ sub pseudo_credentials {
     my $type = shift;
     my $c = $type->{pseudo_credentials} if $type->{pseudo_credentials};
     unless ($c) {
-        my $title = $type->{Title};
-        $c = $type->{$title}->{pseudo_credentials} if $type->{$title};
+        my $table = $type->{Table};
+        $c = $type->{$table}->{pseudo_credentials} if $type->{$table};
     }
     return ({}) unless $c;
     my($c1,$c2) = $c =~ /(\w+),(\w+)/;
@@ -451,7 +451,9 @@ sub layers {
         }
         for my $geom (@l) {
             my $sql = "select auth_name,auth_srid ".
-                "from \"$table\" join spatial_ref_sys on srid=st_srid(\"$geom\") limit 1";
+                "from \"$table\" ".
+                "join spatial_ref_sys on spatial_ref_sys.srid=st_srid(\"$geom\") ".
+                "limit 1";
             my $sth = $dbh->prepare($sql) or croak($dbh->errstr);
             my $rv = $sth->execute or croak($dbh->errstr);
             my($name,$srid)  = $sth->fetchrow_array;

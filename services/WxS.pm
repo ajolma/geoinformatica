@@ -159,7 +159,7 @@ sub ogc_request {
         my $request = {};
         $request->{request} = 'GetFeature';
         for my $a (qw/service version resultType outputFormat maxFeatures/) {
-            $request->{$a} = $node->{$a} if exists $node->{$a};
+            $request->{$a} = $node->getAttribute($a);
         }
         $request->{queries} = [];
         for ($node = $node->firstChild; $node; $node = $node->nextSibling) {
@@ -170,7 +170,7 @@ sub ogc_request {
         my $request = {};
         $request->{request} = 'Transaction';
         for my $a (qw/service version/) {
-            $request->{$a} = $node->{$a} if exists $node->{$a};
+            $request->{$a} = $node->getAttribute($a);
         }
         $request->{inserts} = [];
         for ($node = $node->firstChild; $node; $node = $node->nextSibling) {
@@ -186,7 +186,7 @@ sub ogc_request {
         my @filters = $node->getChildrenByTagName('ogc:Filter');
         $query->{filter} = ogc_filter($filters[0]) if @filters; # there is only one filter
         for my $a (qw/typeName srsName/) {
-            $query->{$a} = $node->{$a} if exists $node->{$a};
+            $query->{$a} = $node->getAttribute($a);
         }
         if (exists $query->{srsName}) {
             ($query->{EPSG}) = $query->{srsName} =~ /EPSG:(\d+)/;
@@ -248,7 +248,8 @@ sub ogc_filter {
     } elsif ($node->nodeName eq 'ogc:Not') {
         return '(NOT '.ogc_filter($node->firstChild).')';
     } elsif ($node->nodeName eq 'gml:Envelope') {
-        my($srid) = $node->{srsName} =~ /EPSG:(\d+)/ if exists $node->{srsName};
+        my $srs = $node->getAttribute('srsName');
+        my($srid) = $srs =~ /EPSG:(\d+)/ if $srs;
         $node = $node->firstChild;
         my $lc = $node->firstChild->data; # gml:lowerCorner
         $lc =~ s/ /,/;
