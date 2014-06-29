@@ -114,11 +114,7 @@ WriteMakefile1(
 sub chk_module {
     my $pkg = shift;
     print "Checking for $pkg:";
-    eval { 
-	my $p; 
-	($p = $pkg . ".pm") =~ s#::#/#g; 
-	require $p; 
-    };
+    eval "require $pkg";
     if ($@) {
 	print " failed\n";
 	return $pkg;

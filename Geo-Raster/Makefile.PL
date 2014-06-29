@@ -5,15 +5,6 @@ use ExtUtils::MakeMaker;
 
 my %missing_modules;
 
-my $v = $];
-$v =~ s/[.0]+/./g;
-for my $a (@ARGV) {
-    if ($a =~ /^PREFIX=(.*)/) {
-        push @INC, $1.'/lib/perl/'.$v;
-        push @INC, $1.'/share/perl/'.$v;
-    }
-}
-
 my @configure_requires = qw/ExtUtils::Depends ExtUtils::PkgConfig Gtk2/;
 foreach my $m (@configure_requires) {
     $missing_modules{chk_module($m)} = 1;

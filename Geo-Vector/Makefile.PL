@@ -4,15 +4,6 @@ use ExtUtils::MakeMaker;
 
 my %missing_modules;
 
-my $v = $];
-$v =~ s/[.0]+/./g;
-for my $a (@ARGV) {
-    if ($a =~ /^PREFIX=(.*)/) {
-        push @INC, $1.'/lib/perl/'.$v;
-        push @INC, $1.'/share/perl/'.$v;
-    }
-}
-
 $missing_modules{chk_module('ExtUtils::Depends')} = 1;
 $missing_modules{chk_module('ExtUtils::PkgConfig')} = 1;
 $missing_modules{chk_module('JSON')} = 1;

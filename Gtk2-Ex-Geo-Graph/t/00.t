@@ -3,9 +3,7 @@ use Glib qw/TRUE FALSE/;
 use Gtk2;
 use Gtk2::Ex::Geo;
 
-BEGIN { 
-    use_ok('Gtk2::Ex::Geo::Graph');
-};
+BEGIN { use_ok('Gtk2::Ex::Geo::Graph'); }
 
 exit unless $ENV{GUI};
 

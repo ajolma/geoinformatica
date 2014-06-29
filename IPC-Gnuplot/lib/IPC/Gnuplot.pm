@@ -19,7 +19,7 @@ documentation of Gtk2::Ex::Geo</a> is written in doxygen format.
 
 use strict;
 use warnings;
-use UNIVERSAL qw(isa);
+use UNIVERSAL;
 use Carp;
 use Term::ReadLine;
 
