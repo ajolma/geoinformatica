@@ -302,7 +302,7 @@ sub thin {
     do {
 	$M = $m;
 	foreach (@thinner) {
-	    $m += ral_grid_applytempl($self->{GRID}, $_, 0);
+	    $m += ral_grid_apply_templ($self->{GRID}, $_, 0);
 	    print STDERR "#" unless $opt{quiet};
 	}
 	print STDERR " thinning, pass $i/$maxiterations: deleted ", $m-$M, " cells\n" unless $opt{quiet};
