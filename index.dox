@@ -10,8 +10,7 @@ Geoinformatica.
 The source code for these modules and libral are developed at <a
 href="https://github.com/ajolma/geoinformatica">github</a>. There are
 nightly snapshots available at <a
-href="http://geoinformatics.aalto.fi/files/Geoinformatica/snapshots/">http://geoinformatics.aalto.fi/files/Geoinformatica/snapshots/</a>. In
-the same ftp site there are Windows binaries available.
+href="http://ajolma.net/Geoinformatica/snapshots/">http://ajolma.net/Geoinformatica/snapshots/</a>.
 
 Geo::Raster and Geo::Vector contain Perl interfaces and access to
 computational methods for geospatial data that are mainly in GEOS and
