@@ -1,16 +1,16 @@
 package Gtk2::Ex::Geo::Graph::Install::Files;
 
 $self = {
-          'inc' => '',
-          'typemaps' => [],
           'deps' => [
-                      'Pango',
+                      'Cairo',
                       'Glib',
                       'Gtk2',
-                      'Cairo',
+                      'Pango',
                       'Gtk2::Ex::Geo'
                     ],
-          'libs' => ''
+          'inc' => '',
+          'libs' => '',
+          'typemaps' => []
         };
 
 
