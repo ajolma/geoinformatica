@@ -1,15 +1,11 @@
 ABOUT GEOINFORMATICA
 
-Geoinformatica is a geospatial toolkit that builds on GDAL, Perl and
-GTK+. The toolkit contains currently one C library (libral, gvl is a
-beginnings of another), seven Perl modules (in fact sets of modules,
-of which Geo::OGC::SymbologyEncoding is only a concept), geospatial
-web service programs, and a simple graphical application.
+Geoinformatica is a geospatial toolkit that builds on GDAL, Perl,
+GTK+, various libraries and Perl modules. The functionality of the
+toolkit is mostly in those and here are only geospatial web service
+programs, and a simple graphical application.
 
 CONFIGURATION
-
-Geoinformatica has been ported to GNU/Linux and MS Windows (using
-MinGW and msys).
 
 You should have development versions of GDAL (and Geo::GDAL, the GDAL
 Perl bindings), Perl and GTK+. In addition you will need pkg-config.
@@ -43,27 +39,10 @@ PDL-NetCDF
 Pango
 Statistics-Descriptive
 
-Configuration of libral is done with commands
+From github.com:
 
-sh autogen.sh
-./configure
-
-and Perl modules as usual with
-
-perl Makefile.PL
-
-INSTALLATION
-
-make
-make test
-make install
-
-Documentation can be built with command
-
-doxygen
-
-in the root directory (for Geoinformatica docs) and in the
-subdirectory libal (for libral docs).
+libral
+Perl modules
 
 OPERATING
 
@@ -76,12 +55,3 @@ Copyright by contributing authors:
 Ari Jolma
 Teemu Kokkonen
 
-LICENCE
-
-libral is LGPL
-Perl modules are Artistic
-
-CONTACT
-
-Ari Jolma
-ari.jolma at gmail.com
