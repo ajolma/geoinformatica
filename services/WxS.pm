@@ -36,7 +36,7 @@ sub config {
         if (open(my $fh, '<', '/var/www/etc/dispatch')) {
             while (<$fh>) {
                 chomp;
-                @l = split /\t/;
+                my @l = split /\t/;
                 $conf = $l[1] if $l[0] and $l[0] eq $0;
             }
         }

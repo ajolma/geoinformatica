@@ -144,6 +144,7 @@ sub GetFeature {
         }
         
         my @cols;
+        my $filter = $query->{filter}; # reverse the field names
         for my $f (keys %{$type->{Schema}}) {
             next if $f eq 'ID';
             next if $pseudo_credentials->{$f};
@@ -158,6 +159,7 @@ sub GetFeature {
             if ($query->{EPSG} and $f eq $type->{GeometryColumn}) {
                 push @cols, "st_transform(\"$f\",$query->{EPSG}) as \"$n\"";
             } else {
+                $filter =~ s/$n/$f/g if $filter;
                 push @cols, "\"$f\" as \"$n\"";
             }
         }
@@ -167,8 +169,8 @@ sub GetFeature {
         # test for $type->{$type->{Title}}{require_filter} vs $query->{filter}
         my $geom = $type->{GeometryColumn};
         $geom = "st_transform(\"$geom\",$query->{EPSG})" if $query->{EPSG};
-        $query->{filter} =~ s/GeometryColumn/$geom/g if $query->{filter};
-        $sql .= " and $query->{filter}" if $query->{filter};
+        $filter =~ s/GeometryColumn/$geom/g if $filter;
+        $sql .= " and $filter" if $filter;
 
         print STDERR "$sql\n";
         $layer = $datasource->ExecuteSQL($sql);
@@ -178,7 +180,7 @@ sub GetFeature {
 
     # note that OpenLayers seem not to like the default ones, at least with outputFormat: "GML2"
     # use "TARGET_NAMESPACE": "http://ogr.maptools.org/", "PREFIX": "ogr", in config or type section
-    my $ns = $config->{TARGET_NAMESPACE} || $type->{TARGET_NAMESPACE} || '"http://www.opengis.net/wfs';
+    my $ns = $config->{TARGET_NAMESPACE} || $type->{TARGET_NAMESPACE} || 'http://www.opengis.net/wfs';
     my $prefix = $config->{PREFIX} || $type->{PREFIX} || 'wfs';
 
     # feed the copy directly to stdout
