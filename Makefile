@@ -14,6 +14,19 @@ all:
 		cd ..; \
 	done;
 
+doc:
+	doxygen
+
+co:
+	for m in ${MODULES}; do \
+		svn co https://github.com/ajolma/$$m/trunk $$m; \
+	done;
+
+remove-modules:
+	for m in ${MODULES}; do \
+		rm -rf $$m; \
+	done;
+
 perl:
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
