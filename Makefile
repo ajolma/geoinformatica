@@ -34,6 +34,14 @@ perl:
 		cd ..; \
 	done;
 
+test-perl:
+	for m in ${PERL_MODULES}; do \
+		cd $$m; \
+		make test; \
+		cd ..; \
+	done;
+
+
 install-perl:
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
@@ -72,9 +80,10 @@ distclean:
 	cd ${LIBRAL}; $(MAKE) distclean; cd ..
 
 dist:
-	cd ${LIBRAL}; $(MAKE) dist; cd ..
+	cd ${LIBRAL}; $(MAKE) dist; cp *.tar.gz ..; cd ..
 	for m in ${PERL_MODULES}; do \
 		cd $$m; \
 		$(MAKE) dist; \
+		cp *.tar.gz ..; \
 		cd ..; \
 	done;
