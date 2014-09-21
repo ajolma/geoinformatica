@@ -20,20 +20,7 @@ perl:
 		cd $$m; \
 		perl Makefile.PL PREFIX=${PREFIX}; \
 		make; \
-		cd ..; \
-	done;
-
-test-perl:
-	for m in ${PERL_MODULES}; do \
-		cd $$m; \
 		make test; \
-		cd ..; \
-	done;
-
-
-install-perl:
-	for m in ${PERL_MODULES}; do \
-		cd $$m; \
 		make install; \
 		cd ..; \
 	done;
