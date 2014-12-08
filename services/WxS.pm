@@ -124,7 +124,9 @@ sub xml_element {
         $attributes = $x, next if ref($x) eq 'HASH';
         $content = $x;
     }
-    print("<$element");
+    print("<");
+    print("/") if $content and $content eq '/>';
+    print("$element");
     if ($attributes) {
         for my $a (keys %$attributes) {
             print(" $a=\"$attributes->{$a}\"");
@@ -143,7 +145,7 @@ sub xml_element {
                 xml_element(@$content);
             }
             print("</$element>");
-        } elsif ($content eq '>' or $content eq '<' or $content eq '<>') {
+        } elsif ($content eq '>' or $content eq '/>' or $content eq '<' or $content eq '<>') {
             print(">");
         } else {
             print(">$content</$element>");
@@ -329,7 +331,7 @@ sub GML2WKT {
         $wkt = "POLYGON ((".join(', ',@pos)."))";
     } 
     #print STDERR "$wkt\n";
-    my($srid) = $geom->{srsName} =~ /EPSG:(\d+)/;
+    my($srid) = $geom->getAttribute('srsName') =~ /EPSG:(\d+)/;
     return "ST_GeometryFromText('$wkt',$srid)";
 }
 
