@@ -26,7 +26,7 @@ x-libral:
 	for m in ${LIBRAL}; do \
 		cd $$m; \
 		sh autogen.sh; \
-		./configure --prefix=${PREFIX} --with-gdal=${WITH-GDAL}; \
+		./configure --prefix=${PREFIX} --with-gdal=${WITH_GDAL}; \
 		make; \
 		make install; \
 		cd ..; \
