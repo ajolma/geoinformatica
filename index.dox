@@ -2,6 +2,10 @@
 
 \section index_intro Introduction
 
+NOTE: New development will occur in Geoinformatica2 and only bug fixes
+will be done for this version of the toolkit. Some components of
+Geoinformatica are used in Geoinformatica2.
+
 <a href="https://github.com/ajolma/geoinformatica">Geoinformatica</a>
 is a geospatial software toolkit, which builds on Perl, GTK+, GDAL,
 and libral. These pages document the Perl modules specific to
