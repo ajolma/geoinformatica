@@ -370,8 +370,9 @@ sub FeatureTypeList  {
             xml_element('wfs:FeatureType', \@FeatureType);
         } elsif ($type->{prefix}) {
             # restrict now to postgis databases
-            my @layers = layers($type->{dbi}, $type->{prefix});
+            my @layers = layers($type);
             for my $l (@layers) {
+                print STDERR "$type->{prefix}: $l->{Title}\n";
                 next if $type->{allow} and !$type->{allow}{$l->{Title}};
                 my @FeatureType = (
                     ['wfs:Name', $l->{Name}],
@@ -405,20 +406,20 @@ sub pseudo_credentials {
 
 sub feature {
     my $name = shift;
-    for my $t (@{$config->{FeatureTypeList}}) {
-        if ($t->{Layer}) {
-            return $t if $t->{Name} eq $name;
+    for my $type (@{$config->{FeatureTypeList}}) {
+        if ($type->{Layer}) {
+            return $type if $type->{Name} eq $name;
         } else {
-            next unless $name =~ /^$t->{prefix}\./;
+            next unless $name =~ /^$type->{prefix}\./;
             # restrict now to postgis databases
-            my @layers = layers($t->{dbi}, $t->{prefix});
+            my @layers = layers($type);
             for my $l (@layers) {
                 if ($l->{Name} eq $name) {
-                    my $type = $t;
+                    my $type2 = $type;
                     for (keys %$l) {
-                        $type->{$_} = $l->{$_};
+                        $type2->{$_} = $l->{$_};
                     }
-                    return $type;
+                    return $type2;
                 }
             }
         }
@@ -427,9 +428,11 @@ sub feature {
 }
 
 sub layers {
-    my($dbi, $prefix) = @_;
-    my($connect, $user, $pass) = split / /, $dbi;
-    my $dbh = DBI->connect($connect, $user, $pass) or croak('no db');
+    my($feature_type) = @_;
+    my($connect, $user, $pass) = split / /, $feature_type->{dbi};
+    my $dbh = DBI->connect($connect, $user, $pass, {
+        PrintError => 0, 
+        RaiseError => 0 }) or croak('no db');
     $dbh->{pg_enable_utf8} = 1;
     my $sth = $dbh->table_info( '', 'public', undef, "'TABLE','VIEW'" );
     my @tables;
@@ -457,7 +460,9 @@ sub layers {
                 "join spatial_ref_sys on spatial_ref_sys.srid=st_srid(\"$geom\") ".
                 "limit 1";
             my $sth = $dbh->prepare($sql) or croak($dbh->errstr);
-            my $rv = $sth->execute or croak($dbh->errstr);
+            my $rv = $sth->execute;
+            # the execute may fail because of no permission, in that case we silently skip
+            next unless $rv;
             my($name,$srid)  = $sth->fetchrow_array;
             $name = 'unknown' unless defined $name;
             $srid = -1 unless defined $srid;
@@ -465,12 +470,13 @@ sub layers {
             # check that the table contains at least one spatial feature
             $sql = "select \"$geom\" from \"$table\" where not \"$geom\" isnull limit 1";
             $sth = $dbh->prepare($sql) or croak($dbh->errstr);
-            $rv = $sth->execute or croak($dbh->errstr);
+            $rv = $sth->execute or croak($dbh->errstr); # error here is a configuration error
             my($g)  = $sth->fetchrow_array;
             #next unless $g;
 
             #print STDERR "found layer $prefix.$table.$geom\n";
 
+            my $prefix = $feature_type->{prefix};
             push @layers, { Title => "$table($geom)",
                             Name => "$prefix.$table.$geom",
                             Abstract => "Layer from $table in $prefix using column $geom",
