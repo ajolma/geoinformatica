@@ -22,7 +22,6 @@ my $config;
 my $q = CGI->new;
 my %names = ();
 my $request;
-my $debug = 0;
 
 eval {
     $config = WxS::config();
@@ -41,11 +40,11 @@ eval {
 error($q, $@, $config ? (-type => $config->{MIME}, -Access_Control_Allow_Origin=>$config->{CORS}) : ()) if $@;
 
 sub page {
-    print STDERR "\n" if $debug;
+    print STDERR "\n" if $config->{debug};
     for ($q->param) {
         croak "Parameter ".uc($_)." given more than once.#" if exists $names{uc($_)};
         $names{uc($_)} = $_;
-        print STDERR "$_ => ".$q->param($_)."\n" if $debug > 1;
+        print STDERR "$_ => ".$q->param($_)."\n" if $config->{debug} > 1;
     }
 
     my $post = $names{POSTDATA};
@@ -86,7 +85,7 @@ sub page {
 
     $request->{EPSG} = 3857 if $request->{EPSG} and $request->{EPSG} == 900913;
 
-    print STDERR Dumper($request) if $debug > 2;
+    print STDERR Dumper($request) if $config->{debug} > 2;
 
     if ($request->{request} eq 'GetCapabilities' or $request->{request} eq 'capabilities') {
         GetCapabilities();
@@ -172,7 +171,7 @@ sub GetFeature {
         $filter =~ s/GeometryColumn/$geom/g if $filter;
         $sql .= " and $filter" if $filter;
 
-        print STDERR "$sql\n";
+        print STDERR "$sql\n" if $config->{debug} > 2;
         $layer = $datasource->ExecuteSQL($sql);
     } else {
         croak "missing information in configuration file";
@@ -208,7 +207,7 @@ sub GetFeature {
         $i++;
         last if defined $request->{maxFeatures} and $i >= $request->{maxFeatures};
     }
-    print STDERR "$i features served, max is ",$request->{maxFeatures}||'not set',"\n" if $debug;
+    print STDERR "$i features served, max is ",$request->{maxFeatures}||'not set',"\n" if $config->{debug};
 }
 
 sub DescribeFeatureType {
@@ -356,6 +355,7 @@ sub FeatureTypeList  {
     xml_element('wfs:Operations', \@operations);
     for my $type (@{$config->{FeatureTypeList}}) {
         if ($type->{Layer}) {
+            # closed policy: announce only named layers
             my @FeatureType = (
                 ['wfs:Name', $type->{Name}],
                 ['wfs:Title', $type->{Title}],
@@ -369,10 +369,11 @@ sub FeatureTypeList  {
             push @FeatureType, ['wfs:Operations', [list2element('wfs:Operation', $type->{Transaction})]] if exists $type->{Transaction};
             xml_element('wfs:FeatureType', \@FeatureType);
         } elsif ($type->{prefix}) {
+            # open policy: announce all but those denied
             # restrict now to postgis databases
             my @layers = layers($type);
             for my $l (@layers) {
-                print STDERR "$type->{prefix}: $l->{Title}\n";
+                print STDERR "$type->{prefix}: $l->{Title}\n" if $config->{debug} > 1;
                 next if $type->{allow} and !$type->{allow}{$l->{Title}};
                 my @FeatureType = (
                     ['wfs:Name', $l->{Name}],
@@ -437,8 +438,12 @@ sub layers {
     my $sth = $dbh->table_info( '', 'public', undef, "'TABLE','VIEW'" );
     my @tables;
     while (my $data = $sth->fetchrow_hashref) {
-        #my $n = decode("utf8", $data->{TABLE_NAME});
         my $n = $data->{TABLE_NAME};
+        print STDERR "table $n exists $feature_type->{TABLE_PREFIX} ",index($n, $feature_type->{TABLE_PREFIX}),"\n" if $config->{debug} > 2;
+        # in open policy, can restrict to specific table types (TABLE_TYPE is a Perl DBI attribute)
+        next if $feature_type->{TABLE_TYPE} && !$feature_type->{TABLE_TYPE}{$data->{TABLE_TYPE}};
+        # in open policy, can restrict to tables with a specific prefix
+        next if $feature_type->{TABLE_PREFIX} && !(index($n, $feature_type->{TABLE_PREFIX}) != -1);
         $n =~ s/"//g;
         push @tables, $n;
     }
@@ -461,22 +466,27 @@ sub layers {
                 "limit 1";
             my $sth = $dbh->prepare($sql) or croak($dbh->errstr);
             my $rv = $sth->execute;
-            # the execute may fail because of no permission, in that case we silently skip
-            next unless $rv;
+            # the execute may fail because of no permission, in that case we skip but log an error
+            unless ($rv) {
+                print STDERR "No permission to serve table '$table'.\n";
+                next;
+            }
             my($name,$srid)  = $sth->fetchrow_array;
             $name = 'unknown' unless defined $name;
             $srid = -1 unless defined $srid;
 
-            # check that the table contains at least one spatial feature
-            $sql = "select \"$geom\" from \"$table\" where not \"$geom\" isnull limit 1";
-            $sth = $dbh->prepare($sql) or croak($dbh->errstr);
-            $rv = $sth->execute or croak($dbh->errstr); # error here is a configuration error
-            my($g)  = $sth->fetchrow_array;
-            #next unless $g;
-
-            #print STDERR "found layer $prefix.$table.$geom\n";
+            my $allow_empty_layers = 1;
+            if (!$allow_empty_layers) {
+                # check that the table contains at least one spatial feature
+                $sql = "select \"$geom\" from \"$table\" where not \"$geom\" isnull limit 1";
+                $sth = $dbh->prepare($sql) or croak($dbh->errstr);
+                $rv = $sth->execute or croak($dbh->errstr); # error here is a configuration error
+                my($g)  = $sth->fetchrow_array;
+                next unless $g;
+            }
 
             my $prefix = $feature_type->{prefix};
+            print STDERR "found layer $prefix.$table.$geom\n" if $config->{debug} > 1;
             push @layers, { Title => "$table($geom)",
                             Name => "$prefix.$table.$geom",
                             Abstract => "Layer from $table in $prefix using column $geom",

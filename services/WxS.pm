@@ -48,6 +48,7 @@ sub config {
     close $fh;
     $config = JSON->new->utf8->decode(encode('UTF-8', "@json"));
     $config->{CORS} = $ENV{'REMOTE_ADDR'} unless $config->{CORS};
+    $config->{debug} = 0 unless defined $config->{debug};
     return $config;
 }
 
