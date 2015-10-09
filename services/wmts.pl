@@ -77,41 +77,42 @@ sub page {
         return;
     }
 
-    my($path, $zxy, $ext);
+    my($set, $zxy, $ext);
     my $layers = $q->param($names{LAYERS});
     ($layers, $zxy, $ext) = $my_url =~ /wmts\.pl\/(\w+)\/(.*?)\.(\w+)$/ 
         unless $layers;
-    my $found = 0;
-    for my $set (@{$config->{TileSets}}) {
-        if ($set->{Layers} eq $layers) {
-            $path = $set->{path};
-            $ext = $set->{ext} unless $ext;
-            $found = 1;
-            last;
-        }
+    for my $s (@{$config->{TileSets}}) {
+        $set = $s, last if $s->{Layers} eq $layers;
     }
-    print STDERR "Layer not found: '$layers'\n" unless $found;
+    $ext = $set->{ext} unless $ext;
 
     if ($request eq 'GetMap') {
         my $bbox = $q->param($names{BBOX});
         my @bbox = split /,/, $bbox; # minx, miny, maxx, maxy
         my $units_per_pixel = ($bbox[2]-$bbox[0])/256;
-        my $i = 0;
         my $z;
-        for my $res (@resolutions_3857) {
-            $z = $i, last if abs($res - $units_per_pixel) < 0.1;
-            $i++;
+        my $res;
+        for my $r (@resolutions_3857) {
+            if (abs($r - $units_per_pixel) < 0.1) {
+                $res = $r;
+                $z = $i;
+                last;
+            }
         }
         my $rows = 2**$z;
-        my $wh = ($bounding_box_3857->{maxx} - $bounding_box_3857->{minx})/$rows;
-        my $x = ($bbox[2]+$bbox[0])/2 - $bounding_box_3857->{minx};
-        my $y = ($bbox[3]+$bbox[1])/2 - $bounding_box_3857->{miny};
-        $x = int($x / $wh);
-        $y = int($y / $wh);
+
+        #my $wh = ($bounding_box_3857->{maxx} - $bounding_box_3857->{minx})/$rows;
+        #my $x = ($bbox[2]+$bbox[0])/2 - $bounding_box_3857->{minx};
+        #my $y = ($bbox[3]+$bbox[1])/2 - $bounding_box_3857->{miny};
+        #$x = int($x / $wh);
+        #$y = int($y / $wh);
+
+        my $x = int(($bbox[0] - $bounding_box_3857->{minx}) / ($res * 256) + 0.5);
+        my $y = int(($bbox[1] - $bounding_box_3857->{miny}) / ($res * 256) + 0.5);
         $zxy = "$z/$x/$y";
     }
 
-    ServeFile("$path/$zxy.$ext", $ext);
+    ServeFile("$set->{path}/$zxy.$ext", $ext);
 }
 
 sub ServeFile {
